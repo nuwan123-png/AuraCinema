@@ -41,6 +41,9 @@ COPY --from=assets /app/public/build ./public/build
 RUN mkdir -p /run/nginx storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs \
     && chown -R www-data:www-data storage bootstrap/cache
 
+# Fail the BUILD (not the deploy) if the web server or PHP-FPM config is invalid.
+RUN nginx -t && php-fpm -t
+
 EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s CMD wget -qO- http://127.0.0.1/up >/dev/null || exit 1
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
