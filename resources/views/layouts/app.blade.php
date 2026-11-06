@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0b0b0f">
     <meta name="description" content="AuraCinema - browse movies, watch trailers and find full movies.">
+    <meta name="google-site-verification" content="AQyWmCgq8TAYzu8-tnZTc7rulEKliazRiKKrpZb7NG4" />
     <title>@yield('title', 'AuraCinema') | Movies &amp; Trailers</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
