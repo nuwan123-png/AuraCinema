@@ -30,6 +30,7 @@
             <label class="block text-xs font-semibold text-slate-300 mb-1.5">Trailer File (MP4, Up to 100MB)</label>
             <input type="file" name="trailer" accept="video/mp4,video/mkv" class="w-full bg-black/30 border border-white/10 rounded-xl p-2 text-xs text-slate-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-orange-500/20 file:text-orange-300 file:text-xs file:font-semibold hover:file:bg-orange-500/30 cursor-pointer">
         </div>
+        
 
         <div>
             <label class="block text-xs font-semibold text-slate-300 mb-1.5">
