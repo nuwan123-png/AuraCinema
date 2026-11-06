@@ -102,6 +102,11 @@ jobs:
             --restart always \
             --network host \
             -v /var/auracinema/storage:/var/www/html/storage/app/public \
+            -e APP_NAME=AuraCinema \
+            -e APP_ENV=production \
+            -e APP_KEY=base64:w3VbX7rA7Uo9v2jM5pL8k4J1h3G5f7D9s1A3z5X7c9V= \
+            -e APP_DEBUG=false \
+            -e APP_URL=http://18.138.235.17 \
             -e DB_CONNECTION=mysql \
             -e DB_HOST=127.0.0.1 \
             -e DB_PORT=3306 \
@@ -111,3 +116,4 @@ jobs:
             403602307011.dkr.ecr.ap-southeast-1.amazonaws.com/auracinema:latest
           docker exec auracinema-app php artisan migrate --force || true
           docker exec auracinema-app php artisan storage:link || true
+          docker exec auracinema-app php artisan config:clear
