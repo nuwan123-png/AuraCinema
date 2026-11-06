@@ -14,5 +14,6 @@ class Movie extends Model
         'description',
         'image',
         'trailer_url',
+        'stream_url',
     ];
 }

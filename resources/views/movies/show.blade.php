@@ -31,14 +31,22 @@
                         </span>
                     </div>
 
-                    <form action="{{ route('movies.destroy', $movie->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to remove this title?');">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 text-xs transition">
-                            <i class="fa fa-trash-can text-[11px]"></i>
-                            <span>Remove</span>
-                        </button>
-                    </form>
+                    <!-- Action Buttons: Edit & Remove -->
+                    <div class="flex items-center gap-2">
+                        <a href="{{ route('movies.edit', $movie) }}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/20 text-xs transition">
+                            <i class="fa fa-pen-to-square text-[11px]"></i>
+                            <span>Edit</span>
+                        </a>
+
+                        <form action="{{ route('movies.destroy', $movie) }}" method="POST" onsubmit="return confirm('මෙම චිත්‍රපටය ඉවත් කිරීමට අවශ්‍යද?');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 text-xs transition">
+                                <i class="fa fa-trash-can text-[11px]"></i>
+                                <span>Remove</span>
+                            </button>
+                        </form>
+                    </div>
                 </div>
 
                 <h1 class="text-3xl font-extrabold text-white mb-4 tracking-tight">{{ $movie->title }}</h1>
@@ -58,7 +66,7 @@
                 </div>
                 <div class="glass-panel p-3 rounded-xl border border-white/5">
                     <span class="text-slate-400 block text-[10px]">Format Support</span>
-                    <span class="text-white font-medium">MP4 / H.264</span>
+                    <span class="text-white font-medium">MP4 / MKV</span>
                 </div>
                 <div class="glass-panel p-3 rounded-xl border border-white/5">
                     <span class="text-slate-400 block text-[10px]">Playback</span>
@@ -68,19 +76,19 @@
         </div>
     </div>
 
-    <!-- Video Trailer Player -->
-    <div class="glass-card rounded-3xl p-6 lg:p-8 border border-white/10 shadow-2xl">
+    <!-- Glass Video Trailer Player -->
+    <div class="glass-card rounded-3xl p-6 lg:p-8 border border-white/10 shadow-2xl mb-8">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
                 <i class="fa fa-circle-play text-orange-400"></i>
                 <span>Trailer Player</span>
             </h2>
-            <span class="text-xs text-slate-400">Direct Stream</span>
+            <span class="text-xs text-slate-400">Preview</span>
         </div>
 
         @if($movie->trailer_url)
-            <div class="w-full aspect-video rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl max-w-4xl mx-auto relative">
-                <video controls playsinline preload="auto" class="w-full h-full block">
+            <div class="w-full aspect-video rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl max-w-4xl mx-auto relative z-10">
+                <video controls playsinline preload="metadata" class="w-full h-full block">
                     <source src="{{ asset('storage/' . $movie->trailer_url) }}" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
@@ -89,6 +97,26 @@
             <div class="aspect-[16/6] bg-black/30 rounded-2xl flex flex-col items-center justify-center border border-white/5 text-slate-500">
                 <i class="fa fa-video-slash text-2xl mb-2 text-slate-600"></i>
                 <p class="text-xs">No video trailer uploaded for this movie.</p>
+            </div>
+        @endif
+
+        <!-- Telegram Full Movie Button (ට්‍රේලර් එකට පහළින් දිස්වන කොටස) -->
+        @if($movie->stream_url)
+            <div class="mt-6 flex flex-col sm:flex-row items-center justify-between p-5 rounded-2xl glass-panel border border-sky-500/20 bg-sky-950/20">
+                <div class="flex items-center gap-3 mb-3 sm:mb-0">
+                    <div class="w-10 h-10 rounded-xl bg-sky-500/20 border border-sky-400/30 flex items-center justify-center text-sky-400 text-xl flex-shrink-0">
+                        <i class="fa-brands fa-telegram"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs font-bold text-white block">Full Movie Available</span>
+                        <span class="text-[11px] text-slate-400">අපගේ Telegram නාලිකාව හරහා සම්පූර්ණ චිත්‍රපටය නරඹන්න</span>
+                    </div>
+                </div>
+
+                <a href="{{ $movie->stream_url }}" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-sky-500/20 transition transform hover:-translate-y-0.5">
+                    <span>Watch Full Movie</span>
+                    <i class="fa fa-arrow-up-right-from-square text-[10px]"></i>
+                </a>
             </div>
         @endif
     </div>

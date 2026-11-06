@@ -51,6 +51,13 @@
             <input type="file" name="trailer" accept="video/mp4,video/mkv" class="w-full bg-black/30 border border-white/10 rounded-xl p-2 text-xs text-slate-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-orange-500/20 file:text-orange-300 file:text-xs file:font-semibold hover:file:bg-orange-500/30 cursor-pointer">
         </div>
 
+        <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">
+                <i class="fa-brands fa-telegram text-sky-400 mr-1"></i> Telegram Movie Stream Link
+            </label>
+            <input type="url" name="stream_url" value="{{ old('stream_url', $movie->stream_url ?? '') }}" placeholder="https://t.me/..." class="w-full bg-black/30 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-400/60 transition">
+        </div>
+
         <!-- Submit Button -->
         <div class="pt-4 flex items-center justify-between">
             <a href="{{ route('movies.show', $movie->id) }}" class="text-xs text-slate-400 hover:text-white transition">Back</a>

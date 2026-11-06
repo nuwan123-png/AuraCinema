@@ -14,9 +14,9 @@ class MovieController extends Controller
     public function index()
     {
         $movies = Movie::latest()->get();
-        $featured = $movies->first();
+        $featuredMovies = Movie::latest()->take(5)->get();
 
-        return view('movies.index', compact('movies', 'featured'));
+        return view('movies.index', compact('movies', 'featuredMovies'));
     }
 
     /**
@@ -78,6 +78,7 @@ class MovieController extends Controller
             'description' => 'nullable|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'trailer' => 'nullable|mimes:mp4,mkv|max:102400',
+            'stream_url' => 'nullable|url',
         ]);
 
         if ($request->hasFile('image')) {
