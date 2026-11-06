@@ -17,10 +17,10 @@ jobs:
         echo "Checking for third-party script CDNs..."
         grep -rnEi "<script[^>]+src=[\"']https?://" resources/views/ || true
 
-    - name: Set up PHP 8.3 (same as production)
+    - name: Set up PHP 8.4 (same as production)
       uses: shivammathur/setup-php@v2
       with:
-        php-version: '8.3'
+        php-version: '8.4'
         extensions: mbstring, xml, ctype, iconv, mysql, pdo_mysql, bcmath, zip, gd
         coverage: none
 
@@ -29,17 +29,17 @@ jobs:
         find app bootstrap config routes -type f -name "*.php" -exec php -l {} \; > /dev/null
         echo "PHP syntax check passed."
 
-    - name: Gate - runner PHP is 8.3 like production
+    - name: Gate - runner PHP is 8.4 like production
       run: |
         PHP_VER=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
-        if [ "$PHP_VER" != "8.3" ]; then
-          echo "PHP version mismatch: expected 8.3, got $PHP_VER"
+        if [ "$PHP_VER" != "8.4" ]; then
+          echo "PHP version mismatch: expected 8.4, got $PHP_VER"
           exit 1
         fi
         echo "PHP version confirmed: $PHP_VER"
 
     - name: Install PHP dependencies (with dev tools for the tests)
-      run: composer install --no-interaction --prefer-dist --optimize-autoloader
+      run: composer install --no-interaction --prefer-dist --optimize-autoloader --ignore-platform-req=php+
 
     - name: Gate - automated tests
       env:
