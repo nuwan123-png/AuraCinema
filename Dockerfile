@@ -15,9 +15,9 @@ RUN apk add --no-cache \
 # PHP Extensions ස්ථාපනය කිරීම
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
 
-# PHP Upload limits සැකසීම (100MB videos සඳහා)
-RUN echo "upload_max_filesize = 120M" > /usr/local/etc/php/conf.d/uploads.ini && \
-    echo "post_max_size = 120M" >> /usr/local/etc/php/conf.d/uploads.ini && \
+# PHP settings (Upload limits 35M සහ 40M ලෙස සැකසීම)
+RUN echo "upload_max_filesize = 35M" > /usr/local/etc/php/conf.d/uploads.ini && \
+    echo "post_max_size = 40M" >> /usr/local/etc/php/conf.d/uploads.ini && \
     echo "memory_limit = 256M" >> /usr/local/etc/php/conf.d/uploads.ini && \
     echo "max_execution_time = 300" >> /usr/local/etc/php/conf.d/uploads.ini
 

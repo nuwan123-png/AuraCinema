@@ -38,9 +38,9 @@ class MovieController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
-            'trailer' => 'nullable|mimes:mp4,mkv|max:102400',
-            'stream_url' => 'nullable|url', // <-- මෙම පේළිය අනිවාර්යයෙන්ම එක් කරන්න
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:30720', // උපරිම 30MB
+            'trailer' => 'nullable|mimes:mp4,mkv|max:30720',              // උපරිම 30MB
+            'stream_url' => 'nullable|url',                                // Telegram Link එක
         ]);
 
         if ($request->hasFile('image')) {
