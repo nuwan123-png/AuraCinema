@@ -95,10 +95,27 @@ jobs:
               --env-file /etc/auracinema/app.env \
               -v /var/auracinema/storage:/var/www/html/storage/app/public \
               "$ECR_REGISTRY/auracinema:$IMAGE_TAG"
-            # fail the deploy if the new container does not become healthy
-            for i in $(seq 1 30); do
-              [ "$(docker inspect -f '{{.State.Health.Status}}' auracinema-app)" = "healthy" ] && echo "healthy" && break
-              [ "$i" = "30" ] && docker logs --tail 50 auracinema-app && exit 1
+            # Wait up to 90s for the health check. Plain if/else (no `[ ] && ...` lists) because
+            # script_stop would abort the whole script on the first "not healthy yet" check.
+            ok=0
+            state=missing
+            health=none
+            for i in $(seq 1 45); do
+              state=$(docker inspect -f '{{.State.Status}}' auracinema-app 2>/dev/null || echo missing)
+              health=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' auracinema-app 2>/dev/null || echo none)
+              if [ "$health" = "healthy" ]; then
+                ok=1
+                break
+              fi
+              if [ "$state" = "exited" ] || [ "$state" = "dead" ]; then
+                break
+              fi
               sleep 2
             done
+            if [ "$ok" != "1" ]; then
+              echo "Deploy failed: state=$state health=$health"
+              docker logs --tail 50 auracinema-app || true
+              exit 1
+            fi
+            echo "healthy"
             docker image prune -af --filter "until=72h"
