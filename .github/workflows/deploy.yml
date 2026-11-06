@@ -41,16 +41,19 @@ jobs:
     - name: Install PHP dependencies (with dev tools for the tests)
       run: composer install --no-interaction --prefer-dist --optimize-autoloader --ignore-platform-req=php+
 
-    - name: Set up App Key for Testing
+    - name: Set up App Key and Database for Testing
       run: |
         php -r "file_exists('.env') || copy('.env.example', '.env');"
         php artisan key:generate
+        touch database/database.sqlite
 
     - name: Gate - automated tests
       env:
         DB_CONNECTION: sqlite
-        DB_DATABASE: ':memory:'
-      run: php artisan test
+        DB_DATABASE: database/database.sqlite
+      run: |
+        php artisan migrate --force
+        php artisan test
 
     - name: Report - npm audit (production deps)
       run: |
