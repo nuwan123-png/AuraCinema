@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AdminBasicAuth;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -12,7 +13,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Behind CloudFront / a load balancer: trust X-Forwarded-* so isSecure() works.
+        // Lock the EC2 security group to CloudFront only, otherwise these headers can be spoofed.
+        $middleware->trustProxies(at: '*');
+        $middleware->alias(['admin' => AdminBasicAuth::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

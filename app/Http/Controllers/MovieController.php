@@ -2,123 +2,132 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\OptimizeTrailer;
 use App\Models\Movie;
+use App\Services\MediaOptimizer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 
 class MovieController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        $movies = Movie::latest()->get();
-        $featuredMovies = Movie::latest()->take(5)->get();
+    public function __construct(private MediaOptimizer $media) {}
 
-        return view('movies.index', compact('movies', 'featuredMovies'));
+    public function index(Request $request)
+    {
+        $q = trim((string) $request->query('q', ''));
+
+        if ($q !== '') {
+            $like = '%'.addcslashes($q, '%_\\').'%';
+            $results = Movie::where('title', 'like', $like)->latest()->simplePaginate(24)->withQueryString();
+
+            return view('movies.index', ['q' => $q, 'results' => $results]);
+        }
+
+        // One query for the rows (cheap on a catalogue this size), one paginated query for the grid.
+        $recent = Movie::latest()->take(40)->get();
+
+        return view('movies.index', [
+            'q' => '',
+            'hero' => $recent->firstWhere(fn ($m) => $m->image),
+            'latest' => $recent->take(20),
+            'withTrailers' => $recent->filter(fn ($m) => $m->trailer_url)->take(20),
+            'fullMovies' => $recent->filter(fn ($m) => $m->stream_url)->take(20),
+            'all' => Movie::latest()->simplePaginate(24),
+        ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         return view('movies.create');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-   /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:30720', // උපරිම 30MB
-            'trailer' => 'nullable|mimes:mp4,mkv|max:30720',              // උපරිම 30MB
-            'stream_url' => 'nullable|url',                                // Telegram Link එක
-        ]);
+        $validated = $request->validate($this->rules());
+        $data = Arr::only($validated, ['title', 'description', 'stream_url']);
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('posters', 'public');
+            $data['image'] = $this->media->storePoster($request->file('image'));
         }
+        if ($request->hasFile('trailer')) {
+            $data['trailer_url'] = $request->file('trailer')->store('trailers', 'public');
+        }
+
+        $movie = Movie::create($data);
 
         if ($request->hasFile('trailer')) {
-            $validated['trailer_url'] = $request->file('trailer')->store('trailers', 'public');
+            OptimizeTrailer::dispatchAfterResponse($movie->id, $data['trailer_url']);
         }
 
-        Movie::create($validated);
-
-        return redirect()->route('movies.index')->with('success', 'Movie added successfully!');
+        return redirect()->route('movies.show', $movie)->with('success', 'Movie added. The trailer is being compressed in the background.');
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(Movie $movie)
     {
         return view('movies.show', compact('movie'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(Movie $movie)
     {
         return view('movies.edit', compact('movie'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Movie $movie)
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
-            'trailer' => 'nullable|mimes:mp4,mkv|max:102400',
-            'stream_url' => 'nullable|url',
-        ]);
+        $validated = $request->validate($this->rules());
+        $data = Arr::only($validated, ['title', 'description', 'stream_url']);
+        $disk = Storage::disk('public');
 
         if ($request->hasFile('image')) {
-            if ($movie->image && Storage::disk('public')->exists($movie->image)) {
-                Storage::disk('public')->delete($movie->image);
+            $data['image'] = $this->media->storePoster($request->file('image'));
+            if ($movie->image) {
+                $disk->delete($movie->image);
             }
-            $validated['image'] = $request->file('image')->store('posters', 'public');
         }
 
+        $newTrailer = null;
         if ($request->hasFile('trailer')) {
-            if ($movie->trailer_url && Storage::disk('public')->exists($movie->trailer_url)) {
-                Storage::disk('public')->delete($movie->trailer_url);
+            $newTrailer = $request->file('trailer')->store('trailers', 'public');
+            $data['trailer_url'] = $newTrailer;
+            if ($movie->trailer_url) {
+                $disk->delete($movie->trailer_url);
             }
-            $validated['trailer_url'] = $request->file('trailer')->store('trailers', 'public');
         }
 
-        $movie->update($validated);
+        $movie->update($data);
 
-        return redirect()->route('movies.show', $movie->id)->with('success', 'Movie successfully updated!');
+        if ($newTrailer) {
+            OptimizeTrailer::dispatchAfterResponse($movie->id, $newTrailer);
+        }
+
+        return redirect()->route('movies.show', $movie)->with('success', 'Movie updated.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Movie $movie)
     {
-        if ($movie->image && Storage::disk('public')->exists($movie->image)) {
-            Storage::disk('public')->delete($movie->image);
+        $disk = Storage::disk('public');
+        foreach ([$movie->image, $movie->trailer_url] as $path) {
+            if ($path) {
+                $disk->delete($path);
+            }
         }
-
-        if ($movie->trailer_url && Storage::disk('public')->exists($movie->trailer_url)) {
-            Storage::disk('public')->delete($movie->trailer_url);
-        }
-
         $movie->delete();
 
-        return redirect()->route('movies.index')->with('success', 'Movie deleted successfully!');
+        return redirect()->route('movies.index')->with('success', 'Movie deleted.');
+    }
+
+    private function rules(): array
+    {
+        return [
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:5000'],
+            // Posters are resized to 480px WebP on save, so the original only needs to be a sane size.
+            'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:10240'],
+            // Same 30MB cap on create AND update (they used to differ: 30MB vs 100MB).
+            'trailer' => ['nullable', 'mimes:mp4,mkv,webm,mov', 'max:30720'],
+            // http/https only: blocks javascript:, data:, ftp: links in the "Watch Full Movie" button.
+            'stream_url' => ['nullable', 'url:http,https', 'max:500'],
+        ];
     }
 }

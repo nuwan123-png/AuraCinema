@@ -2,118 +2,103 @@ name: Build, Test, Push to ECR, and Deploy to EC2
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Gate - no third-party script CDNs
-      run: |
-        echo "Checking for third-party script CDNs..."
-        grep -rnEi "<script[^>]+src=[\"']https?://" resources/views/ || true
+      - name: Gate - no third-party script/style CDNs
+        run: |
+          if grep -rnEi "<(script|link)[^>]+(src|href)=[\"']https?://" resources/views/; then
+            echo "::error::Third-party CDN tag found (this is what made the site slow). Use Vite instead."
+            exit 1
+          fi
 
-    - name: Set up PHP 8.4 (same as production)
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: '8.4'
-        extensions: mbstring, xml, ctype, iconv, mysql, pdo_mysql, bcmath, zip, gd, sqlite3, pdo_sqlite
-        coverage: none
+      - name: Set up PHP 8.4 (same as production)
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, iconv, mysql, pdo_mysql, bcmath, zip, gd, sqlite3, pdo_sqlite
+          coverage: none
 
-    - name: Gate - PHP syntax
-      run: |
-        find app bootstrap config routes -type f -name "*.php" -exec php -l {} \; > /dev/null
-        echo "PHP syntax check passed."
+      - name: Gate - PHP syntax
+        run: find app bootstrap config routes -type f -name "*.php" -exec php -l {} \; > /dev/null
 
-    - name: Gate - runner PHP is 8.4 like production
-      run: |
-        PHP_VER=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
-        if [ "$PHP_VER" != "8.4" ]; then
-          echo "PHP version mismatch: expected 8.4, got $PHP_VER"
-          exit 1
-        fi
-        echo "PHP version confirmed: $PHP_VER"
+      - name: Install PHP dependencies (with dev tools for the tests)
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
 
-    - name: Install PHP dependencies (with dev tools for the tests)
-      run: composer install --no-interaction --prefer-dist --optimize-autoloader --ignore-platform-req=php+
+      - name: Prepare app key
+        run: |
+          php -r "file_exists('.env') || copy('.env.example', '.env');"
+          php artisan key:generate
 
-    - name: Set up App Key and Database for Testing
-      run: |
-        php -r "file_exists('.env') || copy('.env.example', '.env');"
-        php artisan key:generate
-        touch database/database.sqlite
+      - name: Gate - automated tests
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ":memory:"
+        run: php artisan test
 
-    - name: Gate - automated tests
-      env:
-        DB_CONNECTION: sqlite
-        DB_DATABASE: database/database.sqlite
-      run: |
-        php artisan migrate --force
-        php artisan test
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-    - name: Report - npm audit (production deps)
-      run: |
-        npm audit --omit=dev || true
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
+      - uses: docker/setup-buildx-action@v3
 
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v2
+      - name: Build and push image (layer cache = much faster CI)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/auracinema:latest
+            ${{ steps.login-ecr.outputs.registry }}/auracinema:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-    - name: Build Docker image
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: auracinema
-        IMAGE_TAG: latest
-      run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-
-    - name: Push to ECR
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: auracinema
-        IMAGE_TAG: latest
-      run: |
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-
-    - name: Deploy to EC2 via SSH
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ubuntu
-        key: ${{ secrets.EC2_SSH_KEY }}
-        script: |
-          aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin 403602307011.dkr.ecr.ap-southeast-1.amazonaws.com
-          docker pull 403602307011.dkr.ecr.ap-southeast-1.amazonaws.com/auracinema:latest
-          docker stop auracinema-app || true
-          docker rm auracinema-app || true
-          docker run -d \
-            --name auracinema-app \
-            --restart always \
-            --network host \
-            -v /var/auracinema/storage:/var/www/html/storage/app/public \
-            -e APP_NAME=AuraCinema \
-            -e APP_ENV=production \
-            -e APP_KEY=base64:w3VbX7rA7Uo9v2jM5pL8k4J1h3G5f7D9s1A3z5X7c9V= \
-            -e APP_DEBUG=false \
-            -e APP_URL=http://18.138.235.17 \
-            -e DB_CONNECTION=mysql \
-            -e DB_HOST=127.0.0.1 \
-            -e DB_PORT=3306 \
-            -e DB_DATABASE=auracinema \
-            -e DB_USERNAME=aura_user \
-            -e DB_PASSWORD=UserPassword123! \
-            403602307011.dkr.ecr.ap-southeast-1.amazonaws.com/auracinema:latest
-          docker exec auracinema-app php artisan migrate --force || true
-          docker exec auracinema-app php artisan storage:link || true
-          docker exec auracinema-app php artisan config:clear
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: ECR_REGISTRY,IMAGE_TAG
+          script_stop: true
+          script: |
+            aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+            docker pull "$ECR_REGISTRY/auracinema:$IMAGE_TAG"
+            docker stop auracinema-app || true
+            docker rm auracinema-app || true
+            # All secrets (APP_KEY, DB_PASSWORD, ADMIN_*) live ONLY in this file on the server - never in git.
+            docker run -d \
+              --name auracinema-app \
+              --restart always \
+              --network host \
+              --env-file /etc/auracinema/app.env \
+              -v /var/auracinema/storage:/var/www/html/storage/app/public \
+              "$ECR_REGISTRY/auracinema:$IMAGE_TAG"
+            # fail the deploy if the new container does not become healthy
+            for i in $(seq 1 30); do
+              [ "$(docker inspect -f '{{.State.Health.Status}}' auracinema-app)" = "healthy" ] && echo "healthy" && break
+              [ "$i" = "30" ] && docker logs --tail 50 auracinema-app && exit 1
+              sleep 2
+            done
+            docker image prune -af --filter "until=72h"
