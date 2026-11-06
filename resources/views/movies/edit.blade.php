@@ -1,123 +1,72 @@
-name: Build, Test, Push to ECR, and Deploy to EC2
+@extends('layouts.app')
 
-on:
-  push:
-    branches: [ "main" ]
+@section('content')
 
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
+<div class="max-w-xl mx-auto glass-card rounded-3xl p-8 border border-white/10 shadow-2xl my-6">
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h2 class="text-xl font-bold text-white tracking-tight">Edit Movie Details</h2>
+            <p class="text-xs text-slate-400">Title, Poster, Description හෝ Video Trailer එක වෙනස් කරන්න.</p>
+        </div>
+        <a href="{{ route('movies.show', $movie->id) }}" class="text-xs text-slate-400 hover:text-white transition">Cancel</a>
+    </div>
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    <form action="{{ route('movies.update', $movie->id) }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+        @csrf
+        @method('PUT')
+        
 
-    - name: Gate - no third-party script CDNs
-      run: |
-        echo "Checking for third-party script CDNs..."
-        grep -rnEi "<script[^>]+src=[\"']https?://" resources/views/ || true
+        <!-- Title -->
+        <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Movie Title</label>
+            <input type="text" name="title" value="{{ old('title', $movie->title) }}" required class="w-full bg-black/30 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-400/60 transition">
+        </div>
 
-    - name: Set up PHP 8.4 (same as production)
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: '8.4'
-        extensions: mbstring, xml, ctype, iconv, mysql, pdo_mysql, bcmath, zip, gd, sqlite3, pdo_sqlite
-        coverage: none
+        <!-- Description -->
+        <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Description / Synopsis</label>
+            <textarea name="description" rows="3" class="w-full bg-black/30 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-400/60 transition">{{ old('description', $movie->description) }}</textarea>
+        </div>
 
-    - name: Gate - PHP syntax
-      run: |
-        find app bootstrap config routes -type f -name "*.php" -exec php -l {} \; > /dev/null
-        echo "PHP syntax check passed."
+        <!-- Poster Image Update -->
+        <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Poster Cover (Image)</label>
+            @if($movie->image)
+                <div class="flex items-center gap-3 mb-2 p-2 rounded-xl bg-black/20 border border-white/5">
+                    <img src="{{ asset('storage/' . $movie->image) }}" class="w-10 h-14 object-cover rounded-lg border border-white/10">
+                    <span class="text-[11px] text-slate-400">දැනට පවතින Poster එක. අලුත් එකක් දැමීමට පහතින් තෝරන්න.</span>
+                </div>
+            @endif
+            <input type="file" name="image" accept="image/*" class="w-full bg-black/30 border border-white/10 rounded-xl p-2 text-xs text-slate-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-cyan-500/20 file:text-cyan-300 file:text-xs file:font-semibold hover:file:bg-cyan-500/30 cursor-pointer">
+        </div>
 
-    - name: Gate - runner PHP is 8.4 like production
-      run: |
-        PHP_VER=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
-        if [ "$PHP_VER" != "8.4" ]; then
-          echo "PHP version mismatch: expected 8.4, got $PHP_VER"
-          exit 1
-        fi
-        echo "PHP version confirmed: $PHP_VER"
+        <!-- Trailer Video Update -->
+        <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Trailer File (MP4, Up to 100MB)</label>
+            @if($movie->trailer_url)
+                <div class="mb-2 p-2 rounded-xl bg-black/20 border border-white/5 text-[11px] text-cyan-400 flex items-center gap-2">
+                    <i class="fa fa-film"></i>
+                    <span>දැනට වීඩියෝවක් ඇත. වෙනස් කිරීමට අවශ්‍ය නම් පමණක් අලුත් වීඩියෝවක් තෝරන්න.</span>
+                </div>
+            @endif
+            <input type="file" name="trailer" accept="video/mp4,video/mkv" class="w-full bg-black/30 border border-white/10 rounded-xl p-2 text-xs text-slate-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-orange-500/20 file:text-orange-300 file:text-xs file:font-semibold hover:file:bg-orange-500/30 cursor-pointer">
+        </div>
 
-    - name: Install PHP dependencies (with dev tools for the tests)
-      run: composer install --no-interaction --prefer-dist --optimize-autoloader --ignore-platform-req=php+
+        <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">
+                <i class="fa-brands fa-telegram text-sky-400 mr-1"></i> Telegram Movie Stream Link
+            </label>
+            <input type="url" name="stream_url" value="{{ old('stream_url', $movie->stream_url ?? '') }}" placeholder="https://t.me/..." class="w-full bg-black/30 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-400/60 transition">
+        </div>
 
-    - name: Prepare Laravel Environment for Testing
-      run: |
-        cp .env.example .env.testing || true
-        touch database/database.sqlite || true
-        php artisan key:generate --env=testing || true
+        <!-- Submit Button -->
+        <div class="pt-4 flex items-center justify-between">
+            <a href="{{ route('movies.show', $movie->id) }}" class="text-xs text-slate-400 hover:text-white transition">Back</a>
+            <button type="submit" class="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-slate-950 text-xs font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-cyan-500/25 transition transform hover:-translate-y-0.5">
+                Update Movie
+            </button>
+        </div>
+    </form>
+</div>
 
-    - name: Gate - automated tests
-      env:
-        APP_ENV: testing
-        APP_KEY: base64:dFh5WWxHNXpRMHIzRTRXMW84UDdzMkQ2dTFBMGY1SDhqM0s2bDlvMnY0TT0=
-        DB_CONNECTION: sqlite
-        DB_DATABASE: ':memory:'
-      run: |
-        php artisan test || true
-
-    - name: Report - npm audit (production deps)
-      run: |
-        npm audit --omit=dev || true
-
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
-
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v2
-
-    - name: Build Docker image
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: auracinema
-        IMAGE_TAG: latest
-      run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-
-    - name: Push to ECR
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: auracinema
-        IMAGE_TAG: latest
-      run: |
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-
-    - name: Deploy to EC2 via SSH
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ubuntu
-        key: ${{ secrets.EC2_SSH_KEY }}
-        script: |
-          # ECR login
-          aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin 403602307011.dkr.ecr.ap-southeast-1.amazonaws.com
-          
-          # Pull latest image
-          docker pull 403602307011.dkr.ecr.ap-southeast-1.amazonaws.com/auracinema:latest
-          
-          # Old container stop and remove
-          docker stop auracinema-app || true
-          docker rm auracinema-app || true
-          
-          # Start app container
-          docker run -d \
-            --name auracinema-app \
-            --restart always \
-            --network host \
-            -v /var/auracinema/storage:/var/www/html/storage/app/public \
-            -e DB_CONNECTION=mysql \
-            -e DB_HOST=127.0.0.1 \
-            -e DB_PORT=3306 \
-            -e DB_DATABASE=auracinema \
-            -e DB_USERNAME=aura_user \
-            -e DB_PASSWORD=UserPassword123! \
-            403602307011.dkr.ecr.ap-southeast-1.amazonaws.com/auracinema:latest
-          
-          # Run database migrations and storage link
-          docker exec auracinema-app php artisan migrate --force || true
-          docker exec auracinema-app php artisan storage:link || true
+@endsection

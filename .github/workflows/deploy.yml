@@ -1,11 +1,11 @@
-name: Build, Test, and Push to ECR
+name: Build, Test, Push to ECR, and Deploy to EC2
 
 on:
   push:
     branches: [ "main" ]
 
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,7 +21,7 @@ jobs:
       uses: shivammathur/setup-php@v2
       with:
         php-version: '8.4'
-        extensions: mbstring, xml, ctype, iconv, mysql, pdo_mysql, bcmath, zip, gd
+        extensions: mbstring, xml, ctype, iconv, mysql, pdo_mysql, bcmath, zip, gd, sqlite3, pdo_sqlite
         coverage: none
 
     - name: Gate - PHP syntax
@@ -40,6 +40,11 @@ jobs:
 
     - name: Install PHP dependencies (with dev tools for the tests)
       run: composer install --no-interaction --prefer-dist --optimize-autoloader --ignore-platform-req=php+
+
+    - name: Set up App Key for Testing
+      run: |
+        php -r "file_exists('.env') || copy('.env.example', '.env');"
+        php artisan key:generate
 
     - name: Gate - automated tests
       env:
@@ -77,3 +82,29 @@ jobs:
         IMAGE_TAG: latest
       run: |
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+    - name: Deploy to EC2 via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin 403602307011.dkr.ecr.ap-southeast-1.amazonaws.com
+          docker pull 403602307011.dkr.ecr.ap-southeast-1.amazonaws.com/auracinema:latest
+          docker stop auracinema-app || true
+          docker rm auracinema-app || true
+          docker run -d \
+            --name auracinema-app \
+            --restart always \
+            --network host \
+            -v /var/auracinema/storage:/var/www/html/storage/app/public \
+            -e DB_CONNECTION=mysql \
+            -e DB_HOST=127.0.0.1 \
+            -e DB_PORT=3306 \
+            -e DB_DATABASE=auracinema \
+            -e DB_USERNAME=aura_user \
+            -e DB_PASSWORD=UserPassword123! \
+            403602307011.dkr.ecr.ap-southeast-1.amazonaws.com/auracinema:latest
+          docker exec auracinema-app php artisan migrate --force || true
+          docker exec auracinema-app php artisan storage:link || true
