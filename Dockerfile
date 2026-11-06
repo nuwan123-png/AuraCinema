@@ -29,32 +29,27 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction
 # Permissions සැකසීම
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Nginx configuration සකස් කිරීම
-RUN mkdir -p /run/nginx
-COPY <<EOF /etc/nginx/http.d/default.conf
-server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
-    root /var/www/html/public;
-    index index.php index.html;
-
-    location / {
-        try_files \$uri \$uri/ /index.php?\$query_string;
-    }
-
-    location ~ \.php$ {
-        fastcgi_pass 127.0.0.1:9000;
-        fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
-        include fastcgi_params;
-    }
-
-    location ~ /\.(?!well-known).* {
-        deny all;
-    }
-}
-EOF
+# Nginx config එක නිවැරදිව සැකසීම (Laravel Routing සක්‍රීය කිරීමට)
+RUN mkdir -p /run/nginx && \
+    rm -f /etc/nginx/http.d/default.conf && \
+    echo 'server {' > /etc/nginx/http.d/default.conf && \
+    echo '    listen 80 default_server;' >> /etc/nginx/http.d/default.conf && \
+    echo '    listen [::]:80 default_server;' >> /etc/nginx/http.d/default.conf && \
+    echo '    root /var/www/html/public;' >> /etc/nginx/http.d/default.conf && \
+    echo '    index index.php index.html;' >> /etc/nginx/http.d/default.conf && \
+    echo '    location / {' >> /etc/nginx/http.d/default.conf && \
+    echo '        try_files $uri $uri/ /index.php?$query_string;' >> /etc/nginx/http.d/default.conf && \
+    echo '    }' >> /etc/nginx/http.d/default.conf && \
+    echo '    location ~ \.php$ {' >> /etc/nginx/http.d/default.conf && \
+    echo '        fastcgi_pass 127.0.0.1:9000;' >> /etc/nginx/http.d/default.conf && \
+    echo '        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;' >> /etc/nginx/http.d/default.conf && \
+    echo '        include fastcgi_params;' >> /etc/nginx/http.d/default.conf && \
+    echo '    }' >> /etc/nginx/http.d/default.conf && \
+    echo '    location ~ /\.(?!well-known).* {' >> /etc/nginx/http.d/default.conf && \
+    echo '        deny all;' >> /etc/nginx/http.d/default.conf && \
+    echo '    }' >> /etc/nginx/http.d/default.conf && \
+    echo '}' >> /etc/nginx/http.d/default.conf
 
 EXPOSE 80
 
-# PHP-FPM සහ Nginx එකවර ධාවනය කිරීම
 CMD php-fpm -D && nginx -g "daemon off;"
