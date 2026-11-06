@@ -30,6 +30,9 @@ class MovieController extends Controller
     /**
      * Store a newly created resource in storage.
      */
+   /**
+     * Store a newly created resource in storage.
+     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -37,6 +40,7 @@ class MovieController extends Controller
             'description' => 'nullable|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'trailer' => 'nullable|mimes:mp4,mkv|max:102400',
+            'stream_url' => 'nullable|url', // <-- මෙම පේළිය අනිවාර්යයෙන්ම එක් කරන්න
         ]);
 
         if ($request->hasFile('image')) {
