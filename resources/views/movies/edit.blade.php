@@ -14,6 +14,7 @@
     <form action="{{ route('movies.update', $movie->id) }}" method="POST" enctype="multipart/form-data" class="space-y-4">
         @csrf
         @method('PUT')
+        
 
         <!-- Title -->
         <div>
