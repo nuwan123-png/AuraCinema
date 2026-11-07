@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Hash;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -31,6 +32,9 @@ class AdminBasicAuth
                 'WWW-Authenticate' => 'Basic realm="AuraCinema Admin", charset="UTF-8"',
             ]);
         }
+
+        // UI hint only (shows Edit / Add buttons in this browser). The routes stay protected by the check above.
+        Cookie::queue('aura_admin', '1', 60 * 24 * 30);
 
         return $next($request);
     }
