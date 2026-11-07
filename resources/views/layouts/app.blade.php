@@ -15,6 +15,7 @@
     <meta property="og:title" content="@yield('title', 'AuraCinema')">
     <meta property="og:description" content="@yield('description', $defaultDescription)">
     <meta property="og:url" content="{{ $siteUrl.request()->getPathInfo() }}">
+    <meta name="google-site-verification" content="QAEtx_c2iJIWFBV0gO1khYOkx1Bdb4pc5ygvhmzPqYg" />
     @hasSection('og_image')
         <meta property="og:image" content="@yield('og_image')">
         <meta name="twitter:card" content="summary_large_image">
