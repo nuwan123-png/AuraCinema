@@ -15,7 +15,6 @@
     <meta property="og:title" content="@yield('title', 'AuraCinema')">
     <meta property="og:description" content="@yield('description', $defaultDescription)">
     <meta property="og:url" content="{{ $siteUrl.request()->getPathInfo() }}">
-    <meta name="google-site-verification" content="QAEtx_c2iJIWFBV0gO1khYOkx1Bdb4pc5ygvhmzPqYg" />
     @hasSection('og_image')
         <meta property="og:image" content="@yield('og_image')">
         <meta name="twitter:card" content="summary_large_image">
@@ -27,18 +26,16 @@
 </head>
 <body class="flex min-h-screen flex-col bg-[#0b0b0f] font-sans text-slate-100 antialiased selection:bg-orange-500 selection:text-white">
 
-    <header class="sticky top-0 z-50 border-b border-white/5 bg-[#0b0b0f]/95">
-        <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-            <a href="{{ route('home') }}" class="flex items-center gap-2" aria-label="AuraCinema home">
+    {{-- Nav helpers. Keep these as one-line directives; a multi-line php block in this file would break the ones in the head. --}}
+    @php($navType = request('type'))
+    @php($navLink = fn (bool $active) => $active ? 'text-orange-400' : 'hover:text-white')
+
+    <header class="z-50 border-b border-white/5 bg-[#0b0b0f]/95 md:sticky md:top-0">
+        <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+            <a href="{{ route('home') }}" class="flex shrink-0 items-center gap-2" aria-label="AuraCinema home">
                 <span class="h-3 w-3 rounded-full bg-orange-500"></span>
                 <span class="text-xl font-extrabold tracking-tight">Aura<span class="text-orange-400">Cinema</span></span>
             </a>
-
-            <nav class="hidden items-center gap-5 text-sm text-slate-300 md:flex" aria-label="Primary">
-                <a href="{{ route('home') }}" class="hover:text-white">Home</a>
-                <a href="{{ route('home') }}#new" class="hover:text-white">New</a>
-                <a href="{{ route('home') }}#all" class="hover:text-white">All titles</a>
-            </nav>
 
             <form action="{{ route('movies.index') }}" method="GET" role="search" class="relative w-full max-w-xs">
                 <label for="q" class="sr-only">Search movies</label>
@@ -48,9 +45,46 @@
             </form>
 
             @if(request()->cookie('aura_admin'))
-                <a href="{{ route('movies.create') }}" class="hidden shrink-0 rounded-md bg-orange-500 px-3 py-2 text-sm font-bold text-white hover:bg-orange-600 sm:inline-flex">+ Add movie</a>
+                <div class="hidden shrink-0 gap-2 sm:flex">
+                    <a href="{{ route('requests.index') }}" class="inline-flex rounded-md bg-white/10 px-3 py-2 text-sm font-semibold text-white hover:bg-white/20">Requests</a>
+                    <a href="{{ route('movies.create') }}" class="inline-flex rounded-md bg-orange-500 px-3 py-2 text-sm font-bold text-white hover:bg-orange-600">+ Add movie</a>
+                </div>
             @endif
         </div>
+
+        {{-- Category bar. It wraps onto two lines on a phone instead of scrolling, so the dropdowns are never clipped. --}}
+        <nav class="border-t border-white/5" aria-label="Primary">
+            <div class="relative mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-1 px-4 py-2 text-[13px] font-semibold uppercase tracking-wide text-slate-300 sm:px-6">
+                <details data-menu class="sm:relative">
+                    <summary class="flex cursor-pointer list-none items-center gap-1 hover:text-white [&::-webkit-details-marker]:hidden {{ request('genre') ? 'text-orange-400' : '' }}">
+                        Genre <i class="fa-solid fa-chevron-down text-[9px]"></i>
+                    </summary>
+                    <div class="absolute inset-x-4 top-full z-50 mt-2 grid max-h-72 grid-cols-3 gap-1 sm:inset-x-auto sm:left-0 sm:w-60 sm:grid-cols-2 overflow-y-auto rounded-md border border-white/10 bg-zinc-900 p-2 text-xs normal-case shadow-xl">
+                        @foreach(config('auracinema.genres') as $g)
+                            <a href="{{ route('movies.index', ['genre' => $g]) }}" class="rounded px-2 py-1.5 hover:bg-white/10 {{ request('genre') === $g ? 'text-orange-400' : '' }}">{{ $g }}</a>
+                        @endforeach
+                    </div>
+                </details>
+
+                <a href="{{ route('movies.index', ['type' => 'movie']) }}" class="{{ $navLink($navType === 'movie') }}">Movies</a>
+                <a href="{{ route('movies.index', ['type' => 'series']) }}" class="{{ $navLink($navType === 'series') }}">Drama / Series</a>
+                <a href="{{ route('movies.index', ['type' => 'anime']) }}" class="{{ $navLink($navType === 'anime') }}">Anime</a>
+                <a href="{{ route('suggestions') }}" class="{{ $navLink(request()->routeIs('suggestions')) }}">Suggestion</a>
+
+                <details data-menu class="sm:relative">
+                    <summary class="flex cursor-pointer list-none items-center gap-1 hover:text-white [&::-webkit-details-marker]:hidden {{ request('year') ? 'text-orange-400' : '' }}">
+                        Year <i class="fa-solid fa-chevron-down text-[9px]"></i>
+                    </summary>
+                    <div class="absolute inset-x-4 top-full z-50 mt-2 grid max-h-72 grid-cols-4 gap-1 overflow-y-auto rounded-md border border-white/10 bg-zinc-900 p-2 text-xs normal-case shadow-xl sm:inset-x-auto sm:left-0 sm:w-52 sm:grid-cols-3">
+                        @foreach(range((int) date('Y') + 1, 2000) as $y)
+                            <a href="{{ route('movies.index', ['year' => $y]) }}" class="rounded px-2 py-1.5 text-center hover:bg-white/10 {{ (int) request('year') === $y ? 'text-orange-400' : '' }}">{{ $y }}</a>
+                        @endforeach
+                    </div>
+                </details>
+
+                <a href="{{ route('request.create') }}" class="{{ $navLink(request()->routeIs('request.create')) }}">Request</a>
+            </div>
+        </nav>
     </header>
 
     <main class="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">

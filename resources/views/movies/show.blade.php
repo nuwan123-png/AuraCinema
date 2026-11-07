@@ -27,6 +27,18 @@
 
         <div class="min-w-0 flex-1">
             <h1 class="mb-2 text-3xl font-extrabold tracking-tight">{{ $movie->title }}</h1>
+            <p class="mb-2 flex flex-wrap items-center gap-2 text-xs">
+                <a href="{{ route('movies.index', ['type' => $movie->type]) }}" class="rounded bg-white/10 px-2 py-1 font-semibold text-slate-200 hover:bg-white/20">{{ $movie->type_label }}</a>
+                @if($movie->genre)
+                    <a href="{{ route('movies.index', ['genre' => $movie->genre]) }}" class="rounded bg-white/10 px-2 py-1 text-slate-200 hover:bg-white/20">{{ $movie->genre }}</a>
+                @endif
+                @if($movie->year)
+                    <a href="{{ route('movies.index', ['year' => $movie->year]) }}" class="rounded bg-white/10 px-2 py-1 text-slate-200 hover:bg-white/20">{{ $movie->year }}</a>
+                @endif
+                @if($movie->episodes->isNotEmpty())
+                    <span class="rounded bg-orange-500/15 px-2 py-1 font-semibold text-orange-300">{{ $movie->episodes->count() }} EPS</span>
+                @endif
+            </p>
             <p class="mb-5 text-xs text-slate-400">Added {{ $movie->created_at->format('d M Y') }}</p>
             <p class="mb-6 max-w-3xl whitespace-pre-line text-sm leading-relaxed text-slate-300">{{ $movie->description ?: 'No synopsis provided.' }}</p>
 
@@ -43,6 +55,22 @@
             @endif
         </div>
     </div>
+
+    @if($movie->episodes->isNotEmpty())
+        {{-- Each tile opens that episode's Telegram link in a new tab. --}}
+        <section class="mb-10" id="episodes">
+            <h2 class="mb-3 border-l-4 border-orange-500 pl-3 text-base font-bold uppercase tracking-wide text-orange-400">Episodes</h2>
+            <div class="grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10">
+                @foreach($movie->episodes as $episode)
+                    <a href="{{ $episode->url }}" target="_blank" rel="noopener noreferrer nofollow"
+                       aria-label="Watch episode {{ $episode->number }}"
+                       class="flex items-center justify-center gap-1.5 rounded-md bg-white/5 py-3 text-sm font-semibold text-slate-200 ring-1 ring-white/5 transition hover:bg-sky-500 hover:text-white">
+                        <i class="fa-brands fa-telegram text-xs text-sky-400"></i>{{ $episode->number }}
+                    </a>
+                @endforeach
+            </div>
+        </section>
+    @endif
 
     <section>
         <h2 class="mb-3 text-base font-bold">Trailer</h2>

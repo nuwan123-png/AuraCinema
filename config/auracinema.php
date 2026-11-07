@@ -12,4 +12,17 @@ return [
     // The address search engines should treat as THE site (canonical URLs, sitemap, share previews).
     // Today: http://18.138.235.17   Later, if you buy a domain: just change SITE_URL, no code change.
     'site_url' => env('SITE_URL', env('APP_URL', 'http://localhost')),
+
+    // What a title can be (the value is stored in movies.type).
+    'types' => [
+        'movie' => 'Movie',
+        'series' => 'Drama / Series',
+        'anime' => 'Anime',
+    ],
+
+    // Genres shown in the navbar dropdown and the add/edit form.
+    'genres' => [
+        'Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Family',
+        'Fantasy', 'Horror', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'War',
+    ],
 ];

@@ -25,7 +25,7 @@ class SeoController extends Controller
     {
         $base = rtrim((string) config('auracinema.site_url'), '/');
 
-        $body = "User-agent: *\nAllow: /\nDisallow: /movies/create\nDisallow: /movies/*/edit\nDisallow: /*?q=\n\nSitemap: {$base}/sitemap.xml\n";
+        $body = "User-agent: *\nAllow: /\nDisallow: /movies/create\nDisallow: /movies/*/edit\nDisallow: /*?q=\nDisallow: /*?type=\nDisallow: /*?genre=\nDisallow: /*?year=\nDisallow: /suggestions\nDisallow: /requests\n\nSitemap: {$base}/sitemap.xml\n";
 
         return response($body, 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
     }

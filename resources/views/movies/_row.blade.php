@@ -1,4 +1,4 @@
-<section class="mb-8" data-row @isset($anchor) id="{{ $anchor }}" @endisset>
+<section class="mb-8" data-row @if(!empty($auto)) data-auto @endif @isset($anchor) id="{{ $anchor }}" @endisset>
     <div class="mb-3 flex items-center justify-between">
         <h2 class="text-base font-bold text-white sm:text-lg">{{ $title }}</h2>
         <div class="hidden gap-1 sm:flex">

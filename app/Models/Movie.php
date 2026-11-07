@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Movie extends Model
 {
@@ -15,7 +16,21 @@ class Movie extends Model
         'image',
         'trailer_url',
         'stream_url',
+        'type',
+        'genre',
+        'year',
     ];
+
+    /** Episodes of a series, in order (episode 1 first). */
+    public function episodes(): HasMany
+    {
+        return $this->hasMany(Episode::class)->orderBy('number');
+    }
+
+    public function getTypeLabelAttribute(): string
+    {
+        return (string) config('auracinema.types.'.$this->type, 'Movie');
+    }
 
     public function getPosterUrlAttribute(): ?string
     {
@@ -34,7 +49,7 @@ class Movie extends Model
 
         return json_encode(array_filter([
             '@context' => 'https://schema.org',
-            '@type' => 'Movie',
+            '@type' => $this->type === 'movie' ? 'Movie' : 'TVSeries',
             'name' => $this->title,
             'description' => $this->description,
             'image' => $this->image ? $base.'/storage/'.$this->image : null,

@@ -10,6 +10,9 @@
         @if($movie->stream_url)
             <span class="absolute right-1.5 top-1.5 rounded bg-sky-500 px-1.5 py-0.5 text-[9px] font-bold text-white">FULL</span>
         @endif
+        @if(($movie->episodes_count ?? 0) > 0)
+            <span class="absolute left-1.5 top-1.5 rounded bg-black/75 px-1.5 py-0.5 text-[9px] font-bold text-white ring-1 ring-white/20">{{ $movie->episodes_count }} EPS</span>
+        @endif
     </div>
     <p class="mt-2 line-clamp-1 text-xs font-medium text-slate-300 group-hover:text-white">{{ $movie->title }}</p>
 </a>
