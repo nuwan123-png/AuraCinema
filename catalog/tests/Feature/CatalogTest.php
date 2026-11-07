@@ -1,0 +1,135 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Movie;
+use App\Models\MovieRequest;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
+use Tests\TestCase;
+
+class CatalogTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private function admin(): array
+    {
+        config(['auracinema.admin_user' => 'nuwan', 'auracinema.admin_password_hash' => Hash::make('secret-pass')]);
+
+        return ['Authorization' => 'Basic '.base64_encode('nuwan:secret-pass')];
+    }
+
+    public function test_layout_renders_the_head_and_the_category_navbar(): void
+    {
+        // Guards against Blade swallowing part of the layout (it once dropped the whole <head> tail).
+        $this->get('/')->assertOk()
+            ->assertSee('<link rel="canonical"', false)
+            ->assertSee('aria-label="Primary"', false)
+            ->assertSee('Drama / Series')
+            ->assertSee('Suggestion')
+            ->assertSee('Request');
+    }
+
+    public function test_admin_page_sets_the_cookie_that_shows_the_edit_button(): void
+    {
+        $this->withHeaders($this->admin())->get('/movies/create')->assertOk()->assertCookie('aura_admin');
+    }
+
+    public function test_edit_button_only_shows_with_the_admin_cookie(): void
+    {
+        $movie = Movie::create(['title' => 'Inception']);
+
+        $this->get('/movies/'.$movie->id)->assertOk()->assertDontSee('/movies/'.$movie->id.'/edit');
+        $this->withCookie('aura_admin', '1')->get('/movies/'.$movie->id)->assertOk()->assertSee('/movies/'.$movie->id.'/edit');
+    }
+
+    public function test_series_is_saved_with_its_episode_links(): void
+    {
+        $this->withHeaders($this->admin())->post('/movies', [
+            'title' => 'My Show',
+            'type' => 'series',
+            'genre' => 'Drama',
+            'year' => 2026,
+            'has_episodes' => '1',
+            'episodes' => [
+                ['number' => 1, 'url' => 'https://t.me/ep1'],
+                ['number' => 2, 'url' => 'https://t.me/ep2'],
+                ['number' => '', 'url' => ''], // empty row is ignored
+            ],
+        ])->assertRedirect();
+
+        $movie = Movie::firstOrFail();
+        $this->assertSame('series', $movie->type);
+        $this->assertSame(2, $movie->episodes()->count());
+
+        $this->get('/movies/'.$movie->id)->assertOk()->assertSee('Watch episode 2')->assertSee('https://t.me/ep2');
+        $this->get('/')->assertOk()->assertSee('2 EPS');
+    }
+
+    public function test_episode_numbers_must_be_unique(): void
+    {
+        $this->withHeaders($this->admin())->post('/movies', [
+            'title' => 'Dup Show',
+            'type' => 'series',
+            'has_episodes' => '1',
+            'episodes' => [
+                ['number' => 1, 'url' => 'https://t.me/a'],
+                ['number' => 1, 'url' => 'https://t.me/b'],
+            ],
+        ])->assertSessionHasErrors('episodes');
+
+        $this->assertSame(0, Movie::count());
+    }
+
+    public function test_episodes_are_ignored_when_the_box_is_not_ticked(): void
+    {
+        $this->withHeaders($this->admin())->post('/movies', [
+            'title' => 'Single Film',
+            'has_episodes' => '0',
+            'stream_url' => 'https://t.me/film',
+            'episodes' => [['number' => 1, 'url' => 'https://t.me/ignored']],
+        ])->assertRedirect();
+
+        $movie = Movie::firstOrFail();
+        $this->assertSame('movie', $movie->type);
+        $this->assertSame('https://t.me/film', $movie->stream_url);
+        $this->assertSame(0, $movie->episodes()->count());
+    }
+
+    public function test_navbar_filters_by_type_genre_and_year(): void
+    {
+        Movie::create(['title' => 'Drama Show', 'type' => 'series', 'genre' => 'Drama', 'year' => 2026]);
+        Movie::create(['title' => 'Action Film', 'type' => 'movie', 'genre' => 'Action', 'year' => 2020]);
+
+        $this->get('/movies?type=series')->assertOk()->assertSee('Drama Show')->assertDontSee('Action Film');
+        $this->get('/movies?genre=Action')->assertOk()->assertSee('Action Film')->assertDontSee('Drama Show');
+        $this->get('/movies?year=2026')->assertOk()->assertSee('Drama Show')->assertDontSee('Action Film');
+        $this->get('/suggestions')->assertOk()->assertSee('Drama Show')->assertSee('Action Film');
+    }
+
+    public function test_visitors_can_send_a_request_and_only_the_admin_can_read_them(): void
+    {
+        $this->post('/request', ['title' => 'Some Movie', 'note' => 'please'])->assertRedirect(route('home'));
+        $this->assertSame(1, MovieRequest::count());
+
+        $headers = $this->admin();
+
+        $this->get('/requests')->assertStatus(401);
+        $this->withHeaders($headers)->get('/requests')->assertOk()->assertSee('Some Movie');
+    }
+
+    public function test_request_honeypot_blocks_bots(): void
+    {
+        $this->post('/request', ['title' => 'Spam', 'website' => 'http://spam.example'])->assertSessionHasErrors('website');
+        $this->assertSame(0, MovieRequest::count());
+    }
+
+    public function test_sitemap_and_robots_use_the_site_url(): void
+    {
+        config(['auracinema.site_url' => 'http://example.test']);
+        $movie = Movie::create(['title' => 'Inception']);
+
+        $this->get('/sitemap.xml')->assertOk()->assertSee('http://example.test/movies/'.$movie->id);
+        $this->get('/robots.txt')->assertOk()->assertSee('Sitemap: http://example.test/sitemap.xml');
+    }
+}

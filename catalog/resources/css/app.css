@@ -1,0 +1,38 @@
+@import 'tailwindcss';
+@import '@fortawesome/fontawesome-free/css/fontawesome.css';
+@import '@fortawesome/fontawesome-free/css/solid.css';
+@import '@fortawesome/fontawesome-free/css/brands.css';
+
+@theme {
+    --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Sinhala', sans-serif;
+}
+
+/* Hide the horizontal scrollbar on the movie rows (they scroll by touch / arrows). */
+.row-track { scrollbar-width: none; }
+.row-track::-webkit-scrollbar { display: none; }
+
+/* ---- Hero carousel ----
+   Slides stack in ONE grid cell (the cell grows to the tallest slide, so nothing jumps). Only opacity and
+   transform animate, which the browser does on the GPU without re-laying-out the page. */
+.hero-stage { display: grid; }
+.hero-slide {
+    grid-area: 1 / 1;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(3rem);
+    transition: opacity 0.7s ease, transform 0.7s ease, visibility 0s linear 0.7s;
+}
+.hero-slide.is-prev { transform: translateX(-3rem); }
+.hero-slide.is-active { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+
+.hero-bar { transform: scaleX(0); transform-origin: left; }
+.hero-bar.run { animation: hero-bar 6s linear forwards; }
+[data-hero]:hover .hero-bar.run,
+[data-hero]:focus-within .hero-bar.run,
+[data-hero].is-paused .hero-bar.run { animation-play-state: paused; }
+@keyframes hero-bar { to { transform: scaleX(1); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-slide { transition: none; }
+    .hero-bar { display: none; }
+}
