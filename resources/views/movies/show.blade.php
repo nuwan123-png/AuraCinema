@@ -1,6 +1,14 @@
 @extends('layouts.app')
 
 @section('title', $movie->title)
+@section('description', \Illuminate\Support\Str::limit(strip_tags($movie->description ?: 'Watch the trailer and details for '.$movie->title.' on AuraCinema.'), 155))
+@section('og_type', 'video.movie')
+@if($movie->image)
+    @section('og_image', rtrim((string) config('auracinema.site_url'), '/').'/storage/'.$movie->image)
+@endif
+@push('jsonld')
+    <script type="application/ld+json">{!! $movie->json_ld !!}</script>
+@endpush
 
 @section('content')
     <nav class="mb-5 text-xs text-slate-400" aria-label="Breadcrumb">
@@ -12,6 +20,8 @@
         <div class="aspect-[2/3] w-44 shrink-0 self-center overflow-hidden rounded-lg bg-zinc-900 ring-1 ring-white/10 md:self-start">
             @if($movie->image)
                 <img src="{{ $movie->poster_url }}" alt="{{ $movie->title }}" width="480" height="720" fetchpriority="high" decoding="async" class="h-full w-full object-cover">
+            @else
+                <div class="flex h-full w-full items-center justify-center px-3 text-center text-sm text-slate-500">No poster</div>
             @endif
         </div>
 
@@ -26,7 +36,11 @@
                     <i class="fa-brands fa-telegram"></i> Watch full movie
                 </a>
             @endif
-            <a href="{{ route('movies.edit', $movie) }}" class="ml-2 text-xs text-slate-500 hover:text-slate-300">Manage</a>
+            @if(request()->cookie('aura_admin'))
+                <a href="{{ route('movies.edit', $movie) }}" class="ml-2 inline-flex items-center gap-2 rounded-md bg-orange-500 px-5 py-2.5 text-sm font-bold text-white hover:bg-orange-600">
+                    <i class="fa-solid fa-pen-to-square"></i> Edit
+                </a>
+            @endif
         </div>
     </div>
 

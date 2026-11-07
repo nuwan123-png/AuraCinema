@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @section('title', $q !== '' ? 'Search: '.$q : 'AuraCinema')
+@section('robots', $q !== '' ? 'noindex,follow' : 'index,follow')
 
 @section('content')
 

@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Edit '.$movie->title)
+@section('robots', 'noindex,nofollow')
 
 @section('content')
 <div class="mx-auto my-6 max-w-xl rounded-xl border border-white/10 bg-zinc-900/60 p-6 sm:p-8">

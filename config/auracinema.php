@@ -8,4 +8,8 @@ return [
 
     // Basic auth sends the password with every request - never allow it over plain HTTP in production.
     'admin_require_https' => (bool) env('ADMIN_REQUIRE_HTTPS', true),
+
+    // The address search engines should treat as THE site (canonical URLs, sitemap, share previews).
+    // Today: http://18.138.235.17   Later, if you buy a domain: just change SITE_URL, no code change.
+    'site_url' => env('SITE_URL', env('APP_URL', 'http://localhost')),
 ];
