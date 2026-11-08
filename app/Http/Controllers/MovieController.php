@@ -5,9 +5,27 @@ namespace App\Http\Controllers;
 use App\Models\Movie;
 use App\Support\EmbedUrl;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\View;
 
 class MovieController extends Controller
 {
+    public function __construct()
+    {
+        // Navbar එකේ සහ layout එකේ foreach එකකට අවශ්‍ය විය හැකි සියලුම collections null වීම වැළැක්වීමට
+        View::share([
+            'genres' => collect(),
+            'categories' => collect(),
+            'navLinks' => collect(),
+            'navItems' => collect(),
+            'tags' => collect(),
+            'years' => collect(),
+            'menu' => collect(),
+            'items' => collect(),
+            'links' => collect(),
+            'sections' => collect(),
+        ]);
+    }
+
     public function index(Request $request)
     {
         $query = Movie::query();
@@ -18,20 +36,18 @@ class MovieController extends Controller
 
         $movies = $query->latest()->paginate(12)->withQueryString();
 
-        // View එකේ ඉල්ලා සිටින $heroes සහ $latest variables
+        // Index view එකේ බලාපොරොත්තු වන සියලුම collections
         $heroes = Movie::inRandomOrder()->take(5)->get();
         $latest = Movie::latest()->take(10)->get();
+        $withTrailers = Movie::whereNotNull('trailer_path')->latest()->take(10)->get();
 
-        return view('movies.index', compact('movies', 'heroes', 'latest'));
+        return view('movies.index', compact('movies', 'heroes', 'latest', 'withTrailers'));
     }
 
     public function create()
     {
         $movie = new Movie();
-        return view('movies.create', [
-            'movie' => $movie,
-            'genres' => [], // Navbar එකේ foreach null වීම වැළැක්වීමට
-        ]);
+        return view('movies.create', compact('movie'));
     }
 
     public function store(Request $request)
@@ -64,10 +80,7 @@ class MovieController extends Controller
 
     public function edit(Movie $movie)
     {
-        return view('movies.edit', [
-            'movie' => $movie,
-            'genres' => [],
-        ]);
+        return view('movies.edit', compact('movie'));
     }
 
     public function update(Request $request, Movie $movie)
