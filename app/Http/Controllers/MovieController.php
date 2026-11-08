@@ -11,6 +11,7 @@ class MovieController extends Controller
     public function index(Request $request)
     {
         $query = Movie::query();
+        $isSearching = $request->filled('q') || $request->filled('genre');
 
         if ($request->filled('q')) {
             $query->where('title', 'like', '%' . $request->input('q') . '%');
@@ -20,12 +21,14 @@ class MovieController extends Controller
             $query->where('genre', $request->input('genre'));
         }
 
-        $movies       = $query->latest()->paginate(12)->withQueryString();
-        $all          = $movies; // _pager.blade.php සඳහා paginator instance එක
-        $heroes       = Movie::inRandomOrder()->take(5)->get();
-        $latest       = Movie::latest()->take(10)->get();
-        $withTrailers = Movie::whereNotNull('trailer_path')->latest()->take(10)->get();
-        $fullMovies   = Movie::where(function ($q) {
+        $movies = $query->latest()->paginate(12)->withQueryString();
+        $all    = $movies;
+
+        // සෙවීමක් සිදු වන විට Interstellar වැනි අනෙකුත් චිත්‍රපට පිටුවේ පෙන්වීම වැළැක්වීමට හිස් collection ලබා දීම
+        $heroes       = $isSearching ? collect() : Movie::inRandomOrder()->take(5)->get();
+        $latest       = $isSearching ? collect() : Movie::latest()->take(10)->get();
+        $withTrailers = $isSearching ? collect() : Movie::whereNotNull('trailer_path')->latest()->take(10)->get();
+        $fullMovies   = $isSearching ? collect() : Movie::where(function ($q) {
             $q->whereNotNull('stream_url')->orWhereNotNull('embed_url');
         })->latest()->take(10)->get();
 
