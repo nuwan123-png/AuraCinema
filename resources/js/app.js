@@ -162,9 +162,7 @@ document.querySelectorAll('[data-embed-load]').forEach((button) => {
         frame.className = 'aspect-video w-full rounded-lg bg-black ring-1 ring-white/10 md:aspect-auto md:h-[500px]';
         frame.allowFullscreen = true;
         frame.allow = 'autoplay; fullscreen; picture-in-picture; encrypted-media';
-        frame.referrerPolicy = 'strict-origin-when-cross-origin';
-        // Keeps the player from navigating or taking over the page it is embedded in.
-        frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox');
+        frame.referrerPolicy = 'no-referrer';
         button.replaceWith(frame);
     });
 });
