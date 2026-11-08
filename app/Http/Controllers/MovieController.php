@@ -104,19 +104,17 @@ class MovieController extends Controller
             $validated['stream_url'] = trim($validated['stream_url']);
         }
 
-        Movie::create($validated);
+        // Database එකේ සැබවින්ම පවතින columns වලට පමණක් insert කිරීම
+        $dataToSave = [];
+        foreach ($validated as $column => $value) {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('movies', $column)) {
+                $dataToSave[$column] = $value;
+            }
+        }
+
+        Movie::create($dataToSave);
 
         return redirect()->route('movies.index')->with('success', 'Movie created successfully.');
-    }
-
-    public function show(Request $request, Movie $movie)
-    {
-        return view('movies.show', $this->getViewData($request, compact('movie')));
-    }
-
-    public function edit(Request $request, Movie $movie)
-    {
-        return view('movies.edit', $this->getViewData($request, compact('movie')));
     }
 
     public function update(Request $request, Movie $movie)
@@ -139,10 +137,28 @@ class MovieController extends Controller
             $validated['stream_url'] = $validated['stream_url'] ? trim($validated['stream_url']) : null;
         }
 
-        $movie->update($validated);
+        $dataToUpdate = [];
+        foreach ($validated as $column => $value) {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('movies', $column)) {
+                $dataToUpdate[$column] = $value;
+            }
+        }
+
+        $movie->update($dataToUpdate);
 
         return redirect()->route('movies.show', $movie)->with('success', 'Movie updated successfully.');
     }
+
+    public function show(Request $request, Movie $movie)
+    {
+        return view('movies.show', $this->getViewData($request, compact('movie')));
+    }
+
+    public function edit(Request $request, Movie $movie)
+    {
+        return view('movies.edit', $this->getViewData($request, compact('movie')));
+    }
+
 
     public function destroy(Movie $movie)
     {
