@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Schema;
 class MovieController extends Controller
 {
     /**
-     * Views සහ Navbar layout එකට අවශ්‍ය shared helpers සහ data ලබා දීම
+     * Views සහ Layout එකට අවශ්‍ය shared helpers සහ data ලබා දීම
      */
     protected function getViewData(Request $request, array $extra = []): array
     {
@@ -56,8 +56,8 @@ class MovieController extends Controller
             $heroes = Movie::inRandomOrder()->take(5)->get();
             $latest = Movie::latest()->take(10)->get();
 
-            $withTrailers = Schema::hasColumn('movies', 'trailer_path')
-                ? Movie::whereNotNull('trailer_path')->latest()->take(10)->get()
+            $withTrailers = Schema::hasColumn('movies', 'trailer_url')
+                ? Movie::whereNotNull('trailer_url')->latest()->take(10)->get()
                 : collect();
 
             $fullMovies = Movie::where(function ($q) {
@@ -104,17 +104,44 @@ class MovieController extends Controller
             $validated['stream_url'] = trim($validated['stream_url']);
         }
 
-        // Database එකේ සැබවින්ම පවතින columns වලට පමණක් insert කිරීම
-        $dataToSave = [];
-        foreach ($validated as $column => $value) {
-            if (\Illuminate\Support\Facades\Schema::hasColumn('movies', $column)) {
-                $dataToSave[$column] = $value;
+        // Database එකේ සැබවින්ම පවතින columns වලට දත්ත map කිරීම
+        $columns = Schema::getColumnListing('movies');
+        $dataToInsert = [];
+
+        foreach ($validated as $key => $value) {
+            if (in_array($key, $columns)) {
+                $dataToInsert[$key] = $value;
             }
         }
 
-        Movie::create($dataToSave);
+        // Form එකේ release_year දත්තය database එකේ 'year' column එකට දැමීම
+        if (in_array('year', $columns) && !empty($validated['release_year'])) {
+            $dataToInsert['year'] = $validated['release_year'];
+        }
+
+        // Form එකේ trailer_path දත්තය database එකේ 'trailer_url' column එකට දැමීම
+        if (in_array('trailer_url', $columns) && !empty($validated['trailer_path'])) {
+            $dataToInsert['trailer_url'] = $validated['trailer_path'];
+        }
+
+        // Form එකේ poster_path දත්තය database එකේ 'image' column එකට දැමීම
+        if (in_array('image', $columns) && !empty($validated['poster_path'])) {
+            $dataToInsert['image'] = $validated['poster_path'];
+        }
+
+        Movie::create($dataToInsert);
 
         return redirect()->route('movies.index')->with('success', 'Movie created successfully.');
+    }
+
+    public function show(Request $request, Movie $movie)
+    {
+        return view('movies.show', $this->getViewData($request, compact('movie')));
+    }
+
+    public function edit(Request $request, Movie $movie)
+    {
+        return view('movies.edit', $this->getViewData($request, compact('movie')));
     }
 
     public function update(Request $request, Movie $movie)
@@ -137,28 +164,31 @@ class MovieController extends Controller
             $validated['stream_url'] = $validated['stream_url'] ? trim($validated['stream_url']) : null;
         }
 
+        $columns = Schema::getColumnListing('movies');
         $dataToUpdate = [];
-        foreach ($validated as $column => $value) {
-            if (\Illuminate\Support\Facades\Schema::hasColumn('movies', $column)) {
-                $dataToUpdate[$column] = $value;
+
+        foreach ($validated as $key => $value) {
+            if (in_array($key, $columns)) {
+                $dataToUpdate[$key] = $value;
             }
+        }
+
+        if (in_array('year', $columns) && array_key_exists('release_year', $validated)) {
+            $dataToUpdate['year'] = $validated['release_year'];
+        }
+
+        if (in_array('trailer_url', $columns) && array_key_exists('trailer_path', $validated)) {
+            $dataToUpdate['trailer_url'] = $validated['trailer_path'];
+        }
+
+        if (in_array('image', $columns) && array_key_exists('poster_path', $validated)) {
+            $dataToUpdate['image'] = $validated['poster_path'];
         }
 
         $movie->update($dataToUpdate);
 
         return redirect()->route('movies.show', $movie)->with('success', 'Movie updated successfully.');
     }
-
-    public function show(Request $request, Movie $movie)
-    {
-        return view('movies.show', $this->getViewData($request, compact('movie')));
-    }
-
-    public function edit(Request $request, Movie $movie)
-    {
-        return view('movies.edit', $this->getViewData($request, compact('movie')));
-    }
-
 
     public function destroy(Movie $movie)
     {
