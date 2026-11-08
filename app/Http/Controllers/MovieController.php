@@ -8,29 +8,6 @@ use Illuminate\Http\Request;
 
 class MovieController extends Controller
 {
-    /**
-     * Views වලට සහ Navbar layout එකට අවශ්‍ය සියලුම collections එක්වර ලබා දීම
-     */
-    protected function getViewData(array $extra = []): array
-    {
-        $all = Movie::latest()->get();
-
-        return array_merge([
-            'movies'       => $all,
-            'all'          => $all,
-            'heroes'       => Movie::inRandomOrder()->take(5)->get(),
-            'latest'       => Movie::latest()->take(10)->get(),
-            'withTrailers' => Movie::whereNotNull('trailer_path')->latest()->take(10)->get(),
-            'fullMovies'   => Movie::where(function ($q) {
-                $q->whereNotNull('stream_url')->orWhereNotNull('embed_url');
-            })->latest()->take(10)->get(),
-            'genres'       => collect(),
-            'categories'   => collect(),
-            'navLinks'     => collect(),
-            'navItems'     => collect(),
-        ], $extra);
-    }
-
     public function index(Request $request)
     {
         $query = Movie::query();
@@ -39,19 +16,33 @@ class MovieController extends Controller
             $query->where('title', 'like', '%' . $request->input('q') . '%');
         }
 
-        $movies = $query->latest()->paginate(12)->withQueryString();
+        if ($request->filled('genre')) {
+            $query->where('genre', $request->input('genre'));
+        }
 
-        return view('movies.index', $this->getViewData([
-            'movies' => $movies,
-        ]));
+        $movies       = $query->latest()->paginate(12)->withQueryString();
+        $all          = $movies; // _pager.blade.php සඳහා paginator instance එක
+        $heroes       = Movie::inRandomOrder()->take(5)->get();
+        $latest       = Movie::latest()->take(10)->get();
+        $withTrailers = Movie::whereNotNull('trailer_path')->latest()->take(10)->get();
+        $fullMovies   = Movie::where(function ($q) {
+            $q->whereNotNull('stream_url')->orWhereNotNull('embed_url');
+        })->latest()->take(10)->get();
+
+        return view('movies.index', compact(
+            'movies',
+            'all',
+            'heroes',
+            'latest',
+            'withTrailers',
+            'fullMovies'
+        ));
     }
 
     public function create()
     {
         $movie = new Movie();
-        return view('movies.create', $this->getViewData([
-            'movie' => $movie,
-        ]));
+        return view('movies.create', compact('movie'));
     }
 
     public function store(Request $request)
@@ -79,16 +70,12 @@ class MovieController extends Controller
 
     public function show(Movie $movie)
     {
-        return view('movies.show', $this->getViewData([
-            'movie' => $movie,
-        ]));
+        return view('movies.show', compact('movie'));
     }
 
     public function edit(Movie $movie)
     {
-        return view('movies.edit', $this->getViewData([
-            'movie' => $movie,
-        ]));
+        return view('movies.edit', compact('movie'));
     }
 
     public function update(Request $request, Movie $movie)
