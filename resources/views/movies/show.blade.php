@@ -92,17 +92,18 @@
     </section>
 
     @if($movie->embed_url)
-        {{-- Nothing from the player host is loaded until the visitor clicks. app.js builds the iframe then. --}}
         <section class="mt-10" id="watch">
             <h2 class="mb-3 text-base font-bold">Watch now</h2>
-            <div data-embed class="mx-auto w-full max-w-4xl">
-                <button type="button" data-embed-load data-embed-src="{{ $movie->embed_url }}" data-embed-title="{{ $movie->title }}"
-                        class="grid aspect-video w-full place-items-center rounded-lg bg-black ring-1 ring-white/10 transition hover:ring-orange-400/60"
-                        aria-label="Load the player for {{ $movie->title }}">
-                    <span class="flex items-center gap-2 rounded-full bg-orange-500 px-7 py-3 text-sm font-bold text-white">
-                        <i class="fa-solid fa-play"></i> Watch now
-                    </span>
-                </button>
+            <div class="relative mx-auto aspect-video w-full max-w-4xl overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
+                <iframe 
+                    src="{{ $movie->embed_url }}" 
+                    title="{{ $movie->title }}"
+                    class="absolute inset-0 h-full w-full border-0" 
+                    allowfullscreen 
+                    allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                    referrerpolicy="no-referrer"
+                    scrolling="no">
+                </iframe>
             </div>
         </section>
     @endif
