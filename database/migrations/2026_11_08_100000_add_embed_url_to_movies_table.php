@@ -10,7 +10,7 @@ return new class extends Migration
     {
         if (!Schema::hasColumn('movies', 'embed_url')) {
             Schema::table('movies', function (Blueprint $table) {
-                $table->text('embed_url')->nullable()->after('trailer_path');
+                $table->text('embed_url')->nullable();
             });
         }
     }
