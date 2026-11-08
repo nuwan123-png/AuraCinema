@@ -6,7 +6,6 @@ class EmbedUrl
 {
     /**
      * Normalize and validate an embed URL or iframe snippet.
-     * Returns a valid iframe embed src URL or null if invalid/unsupported.
      */
     public static function normalize(?string $input): ?string
     {
@@ -16,8 +15,8 @@ class EmbedUrl
 
         $input = trim($input);
 
-        // Extract src if full iframe is pasted
-        if (preg_match('/<iframe[^>]+src=["']([^"']+)["']/i', $input, $matches)) {
+        // Extract src if full iframe tag is pasted
+        if (preg_match('#<iframe[^>]+src=["\']([^"\']+)["\']#i', $input, $matches)) {
             $input = $matches[1];
         }
 
@@ -70,22 +69,12 @@ class EmbedUrl
         }
 
         // 4. Cloudflare Stream
-        if (in_array($host, ['cloudflarestream.com', 'watch.cloudflarestream.com'])) {
-            if (preg_match('~/([a-zA-Z0-9]+)/iframe~', $path)) {
-                return $input;
-            }
-            $id = trim($path, '/');
-            if (!empty($id)) {
-                return 'https://iframe.videodelivery.net/' . $id;
-            }
-        }
-        if ($host === 'iframe.videodelivery.net') {
+        if (in_array($host, ['cloudflarestream.com', 'watch.cloudflarestream.com', 'iframe.videodelivery.net'])) {
             return $input;
         }
 
         // 5. Streamtape
         if (in_array($host, ['streamtape.com', 'www.streamtape.com', 'streamtape.to', 'streamtape.net'])) {
-            // Check for /e/ID (embed) or /v/ID (view/download)
             if (preg_match('~/(?:e|v)/([a-zA-Z0-9_-]+)~', $path, $m)) {
                 return 'https://streamtape.com/e/' . $m[1];
             }
