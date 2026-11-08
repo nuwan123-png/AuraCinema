@@ -5,47 +5,85 @@ namespace App\Http\Controllers;
 use App\Models\Movie;
 use App\Support\EmbedUrl;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class MovieController extends Controller
 {
+    /**
+     * Views සහ Navbar layout එකට අවශ්‍ය shared helpers සහ data ලබා දීම
+     */
+    protected function getViewData(Request $request, array $extra = []): array
+    {
+        $navType = $request->input('type');
+        $navLink = function (bool $active): string {
+            return $active
+                ? 'text-orange-400 font-semibold px-2 py-1'
+                : 'text-zinc-300 hover:text-white px-2 py-1 transition';
+        };
+
+        return array_merge([
+            'navType' => $navType,
+            'navLink' => $navLink,
+        ], $extra);
+    }
+
     public function index(Request $request)
     {
         $query = Movie::query();
-        $isSearching = $request->filled('q') || $request->filled('genre');
+        $isSearching = $request->filled('q') || $request->filled('genre') || $request->filled('type');
 
         if ($request->filled('q')) {
             $query->where('title', 'like', '%' . $request->input('q') . '%');
         }
 
-        if ($request->filled('genre')) {
+        if ($request->filled('genre') && Schema::hasColumn('movies', 'genre')) {
             $query->where('genre', $request->input('genre'));
+        }
+
+        if ($request->filled('type') && Schema::hasColumn('movies', 'type')) {
+            $query->where('type', $request->input('type'));
         }
 
         $movies = $query->latest()->paginate(12)->withQueryString();
         $all    = $movies;
 
-        // සෙවීමක් සිදු වන විට Interstellar වැනි අනෙකුත් චිත්‍රපට පිටුවේ පෙන්වීම වැළැක්වීමට හිස් collection ලබා දීම
-        $heroes       = $isSearching ? collect() : Movie::inRandomOrder()->take(5)->get();
-        $latest       = $isSearching ? collect() : Movie::latest()->take(10)->get();
-        $withTrailers = $isSearching ? collect() : Movie::whereNotNull('trailer_path')->latest()->take(10)->get();
-        $fullMovies   = $isSearching ? collect() : Movie::where(function ($q) {
-            $q->whereNotNull('stream_url')->orWhereNotNull('embed_url');
-        })->latest()->take(10)->get();
+        if ($isSearching) {
+            $heroes       = collect();
+            $latest       = collect();
+            $withTrailers = collect();
+            $fullMovies   = collect();
+        } else {
+            $heroes = Movie::inRandomOrder()->take(5)->get();
+            $latest = Movie::latest()->take(10)->get();
 
-        return view('movies.index', compact(
+            $withTrailers = Schema::hasColumn('movies', 'trailer_path')
+                ? Movie::whereNotNull('trailer_path')->latest()->take(10)->get()
+                : collect();
+
+            $fullMovies = Movie::where(function ($q) {
+                if (Schema::hasColumn('movies', 'stream_url')) {
+                    $q->whereNotNull('stream_url');
+                }
+                if (Schema::hasColumn('movies', 'embed_url')) {
+                    $q->orWhereNotNull('embed_url');
+                }
+            })->latest()->take(10)->get();
+        }
+
+        return view('movies.index', $this->getViewData($request, compact(
             'movies',
             'all',
             'heroes',
             'latest',
             'withTrailers',
             'fullMovies'
-        ));
+        )));
     }
 
-    public function create()
+    public function create(Request $request)
     {
         $movie = new Movie();
-        return view('movies.create', compact('movie'));
+        return view('movies.create', $this->getViewData($request, compact('movie')));
     }
 
     public function store(Request $request)
@@ -71,14 +109,14 @@ class MovieController extends Controller
         return redirect()->route('movies.index')->with('success', 'Movie created successfully.');
     }
 
-    public function show(Movie $movie)
+    public function show(Request $request, Movie $movie)
     {
-        return view('movies.show', compact('movie'));
+        return view('movies.show', $this->getViewData($request, compact('movie')));
     }
 
-    public function edit(Movie $movie)
+    public function edit(Request $request, Movie $movie)
     {
-        return view('movies.edit', compact('movie'));
+        return view('movies.edit', $this->getViewData($request, compact('movie')));
     }
 
     public function update(Request $request, Movie $movie)
