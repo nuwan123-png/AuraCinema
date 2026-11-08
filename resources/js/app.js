@@ -1,5 +1,3 @@
-import './bootstrap';
-
 document.addEventListener('DOMContentLoaded', () => {
     const watchTrigger = document.getElementById('watch-now-trigger');
     const playerWrapper = document.getElementById('watch-now-player-wrapper');
