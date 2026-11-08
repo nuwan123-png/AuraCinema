@@ -8,9 +8,6 @@ use Illuminate\Http\Request;
 
 class MovieController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request)
     {
         $query = Movie::query();
@@ -21,29 +18,26 @@ class MovieController extends Controller
 
         $movies = $query->latest()->paginate(12)->withQueryString();
 
-        // Testing suite එකේ බලාපොරොත්තු වන $heroes variable එක (featured movies හෝ empty collection එකක්)
+        // View එකේ ඉල්ලා සිටින $heroes සහ $latest variables
         $heroes = Movie::inRandomOrder()->take(5)->get();
+        $latest = Movie::latest()->take(10)->get();
 
-        return view('movies.index', compact('movies', 'heroes'));
+        return view('movies.index', compact('movies', 'heroes', 'latest'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         $movie = new Movie();
-        return view('movies.create', compact('movie'));
+        return view('movies.create', [
+            'movie' => $movie,
+            'genres' => [], // Navbar එකේ foreach null වීම වැළැක්වීමට
+        ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $validated = $this->validateMovie($request);
 
-        // Normalize embed_url if present
         if (!empty($validated['embed_url'])) {
             $normalized = EmbedUrl::normalize($validated['embed_url']);
             if (!$normalized) {
@@ -54,7 +48,6 @@ class MovieController extends Controller
             $validated['embed_url'] = $normalized;
         }
 
-        // Project tests වල stream_url අගය ඇත්නම් එය ආරක්ෂා කර ගැනීම
         if (!empty($validated['stream_url'])) {
             $validated['stream_url'] = trim($validated['stream_url']);
         }
@@ -64,25 +57,19 @@ class MovieController extends Controller
         return redirect()->route('movies.index')->with('success', 'Movie created successfully.');
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(Movie $movie)
     {
         return view('movies.show', compact('movie'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(Movie $movie)
     {
-        return view('movies.edit', compact('movie'));
+        return view('movies.edit', [
+            'movie' => $movie,
+            'genres' => [],
+        ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Movie $movie)
     {
         $validated = $this->validateMovie($request, $movie->id);
@@ -108,9 +95,6 @@ class MovieController extends Controller
         return redirect()->route('movies.show', $movie)->with('success', 'Movie updated successfully.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Movie $movie)
     {
         $movie->delete();
@@ -118,9 +102,6 @@ class MovieController extends Controller
         return redirect()->route('movies.index')->with('success', 'Movie deleted successfully.');
     }
 
-    /**
-     * Validation rules supporting existing tests and the new embed field.
-     */
     protected function validateMovie(Request $request, $id = null): array
     {
         return $request->validate([
@@ -130,9 +111,7 @@ class MovieController extends Controller
             'duration_minutes' => 'nullable|integer|min:1',
             'poster_path' => 'nullable|string|max:255',
             'trailer_path' => 'nullable|string|max:255',
-            // ExampleTest එකේ test_stream_url_must_be_http_or_https සඳහා:
             'stream_url' => 'nullable|url:http,https',
-            // අලුත් player එක සඳහා:
             'embed_url' => 'nullable|string',
         ]);
     }

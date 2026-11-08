@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Movie;
 use App\Support\EmbedUrl;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class CatalogTest extends TestCase
@@ -31,7 +32,11 @@ class CatalogTest extends TestCase
 
     public function test_movie_can_be_stored_with_streamtape_embed(): void
     {
-        $response = $this->post(route('movies.store'), [
+        config(['auracinema.admin_user' => 'nuwan', 'auracinema.admin_password_hash' => Hash::make('secret-pass')]);
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Basic ' . base64_encode('nuwan:secret-pass')
+        ])->post(route('movies.store'), [
             'title' => 'Test Movie',
             'embed_url' => 'https://streamtape.com/v/3xx1jlAX7gFaJm/video.mp4',
         ]);
