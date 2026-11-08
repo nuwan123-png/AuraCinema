@@ -11,19 +11,19 @@ class MovieController extends Controller
 {
     public function __construct()
     {
-        // Navbar එකේ සහ layout එකේ foreach එකකට අවශ්‍ය විය හැකි සියලුම collections null වීම වැළැක්වීමට
-        View::share([
-            'genres' => collect(),
-            'categories' => collect(),
-            'navLinks' => collect(),
-            'navItems' => collect(),
-            'tags' => collect(),
-            'years' => collect(),
-            'menu' => collect(),
-            'items' => collect(),
-            'links' => collect(),
-            'sections' => collect(),
-        ]);
+        // layouts.app ඇතුළු සියලුම views වලට අවශ්‍ය variables ස්වයංක්‍රීයව share කිරීම
+        View::composer('*', function ($view) {
+            $view->with([
+                'heroes'       => Movie::inRandomOrder()->take(5)->get(),
+                'latest'       => Movie::latest()->take(10)->get(),
+                'withTrailers' => Movie::whereNotNull('trailer_path')->latest()->take(10)->get(),
+                'fullMovies'   => Movie::where(function ($q) {
+                    $q->whereNotNull('stream_url')->orWhereNotNull('embed_url');
+                })->latest()->take(10)->get(),
+                'genres'       => collect(),
+                'categories'   => collect(),
+            ]);
+        });
     }
 
     public function index(Request $request)
@@ -36,12 +36,14 @@ class MovieController extends Controller
 
         $movies = $query->latest()->paginate(12)->withQueryString();
 
-        // Index view එකේ බලාපොරොත්තු වන සියලුම collections
-        $heroes = Movie::inRandomOrder()->take(5)->get();
-        $latest = Movie::latest()->take(10)->get();
+        $heroes       = Movie::inRandomOrder()->take(5)->get();
+        $latest       = Movie::latest()->take(10)->get();
         $withTrailers = Movie::whereNotNull('trailer_path')->latest()->take(10)->get();
+        $fullMovies   = Movie::where(function ($q) {
+            $q->whereNotNull('stream_url')->orWhereNotNull('embed_url');
+        })->latest()->take(10)->get();
 
-        return view('movies.index', compact('movies', 'heroes', 'latest', 'withTrailers'));
+        return view('movies.index', compact('movies', 'heroes', 'latest', 'withTrailers', 'fullMovies'));
     }
 
     public function create()
@@ -118,14 +120,14 @@ class MovieController extends Controller
     protected function validateMovie(Request $request, $id = null): array
     {
         return $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'release_year' => 'nullable|integer|min:1900|max:' . (date('Y') + 5),
+            'title'            => 'required|string|max:255',
+            'description'      => 'nullable|string',
+            'release_year'     => 'nullable|integer|min:1900|max:' . (date('Y') + 5),
             'duration_minutes' => 'nullable|integer|min:1',
-            'poster_path' => 'nullable|string|max:255',
-            'trailer_path' => 'nullable|string|max:255',
-            'stream_url' => 'nullable|url:http,https',
-            'embed_url' => 'nullable|string',
+            'poster_path'      => 'nullable|string|max:255',
+            'trailer_path'     => 'nullable|string|max:255',
+            'stream_url'       => 'nullable|url:http,https',
+            'embed_url'        => 'nullable|string',
         ]);
     }
 }
