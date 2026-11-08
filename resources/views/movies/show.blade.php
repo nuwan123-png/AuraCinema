@@ -57,7 +57,6 @@
     </div>
 
     @if($movie->episodes->isNotEmpty())
-        {{-- Each tile opens that episode's Telegram link in a new tab. --}}
         <section class="mb-10" id="episodes">
             <h2 class="mb-3 border-l-4 border-orange-500 pl-3 text-base font-bold uppercase tracking-wide text-orange-400">Episodes</h2>
             <div class="grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10">
@@ -76,7 +75,6 @@
         <h2 class="mb-3 text-base font-bold">Trailer</h2>
         @if($movie->trailer_url)
             <div data-player class="relative mx-auto aspect-video w-full max-w-4xl overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
-                {{-- No src and preload="none": nothing is downloaded until the user presses play. --}}
                 <video data-src="{{ $movie->trailer_file_url }}" preload="none" playsinline
                        @if($movie->image) poster="{{ $movie->poster_url }}" @endif
                        class="h-full w-full bg-black object-contain"></video>
@@ -94,16 +92,14 @@
     @if($movie->embed_url)
         <section class="mt-10" id="watch">
             <h2 class="mb-3 text-base font-bold">Watch now</h2>
-            <div class="relative mx-auto aspect-video w-full max-w-4xl overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
-                <iframe 
-                    src="{{ $movie->embed_url }}" 
-                    title="{{ $movie->title }}"
-                    class="absolute inset-0 h-full w-full border-0" 
-                    allowfullscreen 
-                    allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-                    referrerpolicy="no-referrer"
-                    scrolling="no">
-                </iframe>
+            <div data-embed class="mx-auto w-full max-w-4xl">
+                <button type="button" data-embed-load data-embed-src="{{ $movie->embed_url }}" data-embed-title="{{ $movie->title }}"
+                        class="grid aspect-video w-full place-items-center rounded-lg bg-black ring-1 ring-white/10 transition hover:ring-orange-400/60"
+                        aria-label="Load the player for {{ $movie->title }}"[cite: 13]>
+                    <span class="flex items-center gap-2 rounded-full bg-orange-500 px-7 py-3 text-sm font-bold text-white">
+                        <i class="fa-solid fa-play"></i> Watch now
+                    </span>
+                </button>
             </div>
         </section>
     @endif
