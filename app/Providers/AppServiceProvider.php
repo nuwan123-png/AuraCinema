@@ -20,8 +20,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // CloudFront හෝ Production පරිසරයේදී Assets සහ URLs සඳහා HTTPS බලගැන්වීම
-        if (config('app.env') === 'production' || request()->server('HTTP_X_FORWARDED_PROTO') === 'https') {
+        // CloudFront හරහා එන විට පමණක් (X-Forwarded-Proto: https ඇති විට) HTTPS force කිරීම
+        if (
+            request()->server('HTTP_X_FORWARDED_PROTO') === 'https' ||
+            request()->header('X-Forwarded-Proto') === 'https' ||
+            request()->isSecure()
+        ) {
             URL::forceScheme('https');
         }
     }
