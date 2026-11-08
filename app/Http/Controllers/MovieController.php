@@ -2,212 +2,280 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\OptimizeTrailer;
+use App\Models\Episode;
 use App\Models\Movie;
+use App\Services\MediaOptimizer;
 use App\Support\EmbedUrl;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class MovieController extends Controller
 {
-    /**
-     * Views සහ Layout එකට අවශ්‍ය shared helpers සහ data ලබා දීම
-     */
-    protected function getViewData(Request $request, array $extra = []): array
-    {
-        $navType = $request->input('type');
-        $navLink = function (bool $active): string {
-            return $active
-                ? 'text-orange-400 font-semibold px-2 py-1'
-                : 'text-zinc-300 hover:text-white px-2 py-1 transition';
-        };
-
-        return array_merge([
-            'navType' => $navType,
-            'navLink' => $navLink,
-        ], $extra);
-    }
+    public function __construct(private MediaOptimizer $media) {}
 
     public function index(Request $request)
     {
-        $query = Movie::query();
-        $isSearching = $request->filled('q') || $request->filled('genre') || $request->filled('type');
+        $q = trim((string) $request->query('q', ''));
+        $type = (string) $request->query('type', '');
+        $genre = (string) $request->query('genre', '');
+        $year = (int) $request->query('year', 0);
 
-        if ($request->filled('q')) {
-            $query->where('title', 'like', '%' . $request->input('q') . '%');
+        // Only accept values we actually offer (the navbar links), ignore anything else.
+        $type = array_key_exists($type, config('auracinema.types')) ? $type : '';
+        $genre = in_array($genre, config('auracinema.genres'), true) ? $genre : '';
+        $year = ($year >= 1900 && $year <= 2100) ? $year : 0;
+
+        if ($q !== '' || $type !== '' || $genre !== '' || $year !== 0) {
+            $query = Movie::query()->withCount('episodes');
+
+            if ($q !== '') {
+                $query->where('title', 'like', '%'.addcslashes($q, '%_\\').'%');
+            }
+            if ($type !== '') {
+                $query->where('type', $type);
+            }
+            if ($genre !== '') {
+                $query->where('genre', $genre);
+            }
+            if ($year !== 0) {
+                $query->where('year', $year);
+            }
+
+            $heading = match (true) {
+                $q !== '' => 'Results for “'.$q.'”',
+                $genre !== '' => 'Genre: '.$genre,
+                $year !== 0 => 'Year: '.$year,
+                default => match ($type) {
+                    'movie' => 'Movies',
+                    'series' => 'Drama / Series',
+                    default => 'Anime',
+                },
+            };
+
+            return view('movies.browse', [
+                'heading' => $heading,
+                'results' => $query->latest()->simplePaginate(24)->withQueryString(),
+            ]);
         }
 
-        if ($request->filled('genre') && Schema::hasColumn('movies', 'genre')) {
-            $query->where('genre', $request->input('genre'));
-        }
+        // One query for the rows (cheap on a catalogue this size), one paginated query for the grid.
+        $recent = Movie::withCount('episodes')->latest()->take(40)->get();
 
-        if ($request->filled('type') && Schema::hasColumn('movies', 'type')) {
-            $query->where('type', $request->input('type'));
-        }
-
-        $movies = $query->latest()->paginate(12)->withQueryString();
-        $all    = $movies;
-
-        if ($isSearching) {
-            $heroes       = collect();
-            $latest       = collect();
-            $withTrailers = collect();
-            $fullMovies   = collect();
-        } else {
-            $heroes = Movie::inRandomOrder()->take(5)->get();
-            $latest = Movie::latest()->take(10)->get();
-
-            $withTrailers = Schema::hasColumn('movies', 'trailer_url')
-                ? Movie::whereNotNull('trailer_url')->latest()->take(10)->get()
-                : collect();
-
-            $fullMovies = Movie::where(function ($q) {
-                if (Schema::hasColumn('movies', 'stream_url')) {
-                    $q->whereNotNull('stream_url');
-                }
-                if (Schema::hasColumn('movies', 'embed_url')) {
-                    $q->orWhereNotNull('embed_url');
-                }
-            })->latest()->take(10)->get();
-        }
-
-        return view('movies.index', $this->getViewData($request, compact(
-            'movies',
-            'all',
-            'heroes',
-            'latest',
-            'withTrailers',
-            'fullMovies'
-        )));
+        return view('movies.index', [
+            'heroes' => $recent->filter(fn ($m) => $m->image)->take(5)->values(),
+            'latest' => $recent->take(20),
+            'withTrailers' => $recent->filter(fn ($m) => $m->trailer_url)->take(20),
+            'fullMovies' => $recent->filter(fn ($m) => $m->stream_url)->take(20),
+            'all' => Movie::withCount('episodes')->latest()->simplePaginate(24),
+        ]);
     }
 
-    public function create(Request $request)
+    /** "Suggestion" in the navbar: a fresh random pick every visit. */
+    public function suggestions()
     {
-        $movie = new Movie();
-        return view('movies.create', $this->getViewData($request, compact('movie')));
+        return view('movies.browse', [
+            'heading' => 'Suggestions for you',
+            'results' => Movie::withCount('episodes')->inRandomOrder()->limit(24)->get(),
+        ]);
+    }
+
+    public function create()
+    {
+        return view('movies.create');
     }
 
     public function store(Request $request)
     {
-        $validated = $this->validateMovie($request);
+        $validated = $this->validated($request);
+        $data = $this->movieData($validated);
 
-        if (!empty($validated['embed_url'])) {
-            $normalized = EmbedUrl::normalize($validated['embed_url']);
-            if (!$normalized) {
-                return back()->withInput()->withErrors([
-                    'embed_url' => 'Please provide a valid YouTube, Vimeo, Bunny, Cloudflare, or Streamtape link/embed code.',
-                ]);
-            }
-            $validated['embed_url'] = $normalized;
+        if ($request->hasFile('image')) {
+            $data['image'] = $this->media->storePoster($request->file('image'));
+        }
+        if ($request->hasFile('trailer')) {
+            $data['trailer_url'] = $request->file('trailer')->store('trailers', 'public');
         }
 
-        if (!empty($validated['stream_url'])) {
-            $validated['stream_url'] = trim($validated['stream_url']);
+        $movie = DB::transaction(function () use ($data, $validated) {
+            $movie = Movie::create($data);
+            $this->syncEpisodes($movie, $validated['episodes'] ?? []);
+
+            return $movie;
+        });
+
+        if ($request->hasFile('trailer')) {
+            OptimizeTrailer::dispatchAfterResponse($movie->id, $data['trailer_url']);
         }
 
-        // Database එකේ සැබවින්ම පවතින columns වලට දත්ත map කිරීම
-        $columns = Schema::getColumnListing('movies');
-        $dataToInsert = [];
-
-        foreach ($validated as $key => $value) {
-            if (in_array($key, $columns)) {
-                $dataToInsert[$key] = $value;
-            }
-        }
-
-        // Form එකේ release_year දත්තය database එකේ 'year' column එකට දැමීම
-        if (in_array('year', $columns) && !empty($validated['release_year'])) {
-            $dataToInsert['year'] = $validated['release_year'];
-        }
-
-        // Form එකේ trailer_path දත්තය database එකේ 'trailer_url' column එකට දැමීම
-        if (in_array('trailer_url', $columns) && !empty($validated['trailer_path'])) {
-            $dataToInsert['trailer_url'] = $validated['trailer_path'];
-        }
-
-        // Form එකේ poster_path දත්තය database එකේ 'image' column එකට දැමීම
-        if (in_array('image', $columns) && !empty($validated['poster_path'])) {
-            $dataToInsert['image'] = $validated['poster_path'];
-        }
-
-        Movie::create($dataToInsert);
-
-        return redirect()->route('movies.index')->with('success', 'Movie created successfully.');
+        return redirect()->route('movies.show', $movie)->with('success', 'Movie added. The trailer is being compressed in the background.');
     }
 
-    public function show(Request $request, Movie $movie)
+    public function show(Movie $movie)
     {
-        return view('movies.show', $this->getViewData($request, compact('movie')));
+        $movie->load('episodes');
+
+        return view('movies.show', compact('movie'));
     }
 
-    public function edit(Request $request, Movie $movie)
+    public function edit(Movie $movie)
     {
-        return view('movies.edit', $this->getViewData($request, compact('movie')));
+        $movie->load('episodes');
+
+        return view('movies.edit', compact('movie'));
     }
 
     public function update(Request $request, Movie $movie)
     {
-        $validated = $this->validateMovie($request, $movie->id);
+        $validated = $this->validated($request);
+        $data = $this->movieData($validated, $movie);
+        $disk = Storage::disk('public');
 
-        if (!empty($validated['embed_url'])) {
-            $normalized = EmbedUrl::normalize($validated['embed_url']);
-            if (!$normalized) {
-                return back()->withInput()->withErrors([
-                    'embed_url' => 'Please provide a valid YouTube, Vimeo, Bunny, Cloudflare, or Streamtape link/embed code.',
-                ]);
-            }
-            $validated['embed_url'] = $normalized;
-        } else {
-            $validated['embed_url'] = null;
-        }
-
-        if (array_key_exists('stream_url', $validated)) {
-            $validated['stream_url'] = $validated['stream_url'] ? trim($validated['stream_url']) : null;
-        }
-
-        $columns = Schema::getColumnListing('movies');
-        $dataToUpdate = [];
-
-        foreach ($validated as $key => $value) {
-            if (in_array($key, $columns)) {
-                $dataToUpdate[$key] = $value;
+        if ($request->hasFile('image')) {
+            $data['image'] = $this->media->storePoster($request->file('image'));
+            if ($movie->image) {
+                $disk->delete($movie->image);
             }
         }
 
-        if (in_array('year', $columns) && array_key_exists('release_year', $validated)) {
-            $dataToUpdate['year'] = $validated['release_year'];
+        $newTrailer = null;
+        if ($request->hasFile('trailer')) {
+            $newTrailer = $request->file('trailer')->store('trailers', 'public');
+            $data['trailer_url'] = $newTrailer;
+            if ($movie->trailer_url) {
+                $disk->delete($movie->trailer_url);
+            }
         }
 
-        if (in_array('trailer_url', $columns) && array_key_exists('trailer_path', $validated)) {
-            $dataToUpdate['trailer_url'] = $validated['trailer_path'];
+        DB::transaction(function () use ($movie, $data, $validated) {
+            $movie->update($data);
+            $this->syncEpisodes($movie, $validated['episodes'] ?? []);
+        });
+
+        if ($newTrailer) {
+            OptimizeTrailer::dispatchAfterResponse($movie->id, $newTrailer);
         }
 
-        if (in_array('image', $columns) && array_key_exists('poster_path', $validated)) {
-            $dataToUpdate['image'] = $validated['poster_path'];
-        }
-
-        $movie->update($dataToUpdate);
-
-        return redirect()->route('movies.show', $movie)->with('success', 'Movie updated successfully.');
+        return redirect()->route('movies.show', $movie)->with('success', 'Movie updated.');
     }
 
     public function destroy(Movie $movie)
     {
+        $disk = Storage::disk('public');
+        foreach ([$movie->image, $movie->trailer_url] as $path) {
+            if ($path) {
+                $disk->delete($path);
+            }
+        }
         $movie->delete();
 
-        return redirect()->route('movies.index')->with('success', 'Movie deleted successfully.');
+        return redirect()->route('movies.index')->with('success', 'Movie deleted.');
     }
 
-    protected function validateMovie(Request $request, $id = null): array
+    /**
+     * Validate the form. Episode rows the admin left empty are dropped first, and episodes are only
+     * kept when the "has episodes" box is ticked.
+     */
+    private function validated(Request $request): array
     {
-        return $request->validate([
-            'title'            => 'required|string|max:255',
-            'description'      => 'nullable|string',
-            'release_year'     => 'nullable|integer|min:1900|max:' . (date('Y') + 5),
-            'duration_minutes' => 'nullable|integer|min:1',
-            'poster_path'      => 'nullable|string|max:255',
-            'trailer_path'     => 'nullable|string|max:255',
-            'stream_url'       => 'nullable|url:http,https',
-            'embed_url'        => 'nullable|string',
-        ]);
+        $hasEpisodes = $request->boolean('has_episodes');
+
+        $rows = $hasEpisodes
+            ? collect($request->input('episodes', []))
+                ->filter(fn ($row) => is_array($row) && filled($row['url'] ?? null))
+                ->values()
+                ->all()
+            : [];
+        $request->merge(['episodes' => $rows]);
+
+        // "Watch now": accept a link or a pasted <iframe> snippet. Normalise it to a safe player URL,
+        // or leave it as-is (non-empty) so the validation rule below rejects it with a clear message.
+        $embed = trim((string) $request->input('embed_url', ''));
+        if ($embed !== '') {
+            $request->merge(['embed_url' => EmbedUrl::normalize($embed) ?? $embed]);
+        }
+
+        $validated = $request->validate($this->rules());
+
+        if ($hasEpisodes) {
+            $numbers = collect($validated['episodes'] ?? [])->pluck('number');
+
+            if ($numbers->isEmpty()) {
+                throw ValidationException::withMessages(['episodes' => 'Add at least one episode link, or untick "This title has episodes".']);
+            }
+            if ($numbers->duplicates()->isNotEmpty()) {
+                throw ValidationException::withMessages(['episodes' => 'Each episode number can be used only once.']);
+            }
+        }
+
+        return $validated;
+    }
+
+    /** Columns of the movies table from validated input. */
+    private function movieData(array $validated, ?Movie $movie = null): array
+    {
+        $data = Arr::only($validated, ['title', 'description', 'stream_url', 'embed_url', 'genre', 'year']);
+        $data['type'] = $validated['type'] ?? $movie?->type ?? 'movie';
+
+        // A series uses per-episode links; a single "full movie" link would just be confusing next to them.
+        if (! empty($validated['episodes'])) {
+            $data['stream_url'] = null;
+        }
+
+        return $data;
+    }
+
+    /** Replace the episode list (small lists; one delete + one bulk insert). */
+    private function syncEpisodes(Movie $movie, array $episodes): void
+    {
+        $movie->episodes()->delete();
+
+        if ($episodes === []) {
+            return;
+        }
+
+        $now = now();
+        Episode::insert(
+            collect($episodes)
+                ->map(fn ($row) => [
+                    'movie_id' => $movie->id,
+                    'number' => (int) $row['number'],
+                    'url' => $row['url'],
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ])
+                ->sortBy('number')
+                ->values()
+                ->all()
+        );
+    }
+
+    private function rules(): array
+    {
+        return [
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:5000'],
+            // Posters are resized to 480px WebP on save, so the original only needs to be a sane size.
+            'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:10240'],
+            // Same 30MB cap on create AND update (they used to differ: 30MB vs 100MB).
+            'trailer' => ['nullable', 'mimes:mp4,mkv,webm,mov', 'max:30720'],
+            // http/https only: blocks javascript:, data:, ftp: links in the "Watch Full Movie" button.
+            'stream_url' => ['nullable', 'url:http,https', 'max:500'],
+            'embed_url' => ['nullable', 'string', 'max:500', function (string $attribute, mixed $value, \Closure $fail) {
+                if (EmbedUrl::normalize($value) === null) {
+                    $fail('Watch now must be a YouTube, Vimeo, Bunny Stream or Cloudflare Stream player link (https).');
+                }
+            }],
+            'type' => ['nullable', Rule::in(array_keys(config('auracinema.types')))],
+            'genre' => ['nullable', Rule::in(config('auracinema.genres'))],
+            'year' => ['nullable', 'integer', 'between:1900,2100'],
+            'episodes' => ['nullable', 'array', 'max:500'],
+            'episodes.*.number' => ['required', 'integer', 'between:1,9999'],
+            'episodes.*.url' => ['required', 'url:http,https', 'max:500'],
+        ];
     }
 }

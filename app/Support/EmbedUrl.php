@@ -2,84 +2,79 @@
 
 namespace App\Support;
 
+/**
+ * Turns whatever the admin pasted into a safe player URL, or null if it is not an allowed one.
+ *
+ * Accepted input: a player/embed URL, a normal YouTube link (watch?v=… or youtu.be/…), or a whole
+ * <iframe …> snippet (only its src is used). Only https links on the hosts in
+ * config('auracinema.embed_hosts') are ever allowed, so a pasted snippet can never load an
+ * arbitrary site inside your pages.
+ */
 class EmbedUrl
 {
-    /**
-     * Normalize and validate an embed URL or iframe snippet.
-     */
     public static function normalize(?string $input): ?string
     {
-        if (empty($input)) {
+        $input = trim((string) $input);
+        if ($input === '') {
             return null;
         }
 
-        $input = trim($input);
-
-        // Extract src if full iframe tag is pasted
-        if (preg_match('#<iframe[^>]+src=["\']([^"\']+)["\']#i', $input, $matches)) {
-            $input = $matches[1];
+        // A pasted <iframe ... src="..."> snippet: keep only the src.
+        if (stripos($input, '<iframe') !== false) {
+            if (! preg_match('/\bsrc\s*=\s*(["\'])(.*?)\1/is', $input, $m)) {
+                return null;
+            }
+            $input = trim(html_entity_decode($m[2]));
         }
 
-        // Ensure scheme exists
-        if (!preg_match('~^(?:f|ht)tps?://~i', $input)) {
-            $input = 'https://' . ltrim($input, '/');
-        }
-
-        $parsed = parse_url($input);
-        if (!$parsed || !isset($parsed['host'])) {
+        $parts = parse_url($input);
+        if (! is_array($parts) || ($parts['scheme'] ?? '') !== 'https' || empty($parts['host']) || isset($parts['user']) || isset($parts['port'])) {
             return null;
         }
 
-        $host = strtolower($parsed['host']);
-        $path = $parsed['path'] ?? '';
-        parse_str($parsed['query'] ?? '', $query);
+        $host = strtolower($parts['host']);
+        $path = $parts['path'] ?? '';
+        parse_str($parts['query'] ?? '', $query);
 
-        // 1. YouTube
-        if (in_array($host, ['youtube.com', 'www.youtube.com', 'm.youtube.com'])) {
-            if (isset($query['v'])) {
-                return 'https://www.youtube-nocookie.com/embed/' . $query['v'];
-            }
-            if (preg_match('~/embed/([a-zA-Z0-9_-]+)~', $path, $m)) {
-                return 'https://www.youtube-nocookie.com/embed/' . $m[1];
-            }
-            if (preg_match('~/shorts/([a-zA-Z0-9_-]+)~', $path, $m)) {
-                return 'https://www.youtube-nocookie.com/embed/' . $m[1];
-            }
+        // Normal YouTube links -> the embeddable form.
+        if ($host === 'youtu.be' && preg_match('#^/([\w-]{6,20})$#', $path, $m)) {
+            return 'https://www.youtube.com/embed/'.$m[1];
         }
-        if ($host === 'youtu.be') {
-            $id = trim($path, '/');
-            if (!empty($id)) {
-                return 'https://www.youtube-nocookie.com/embed/' . $id;
+        if (in_array($host, ['youtube.com', 'www.youtube.com', 'm.youtube.com'], true)) {
+            if ($path === '/watch' && isset($query['v']) && is_string($query['v']) && preg_match('/^[\w-]{6,20}$/', $query['v'])) {
+                return 'https://www.youtube.com/embed/'.$query['v'];
             }
-        }
+            if (preg_match('#^/embed/[\w-]{6,20}$#', $path)) {
+                return 'https://www.youtube.com'.$path;
+            }
 
-        // 2. Vimeo
-        if (in_array($host, ['vimeo.com', 'www.vimeo.com'])) {
-            if (preg_match('~/([0-9]+)~', $path, $m)) {
-                return 'https://player.vimeo.com/video/' . $m[1];
-            }
+            return null;
         }
-        if ($host === 'player.vimeo.com') {
-            return $input;
+        if ($host === 'www.youtube-nocookie.com') {
+            return preg_match('#^/embed/[\w-]{6,20}$#', $path) ? 'https://www.youtube-nocookie.com'.$path : null;
         }
 
-        // 3. Bunny Stream
-        if ($host === 'iframe.mediadelivery.net') {
-            return $input;
+        if (! self::hostAllowed($host)) {
+            return null;
         }
 
-        // 4. Cloudflare Stream
-        if (in_array($host, ['cloudflarestream.com', 'watch.cloudflarestream.com', 'iframe.videodelivery.net'])) {
-            return $input;
+        // Vimeo / Bunny / Cloudflare: keep their own player URL (path + query) as given.
+        $url = 'https://'.$host.$path;
+        if (($parts['query'] ?? '') !== '') {
+            $url .= '?'.$parts['query'];
         }
 
-        // 5. Streamtape
-        if (in_array($host, ['streamtape.com', 'www.streamtape.com', 'streamtape.to', 'streamtape.net'])) {
-            if (preg_match('~/(?:e|v)/([a-zA-Z0-9_-]+)~', $path, $m)) {
-                return 'https://streamtape.com/e/' . $m[1];
+        return strlen($url) <= 500 ? $url : null;
+    }
+
+    public static function hostAllowed(string $host): bool
+    {
+        foreach ((array) config('auracinema.embed_hosts') as $allowed) {
+            if ($host === $allowed || (str_starts_with($allowed, '*.') && str_ends_with($host, substr($allowed, 1)))) {
+                return true;
             }
         }
 
-        return null;
+        return false;
     }
 }
