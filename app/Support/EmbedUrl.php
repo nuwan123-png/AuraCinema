@@ -27,6 +27,11 @@ class EmbedUrl
             $input = trim(html_entity_decode($m[2]));
         }
 
+        // Streamtape links (e.g., https://streamtape.com/v/... or /e/...) -> convert to embed URL
+        if (preg_match('#^https?://(?:www\.)?streamtape\.(?:com|to|net)/(?:v|e)/([a-zA-Z0-9_-]+)#i', $input, $matches)) {
+            return 'https://streamtape.com/e/' . $matches[1];
+        }
+
         $parts = parse_url($input);
         if (! is_array($parts) || ($parts['scheme'] ?? '') !== 'https' || empty($parts['host']) || isset($parts['user']) || isset($parts['port'])) {
             return null;
