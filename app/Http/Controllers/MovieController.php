@@ -47,20 +47,15 @@ class MovieController extends Controller
                 $query->where('genre', $genre);
             }
             if ($language !== '') {
-                $query->where('language', $language);
+                // A movie counts for "Sinhala" if its Language is Sinhala OR it carries a "sinhala" keyword.
+                $langTag = '%,'.addcslashes(Movie::normalizeTag($language), '%_\\').',%';
+                $query->where(fn ($w) => $w->where('language', $language)->orWhere('tags', 'like', $langTag));
             }
             if ($year !== 0) {
                 $query->where('year', $year);
             }
             if ($tag !== '') {
-                $cleanTag = addcslashes($tag, '%_\\');
-                $query->where(function ($w) use ($cleanTag) {
-                    $w->where('tags', 'like', '%,' . $cleanTag . ',%')
-                      ->orWhere('tags', 'like', $cleanTag . ',%')
-                      ->orWhere('tags', 'like', '%,' . $cleanTag)
-                      ->orWhere('tags', '=', $cleanTag)
-                      ->orWhere('tags', 'like', '%"' . $cleanTag . '"%');
-                });
+                $query->where('tags', 'like', '%,'.addcslashes($tag, '%_\\').',%');
             }
 
             // e.g. "Hindi · Romance · 2026 · Movies" - every active filter is named.

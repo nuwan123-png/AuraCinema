@@ -140,6 +140,9 @@ class CatalogTest extends TestCase
         $this->get('/movies?type=movie&language=Hindi')->assertOk()->assertSee('Hindi Love')->assertDontSee('Hindi Series');
         $this->get('/movies?tag=romantic')->assertOk()->assertSee('Hindi Love')->assertDontSee('Tamil Action');
         $this->get('/movies?tag=roman')->assertOk()->assertDontSee('Hindi Love'); // exact keyword, not a prefix
+        // A keyword typed as "Sinhala" (no Language chosen) still shows up under Movies > Sinhala.
+        Movie::create(['title' => 'Only Keyword', 'type' => 'movie', 'tags' => ',sinhala,']);
+        $this->get('/movies?type=movie&language=Sinhala')->assertOk()->assertSee('Only Keyword')->assertDontSee('Hindi Love');
         $this->get('/movies?language=Klingon')->assertOk(); // unknown values are ignored, not an error
     }
 
