@@ -26,7 +26,7 @@
 </head>
 <body class="flex min-h-screen flex-col bg-[#0b0b0f] font-sans text-slate-100 antialiased selection:bg-orange-500 selection:text-white">
 
-    {{-- Nav helpers. Keep these as one-line directives; a multi-line php block in this file would break the ones in the head. --}}
+    {{-- Nav helpers --}}
     @php($navType = request('type'))
     @php($navLink = fn (bool $active) => 'py-1.5 '.($active ? 'text-orange-400' : 'hover:text-white'))
 
@@ -52,43 +52,48 @@
             @endif
         </div>
 
-        {{-- Category bar. It wraps onto two lines on a phone instead of scrolling, so the dropdowns are never clipped. --}}
+        {{-- Category bar --}}
         <nav class="border-t border-white/5" aria-label="Primary">
             <div class="relative mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-0 px-4 py-1 text-[13px] font-semibold uppercase tracking-wide text-slate-300 sm:px-6">
+                
+                {{-- Genre Dropdown --}}
                 <details data-menu class="sm:relative">
                     <summary class="flex cursor-pointer list-none items-center gap-1 py-1.5 hover:text-white [&::-webkit-details-marker]:hidden {{ request('genre') ? 'text-orange-400' : '' }}">
                         Genre <i class="fa-solid fa-chevron-down text-[9px]"></i>
                     </summary>
                     <div class="absolute inset-x-4 top-full z-50 mt-2 grid max-h-72 grid-cols-3 gap-1 sm:inset-x-auto sm:left-0 sm:w-60 sm:grid-cols-2 overflow-y-auto rounded-md border border-white/10 bg-zinc-900 p-2 text-xs normal-case shadow-xl">
-                        @foreach(config('auracinema.genres') as $g)
+                        @php
+                            $navGenres = config('auracinema.genres', ['Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Drama', 'Horror', 'Romance', 'Sci-Fi', 'Thriller']);
+                        @endphp
+                        @foreach($navGenres as $g)
                             <a href="{{ route('movies.index', ['genre' => $g]) }}" class="rounded px-2 py-1.5 hover:bg-white/10 {{ request('genre') === $g ? 'text-orange-400' : '' }}">{{ $g }}</a>
                         @endforeach
                     </div>
                 </details>
 
-                {{-- app.blade.php හි පවතින කේතය වෙනුවට මෙය යොදන්න --}}
-
-@foreach(['movie' => 'Movies', 'series' => 'Drama / Series', 'anime' => 'Anime'] as $navKey => $navLabel)
-    <div class="group relative">
-        <a href="{{ route('movies.index', ['type' => $navKey]) }}" class="flex items-center gap-1 {{ $navLink($navType === $navKey) }}">
-            {{ $navLabel }} <i class="fa-solid fa-chevron-down text-[9px]"></i>
-        </a>
-        <div class="invisible absolute left-0 top-full z-50 pt-2 opacity-0 transition duration-150 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
-            <div class="grid w-48 grid-cols-2 gap-1 rounded-md border border-white/10 bg-zinc-900 p-2 text-xs normal-case shadow-xl">
-                <a href="{{ route('movies.index', ['type' => $navKey]) }}" class="col-span-2 rounded px-2 py-1.5 font-bold text-orange-400 hover:bg-white/10">All {{ $navLabel }}</a>
-                {{-- මෙහිදී config එක වෙනුවට array එක ලබා දී ඇත --}}
-                @php
-                    $navLanguages = config('auracinema.languages', ['Sinhala', 'English', 'Tamil', 'Hindi', 'Malayalam', 'Telugu', 'Korean']);
-                @endphp
-                @foreach($navLanguages as $lang)
-                    <a href="{{ route('movies.index', ['type' => $navKey, 'language' => $lang]) }}" class="rounded px-2 py-1.5 hover:bg-white/10 {{ $navType === $navKey && request('language') === $lang ? 'text-orange-400' : '' }}">{{ $lang }}</a>
+                {{-- Type and Language Menus --}}
+                @foreach(['movie' => 'Movies', 'series' => 'Drama / Series', 'anime' => 'Anime'] as $navKey => $navLabel)
+                    <div class="group relative">
+                        <a href="{{ route('movies.index', ['type' => $navKey]) }}" class="flex items-center gap-1 {{ $navLink($navType === $navKey) }}">
+                            {{ $navLabel }} <i class="fa-solid fa-chevron-down text-[9px]"></i>
+                        </a>
+                        <div class="invisible absolute left-0 top-full z-50 pt-2 opacity-0 transition duration-150 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
+                            <div class="grid w-48 grid-cols-2 gap-1 rounded-md border border-white/10 bg-zinc-900 p-2 text-xs normal-case shadow-xl">
+                                <a href="{{ route('movies.index', ['type' => $navKey]) }}" class="col-span-2 rounded px-2 py-1.5 font-bold text-orange-400 hover:bg-white/10">All {{ $navLabel }}</a>
+                                @php
+                                    $navLanguages = config('auracinema.languages', ['Sinhala', 'English', 'Tamil', 'Hindi', 'Malayalam', 'Telugu', 'Korean']);
+                                @endphp
+                                @foreach($navLanguages as $lang)
+                                    <a href="{{ route('movies.index', ['type' => $navKey, 'language' => $lang]) }}" class="rounded px-2 py-1.5 hover:bg-white/10 {{ $navType === $navKey && request('language') === $lang ? 'text-orange-400' : '' }}">{{ $lang }}</a>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
                 @endforeach
-            </div>
-        </div>
-    </div>
-@endforeach
+
                 <a href="{{ route('suggestions') }}" class="{{ $navLink(request()->routeIs('suggestions')) }}">Suggestion</a>
 
+                {{-- Year Dropdown --}}
                 <details data-menu class="sm:relative">
                     <summary class="flex cursor-pointer list-none items-center gap-1 py-1.5 hover:text-white [&::-webkit-details-marker]:hidden {{ request('year') ? 'text-orange-400' : '' }}">
                         Year <i class="fa-solid fa-chevron-down text-[9px]"></i>
