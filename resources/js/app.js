@@ -75,6 +75,16 @@ document.querySelectorAll('[data-hero]').forEach((hero) => {
     hero.querySelector('[data-hero-prev]')?.addEventListener('click', () => show(current - 1));
     hero.querySelector('[data-hero-next]')?.addEventListener('click', () => show(current + 1));
     dots.forEach((dot, i) => dot.addEventListener('click', () => show(i)));
+
+    // Phones: swipe left / right to change slide
+    let swipeX = null;
+    hero.addEventListener('touchstart', (e) => { swipeX = e.touches[0].clientX; }, { passive: true });
+    hero.addEventListener('touchend', (e) => {
+        if (swipeX === null) return;
+        const dx = e.changedTouches[0].clientX - swipeX;
+        swipeX = null;
+        if (Math.abs(dx) > 40) show(current + (dx < 0 ? 1 : -1));
+    }, { passive: true });
     bar?.addEventListener('animationend', () => show(current + 1));
 
     let offscreen = false;
@@ -157,7 +167,7 @@ if (episodesToggle) {
     sync();
 }
 
-// ---- "Watch now" player mount function (NO sandbox: Streamtape loads safely) ----
+// ---- "Watch now" player mount function (NO sandbox: ensures Streamtape works) ----
 function mountPlayer(container, src, title) {
     const frame = document.createElement('iframe');
     frame.src = src;
@@ -170,7 +180,7 @@ function mountPlayer(container, src, title) {
     container.appendChild(frame);
 }
 
-// Click "Watch now" button
+// Click Watch Now button
 document.querySelectorAll('[data-embed-load]').forEach((button) => {
     button.addEventListener('click', () => {
         const container = button.closest('[data-embed]');
@@ -180,7 +190,7 @@ document.querySelectorAll('[data-embed-load]').forEach((button) => {
     });
 });
 
-// Click Episode button -> loads in Watch now player
+// Click Episode button -> Load episode in Watch player
 document.querySelectorAll('[data-episode-btn]').forEach((btn) => {
     btn.addEventListener('click', () => {
         const src = btn.dataset.embedSrc;

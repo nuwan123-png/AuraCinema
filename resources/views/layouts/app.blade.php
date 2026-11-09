@@ -28,7 +28,7 @@
 
     {{-- Nav helpers. Keep these as one-line directives; a multi-line php block in this file would break the ones in the head. --}}
     @php($navType = request('type'))
-    @php($navLink = fn (bool $active) => $active ? 'text-orange-400' : 'hover:text-white')
+    @php($navLink = fn (bool $active) => 'py-1.5 '.($active ? 'text-orange-400' : 'hover:text-white'))
 
     <header class="z-50 border-b border-white/5 bg-[#0b0b0f]/95 md:sticky md:top-0">
         <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
@@ -54,9 +54,9 @@
 
         {{-- Category bar. It wraps onto two lines on a phone instead of scrolling, so the dropdowns are never clipped. --}}
         <nav class="border-t border-white/5" aria-label="Primary">
-            <div class="relative mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-1 px-4 py-2 text-[13px] font-semibold uppercase tracking-wide text-slate-300 sm:px-6">
+            <div class="relative mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-0 px-4 py-1 text-[13px] font-semibold uppercase tracking-wide text-slate-300 sm:px-6">
                 <details data-menu class="sm:relative">
-                    <summary class="flex cursor-pointer list-none items-center gap-1 hover:text-white [&::-webkit-details-marker]:hidden {{ request('genre') ? 'text-orange-400' : '' }}">
+                    <summary class="flex cursor-pointer list-none items-center gap-1 py-1.5 hover:text-white [&::-webkit-details-marker]:hidden {{ request('genre') ? 'text-orange-400' : '' }}">
                         Genre <i class="fa-solid fa-chevron-down text-[9px]"></i>
                     </summary>
                     <div class="absolute inset-x-4 top-full z-50 mt-2 grid max-h-72 grid-cols-3 gap-1 sm:inset-x-auto sm:left-0 sm:w-60 sm:grid-cols-2 overflow-y-auto rounded-md border border-white/10 bg-zinc-900 p-2 text-xs normal-case shadow-xl">
@@ -85,7 +85,7 @@
                 <a href="{{ route('suggestions') }}" class="{{ $navLink(request()->routeIs('suggestions')) }}">Suggestion</a>
 
                 <details data-menu class="sm:relative">
-                    <summary class="flex cursor-pointer list-none items-center gap-1 hover:text-white [&::-webkit-details-marker]:hidden {{ request('year') ? 'text-orange-400' : '' }}">
+                    <summary class="flex cursor-pointer list-none items-center gap-1 py-1.5 hover:text-white [&::-webkit-details-marker]:hidden {{ request('year') ? 'text-orange-400' : '' }}">
                         Year <i class="fa-solid fa-chevron-down text-[9px]"></i>
                     </summary>
                     <div class="absolute inset-x-4 top-full z-50 mt-2 grid max-h-72 grid-cols-4 gap-1 overflow-y-auto rounded-md border border-white/10 bg-zinc-900 p-2 text-xs normal-case shadow-xl sm:inset-x-auto sm:left-0 sm:w-52 sm:grid-cols-3">
