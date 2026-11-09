@@ -25,6 +25,7 @@ class Movie extends Model
         'download_480p',
         'download_720p',
         'download_1080p',
+        'subtitle_url',
     ];
 
     /** Episodes of a series, in order (episode 1 first). */

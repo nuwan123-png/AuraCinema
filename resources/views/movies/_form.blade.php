@@ -133,4 +133,12 @@
         <input type="url" name="download_1080p" id="download_1080p" value="{{ old('download_1080p', $movie->download_1080p ?? '') }}" class="w-full rounded-md border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none" placeholder="https://streamtape.com/v/...">
         @error('download_1080p') <span class="text-xs text-rose-500">{{ $message }}</span> @enderror
     </div>
+    <div class="mt-6 space-y-4 rounded-lg border border-white/10 bg-white/5 p-4">
+    <h3 class="text-sm font-bold text-orange-400">Subtitle Link</h3>
+    <div>
+        <label for="subtitle_url" class="mb-1 block text-xs font-semibold">Sinhala Subtitle Link (Google Drive, MediaFire etc.)</label>
+        <input type="url" name="subtitle_url" id="subtitle_url" value="{{ old('subtitle_url', $movie->subtitle_url ?? '') }}" class="w-full rounded-md border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none" placeholder="https://...">
+        @error('subtitle_url') <span class="text-xs text-rose-500">{{ $message }}</span> @enderror
+    </div>
+</div>
 </div>

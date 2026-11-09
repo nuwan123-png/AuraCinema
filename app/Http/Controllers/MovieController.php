@@ -244,7 +244,7 @@ class MovieController extends Controller
     {
         $data = Arr::only($validated, [
             'title', 'description', 'stream_url', 'embed_url', 'genre', 'year', 'language',
-            'download_480p', 'download_720p', 'download_1080p'
+            'download_480p', 'download_720p', 'download_1080p' , 'subtitle_url'
         ]);
         
         $data['tags'] = Movie::normalizeTags($validated['tags'] ?? null);
@@ -312,6 +312,7 @@ class MovieController extends Controller
             'download_480p' => ['nullable', 'url:http,https', 'max:500'],
             'download_720p' => ['nullable', 'url:http,https', 'max:500'],
             'download_1080p' => ['nullable', 'url:http,https', 'max:500'],
+            'subtitle_url' => ['nullable', 'url:http,https', 'max:500'],
         ];
     }
 }

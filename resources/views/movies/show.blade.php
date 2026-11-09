@@ -120,7 +120,7 @@
             </div>
 
             {{-- Download & Subtitles Section --}}
-            @if($movie->download_480p || $movie->download_720p || $movie->download_1080p)
+            @if($movie->download_480p || $movie->download_720p || $movie->download_1080p || $movie->subtitle_url)
                 <div class="mx-auto mt-10 grid w-full max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
                     
                     {{-- 1. Select Quality Box (Left) --}}
@@ -193,29 +193,34 @@
                         </div>
                     </div>
 
-                    {{-- 2. Subtitles Box (Right) --}}
-                    <div class="rounded-xl border border-white/10 bg-white/5 p-5 shadow-lg">
-                        <h3 class="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-200">
-                            <i class="fa-regular fa-closed-captioning text-orange-500"></i> Subtitles
-                        </h3>
-                        
-                        <div class="space-y-3">
-                            <a href="#" class="group flex items-center justify-between rounded-lg bg-black/40 p-3 ring-1 ring-white/5 transition hover:bg-black/60 hover:ring-orange-500/50">
-                                <div class="flex items-center gap-4">
-                                    <div class="grid h-12 w-12 place-items-center rounded bg-orange-500/10 text-xl text-orange-400 transition group-hover:bg-orange-500/20">
-                                        <i class="fa-regular fa-file-lines"></i>
+                    {{-- 2. Subtitles Box (Right) - Only shows if subtitle link is added --}}
+                    @if($movie->subtitle_url)
+                        <div class="rounded-xl border border-white/10 bg-white/5 p-5 shadow-lg">
+                            <h3 class="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-200">
+                                <i class="fa-regular fa-closed-captioning text-orange-500"></i> Subtitles
+                            </h3>
+                            
+                            <div class="space-y-3">
+                                <a href="{{ $movie->subtitle_url }}" target="_blank" class="group flex items-center justify-between rounded-lg bg-black/40 p-3 ring-1 ring-white/5 transition hover:bg-black/60 hover:ring-orange-500/50">
+                                    <div class="flex items-center gap-4">
+                                        <div class="grid h-12 w-12 place-items-center rounded bg-orange-500/10 text-xl text-orange-400 transition group-hover:bg-orange-500/20">
+                                            <i class="fa-regular fa-file-lines"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-sm font-bold text-slate-200 transition group-hover:text-white">Sinhala Subtitle</div>
+                                            <div class="mt-0.5 text-[10px] font-semibold uppercase text-slate-500">BY AuraCinema</div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <div class="text-sm font-bold text-slate-200 transition group-hover:text-white">Sinhala Subtitle</div>
-                                        <div class="mt-0.5 text-[10px] font-semibold uppercase text-slate-500">BY AuraCinema</div>
+                                    <div class="grid h-10 w-10 place-items-center rounded-full bg-white/5 text-slate-400 transition group-hover:bg-orange-500 group-hover:text-white">
+                                        <i class="fa-solid fa-download"></i>
                                     </div>
-                                </div>
-                                <div class="grid h-10 w-10 place-items-center rounded-full bg-white/5 text-slate-400 transition group-hover:bg-orange-500 group-hover:text-white">
-                                    <i class="fa-solid fa-download"></i>
-                                </div>
-                            </a>
+                                </a>
+                            </div>
                         </div>
-                    </div>
+                    @else
+                        {{-- Subtitle එකක් නැති විට UI එක සමබර කිරීමට හිස් ඩිව් එකක් --}}
+                        <div></div>
+                    @endif
 
                 </div>
             @endif
