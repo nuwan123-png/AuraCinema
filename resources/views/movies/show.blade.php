@@ -119,27 +119,104 @@
                 </button>
             </div>
 
-            {{-- Download Options Section --}}
+            {{-- Download & Subtitles Section --}}
             @if($movie->download_480p || $movie->download_720p || $movie->download_1080p)
-                <div class="mx-auto mt-6 w-full max-w-4xl rounded-lg border border-white/10 bg-white/5 p-5 text-center">
-                    <h3 class="mb-4 text-sm font-bold text-slate-300">Download Full Movie</h3>
-                    <div class="flex flex-wrap justify-center gap-3">
-                        @if($movie->download_480p)
-                            <a href="{{ str_replace('/e/', '/v/', $movie->download_480p) }}" target="_blank" class="inline-flex items-center gap-2 rounded-full bg-orange-500 px-6 py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 shadow-md">
-                                <i class="fa-solid fa-download"></i> 480p
-                            </a>
-                        @endif
-                        @if($movie->download_720p)
-                            <a href="{{ str_replace('/e/', '/v/', $movie->download_720p) }}" target="_blank" class="inline-flex items-center gap-2 rounded-full bg-orange-500 px-6 py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 shadow-md">
-                                <i class="fa-solid fa-download"></i> 720p
-                            </a>
-                        @endif
-                        @if($movie->download_1080p)
-                            <a href="{{ str_replace('/e/', '/v/', $movie->download_1080p) }}" target="_blank" class="inline-flex items-center gap-2 rounded-full bg-orange-500 px-6 py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 shadow-md">
-                                <i class="fa-solid fa-download"></i> 1080p
-                            </a>
-                        @endif
+                <div class="mx-auto mt-10 grid w-full max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
+                    
+                    {{-- 1. Select Quality Box (Left) --}}
+                    <div class="rounded-xl border border-white/10 bg-white/5 p-5 shadow-lg">
+                        <h3 class="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-200">
+                            <i class="fa-solid fa-hard-drive text-orange-500"></i> Select Quality
+                        </h3>
+                        
+                        <div class="space-y-3">
+                            @if($movie->download_720p)
+                                <a href="{{ str_replace('/e/', '/v/', $movie->download_720p) }}" target="_blank" class="group flex items-center justify-between rounded-lg bg-black/40 p-3 ring-1 ring-white/5 transition hover:bg-black/60 hover:ring-orange-500/50">
+                                    <div class="flex items-center gap-4">
+                                        <div class="flex h-12 w-12 flex-col items-center justify-center rounded bg-white/5 font-bold text-slate-300 transition group-hover:bg-orange-500/10 group-hover:text-orange-400">
+                                            <span class="text-[10px] leading-none text-slate-500">HD</span>
+                                            <span class="mt-0.5 text-sm">720p</span>
+                                        </div>
+                                        <div>
+                                            <div class="text-sm font-bold text-slate-200 transition group-hover:text-white">Direct Download</div>
+                                            <div class="mt-0.5 flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
+                                                <span class="rounded bg-white/10 px-1.5 py-0.5">WEB</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="grid h-10 w-10 place-items-center rounded-full bg-white/5 text-slate-400 transition group-hover:bg-orange-500 group-hover:text-white">
+                                        <i class="fa-solid fa-download"></i>
+                                    </div>
+                                </a>
+                            @endif
+
+                            @if($movie->download_1080p)
+                                <a href="{{ str_replace('/e/', '/v/', $movie->download_1080p) }}" target="_blank" class="group flex items-center justify-between rounded-lg bg-black/40 p-3 ring-1 ring-white/5 transition hover:bg-black/60 hover:ring-orange-500/50">
+                                    <div class="flex items-center gap-4">
+                                        <div class="flex h-12 w-12 flex-col items-center justify-center rounded bg-white/5 font-bold text-slate-300 transition group-hover:bg-orange-500/10 group-hover:text-orange-400">
+                                            <span class="text-[10px] leading-none text-slate-500">FHD</span>
+                                            <span class="mt-0.5 text-sm">1080p</span>
+                                        </div>
+                                        <div>
+                                            <div class="text-sm font-bold text-slate-200 transition group-hover:text-white">Direct Download</div>
+                                            <div class="mt-0.5 flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
+                                                <span class="rounded bg-white/10 px-1.5 py-0.5 text-emerald-500/80">HQ</span>
+                                                <span class="rounded bg-orange-500/10 px-1.5 py-0.5 text-orange-400">10-BIT</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="grid h-10 w-10 place-items-center rounded-full bg-white/5 text-slate-400 transition group-hover:bg-orange-500 group-hover:text-white">
+                                        <i class="fa-solid fa-download"></i>
+                                    </div>
+                                </a>
+                            @endif
+
+                            @if($movie->download_480p)
+                                <a href="{{ str_replace('/e/', '/v/', $movie->download_480p) }}" target="_blank" class="group flex items-center justify-between rounded-lg bg-black/40 p-3 ring-1 ring-white/5 transition hover:bg-black/60 hover:ring-orange-500/50">
+                                    <div class="flex items-center gap-4">
+                                        <div class="flex h-12 w-12 flex-col items-center justify-center rounded bg-white/5 font-bold text-slate-300 transition group-hover:bg-orange-500/10 group-hover:text-orange-400">
+                                            <span class="text-[10px] leading-none text-slate-500">SD</span>
+                                            <span class="mt-0.5 text-sm">480p</span>
+                                        </div>
+                                        <div>
+                                            <div class="text-sm font-bold text-slate-200 transition group-hover:text-white">Direct Download</div>
+                                            <div class="mt-0.5 flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
+                                                <span class="rounded bg-white/10 px-1.5 py-0.5">WEB</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="grid h-10 w-10 place-items-center rounded-full bg-white/5 text-slate-400 transition group-hover:bg-orange-500 group-hover:text-white">
+                                        <i class="fa-solid fa-download"></i>
+                                    </div>
+                                </a>
+                            @endif
+                        </div>
                     </div>
+
+                    {{-- 2. Subtitles Box (Right) --}}
+                    <div class="rounded-xl border border-white/10 bg-white/5 p-5 shadow-lg">
+                        <h3 class="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-200">
+                            <i class="fa-regular fa-closed-captioning text-orange-500"></i> Subtitles
+                        </h3>
+                        
+                        <div class="space-y-3">
+                            <a href="#" class="group flex items-center justify-between rounded-lg bg-black/40 p-3 ring-1 ring-white/5 transition hover:bg-black/60 hover:ring-orange-500/50">
+                                <div class="flex items-center gap-4">
+                                    <div class="grid h-12 w-12 place-items-center rounded bg-orange-500/10 text-xl text-orange-400 transition group-hover:bg-orange-500/20">
+                                        <i class="fa-regular fa-file-lines"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-bold text-slate-200 transition group-hover:text-white">Sinhala Subtitle</div>
+                                        <div class="mt-0.5 text-[10px] font-semibold uppercase text-slate-500">BY AuraCinema</div>
+                                    </div>
+                                </div>
+                                <div class="grid h-10 w-10 place-items-center rounded-full bg-white/5 text-slate-400 transition group-hover:bg-orange-500 group-hover:text-white">
+                                    <i class="fa-solid fa-download"></i>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+
                 </div>
             @endif
         </section>
