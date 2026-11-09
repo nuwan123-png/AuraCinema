@@ -7,23 +7,23 @@
         @else
             <div class="flex h-full w-full items-center justify-center px-2 text-center text-xs text-slate-500">{{ $movie->title }}</div>
         @endif
-        @if($movie->stream_url)
+        @if($movie->stream_url || $movie->embed_url)
             <span class="absolute right-1.5 top-1.5 rounded bg-sky-500 px-1.5 py-0.5 text-[9px] font-bold text-white">FULL</span>
         @endif
         @if(($movie->episodes_count ?? 0) > 0)
             <span class="absolute left-1.5 top-1.5 rounded bg-black/75 px-1.5 py-0.5 text-[9px] font-bold text-white ring-1 ring-white/20">{{ $movie->episodes_count }} EPS</span>
         @endif
-        {{-- Play icon: fades in on hover (and keyboard focus). Pure CSS, no JS. --}}
-        <span class="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition duration-200 group-hover:opacity-100 group-focus-visible:opacity-100" aria-hidden="true">
-            <span class="flex h-12 w-12 scale-75 items-center justify-center rounded-full border-2 border-white bg-black/40 text-white transition duration-200 group-hover:scale-100 group-focus-visible:scale-100">
+
+        {{-- Play icon and "සිංහල උපසිරසි සමඟ" badge: fades in on hover (and keyboard focus). Pure CSS, no JS. --}}
+        <span class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center bg-black/40 px-2 opacity-0 transition duration-200 group-hover:opacity-100 group-focus-visible:opacity-100" aria-hidden="true">
+            <span class="flex h-12 w-12 scale-75 items-center justify-center rounded-full border-2 border-white bg-black/50 text-white shadow-lg transition duration-200 group-hover:scale-100 group-focus-visible:scale-100">
                 <i class="fa-solid fa-play pl-0.5 text-lg"></i>
+            </span>
+            <span class="mt-2.5 rounded bg-orange-500/95 px-2 py-0.5 text-center text-[10px] font-bold tracking-wide text-white shadow">
+                සිංහල උපසිරසි සමඟ
             </span>
         </span>
     </div>
-    {{-- Shown above the title for movies carrying the "sinhala sub" keyword. --}}
-    @php($hasSub = in_array('sinhala sub', $movie->tag_list, true))
-    @if($hasSub)
-        <span class="mt-2 inline-block max-w-full truncate rounded bg-orange-500 px-2 py-0.5 text-[11px] font-bold text-white">සිංහල උපසිරසි සමඟ</span>
-    @endif
-    <p class="{{ $hasSub ? 'mt-1' : 'mt-2' }} line-clamp-1 text-xs font-medium text-slate-300 group-hover:text-white">{{ $movie->title }}</p>
+
+    <p class="mt-2 line-clamp-1 text-xs font-medium text-slate-300 group-hover:text-white">{{ $movie->title }}</p>
 </a>
