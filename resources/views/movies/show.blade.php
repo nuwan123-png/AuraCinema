@@ -125,20 +125,23 @@
                     <h3 class="mb-4 text-sm font-bold text-slate-300">Download Full Movie</h3>
                     <div class="flex flex-wrap justify-center gap-3">
                         @if($movie->download_480p)
-                            <a href="{{ str_replace('/e/', '/v/', $movie->download_480p) }}" target="_blank" class="inline-flex items-center gap-2 rounded bg-zinc-800 px-5 py-2.5 text-xs font-bold text-slate-200 ring-1 ring-white/10 transition hover:bg-orange-500 hover:text-white hover:ring-orange-500">
+                            <a href="{{ str_replace('/e/', '/v/', $movie->download_480p) }}" target="_blank" class="inline-flex items-center gap-2 rounded-full bg-orange-500 px-6 py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 shadow-md">
                                 <i class="fa-solid fa-download"></i> 480p
                             </a>
                         @endif
                         @if($movie->download_720p)
-                            <a href="{{ str_replace('/e/', '/v/', $movie->download_720p) }}" target="_blank" class="inline-flex items-center gap-2 rounded bg-zinc-800 px-5 py-2.5 text-xs font-bold text-slate-200 ring-1 ring-white/10 transition hover:bg-orange-500 hover:text-white hover:ring-orange-500">
+                            <a href="{{ str_replace('/e/', '/v/', $movie->download_720p) }}" target="_blank" class="inline-flex items-center gap-2 rounded-full bg-orange-500 px-6 py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 shadow-md">
                                 <i class="fa-solid fa-download"></i> 720p
                             </a>
                         @endif
                         @if($movie->download_1080p)
-                            <a href="{{ str_replace('/e/', '/v/', $movie->download_1080p) }}" target="_blank" class="inline-flex items-center gap-2 rounded bg-zinc-800 px-5 py-2.5 text-xs font-bold text-slate-200 ring-1 ring-white/10 transition hover:bg-orange-500 hover:text-white hover:ring-orange-500">
+                            <a href="{{ str_replace('/e/', '/v/', $movie->download_1080p) }}" target="_blank" class="inline-flex items-center gap-2 rounded-full bg-orange-500 px-6 py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 shadow-md">
                                 <i class="fa-solid fa-download"></i> 1080p
                             </a>
                         @endif
+                    </div>
+                </div>
+            @endif
                     </div>
                 </div>
             @endif
