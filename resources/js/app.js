@@ -43,12 +43,6 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ---- Animated hero carousel ----
-//
-// Cheap on purpose: only opacity/transform animate (GPU, no layout work), slides are plain markup
-// (no libraries, no timers hammering the page). The progress bar is a CSS animation and its
-// "animationend" event moves to the next slide, so hovering (CSS) pauses both the bar and the slider.
-// It also pauses when the tab is hidden or the hero is off-screen, and never autoplays for people
-// who asked their system for reduced motion.
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 document.querySelectorAll('[data-hero]').forEach((hero) => {
@@ -62,7 +56,7 @@ document.querySelectorAll('[data-hero]').forEach((hero) => {
     const restartBar = () => {
         if (!bar || reduceMotion) return;
         bar.classList.remove('run');
-        void bar.offsetWidth; // forces the browser to restart the CSS animation
+        void bar.offsetWidth;
         bar.classList.add('run');
     };
 
@@ -95,8 +89,6 @@ document.querySelectorAll('[data-hero]').forEach((hero) => {
 });
 
 // ---- Rows that glide by themselves (add data-auto to a row) ----
-// One gentle smooth scroll every few seconds; waits while the mouse is over the row, after any
-// touch/click/keypress, when the row is off-screen or the tab is hidden.
 document.querySelectorAll('[data-row][data-auto]').forEach((row) => {
     const track = row.querySelector('[data-track]');
     if (!track || reduceMotion) return;
@@ -151,11 +143,11 @@ if (episodesToggle) {
         sync();
         if (episodesToggle.checked && list.children.length === 0) addRow(1);
     });
-    panel.querySelector('[data-episode-add]').addEventListener('click', () => addRow(nextNumber()).querySelector('input[type=url]').focus());
+    panel.querySelector('[data-episode-add]').addEventListener('click', () => addRow(nextNumber()).querySelector('input[type=url], input[type=text]').focus());
     panel.querySelector('[data-episode-bulk]').addEventListener('click', () => {
         const count = Math.min(200, Math.max(1, parseInt(bulkInput.value, 10) || 0));
         for (let i = 0; i < count; i += 1) addRow(nextNumber());
-        list.lastElementChild?.querySelector('input[type=url]')?.scrollIntoView({ block: 'nearest' });
+        list.lastElementChild?.querySelector('input[type=url], input[type=text]')?.scrollIntoView({ block: 'nearest' });
     });
     list.addEventListener('click', (e) => {
         const remove = e.target.closest('[data-episode-remove]');
@@ -165,29 +157,50 @@ if (episodesToggle) {
     sync();
 }
 
-// ---- "Watch now" player: the iframe is only created when the visitor clicks ----
+// ---- "Watch now" player mount function (NO sandbox: Streamtape loads safely) ----
+function mountPlayer(container, src, title) {
+    const frame = document.createElement('iframe');
+    frame.src = src;
+    frame.title = title || 'Video player';
+    frame.className = 'aspect-video w-full rounded-lg bg-black ring-1 ring-white/10 md:aspect-auto md:h-[500px]';
+    frame.allowFullscreen = true;
+    frame.allow = 'autoplay; fullscreen; picture-in-picture; encrypted-media';
+    frame.referrerPolicy = 'no-referrer';
+    container.innerHTML = '';
+    container.appendChild(frame);
+}
+
+// Click "Watch now" button
 document.querySelectorAll('[data-embed-load]').forEach((button) => {
     button.addEventListener('click', () => {
-        const frame = document.createElement('iframe');
-        frame.src = button.dataset.embedSrc;
-        frame.title = button.dataset.embedTitle || 'Video player';
-        frame.className = 'aspect-video w-full rounded-lg bg-black ring-1 ring-white/10 md:aspect-auto md:h-[500px]';
-        frame.allowFullscreen = true;
-        frame.allow = 'autoplay; fullscreen; picture-in-picture; encrypted-media';
-        frame.referrerPolicy = 'strict-origin-when-cross-origin';
-        // Keeps the player from navigating or taking over the page it is embedded in.
-        frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox');
-        button.replaceWith(frame);
+        const container = button.closest('[data-embed]');
+        if (container) {
+            mountPlayer(container, button.dataset.embedSrc, button.dataset.embedTitle);
+        }
+    });
+});
+
+// Click Episode button -> loads in Watch now player
+document.querySelectorAll('[data-episode-btn]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+        const src = btn.dataset.embedSrc;
+        const title = btn.dataset.embedTitle;
+        const container = document.querySelector('[data-embed]');
+        const watchSection = document.getElementById('watch');
+        const watchTitle = document.getElementById('watch-title');
+
+        if (watchTitle && title) {
+            watchTitle.textContent = title;
+        }
+
+        if (container && src) {
+            mountPlayer(container, src, title);
+            watchSection?.scrollIntoView({ behavior: 'smooth' });
+        }
     });
 });
 
 // ---- Trailer player: lazy source + release buffer when paused ----
-//
-// * Nothing is downloaded until the user presses play (no src, preload="none").
-// * If the video stays paused for IDLE_MS we drop the source: the browser frees the decoded/buffered
-//   data and stops any background download. Pressing play again re-attaches the file and resumes
-//   from the same second (the file is cached + range-requested, so this is fast).
-// * The video also pauses when the tab is hidden.
 const IDLE_MS = 15000;
 
 document.querySelectorAll('[data-player]').forEach((box) => {
