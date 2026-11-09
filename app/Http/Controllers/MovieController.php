@@ -53,7 +53,14 @@ class MovieController extends Controller
                 $query->where('year', $year);
             }
             if ($tag !== '') {
-                $query->where('tags', 'like', '%,'.addcslashes($tag, '%_\\').',%');
+                $cleanTag = addcslashes($tag, '%_\\');
+                $query->where(function ($w) use ($cleanTag) {
+                    $w->where('tags', 'like', '%,' . $cleanTag . ',%')
+                      ->orWhere('tags', 'like', $cleanTag . ',%')
+                      ->orWhere('tags', 'like', '%,' . $cleanTag)
+                      ->orWhere('tags', '=', $cleanTag)
+                      ->orWhere('tags', 'like', '%"' . $cleanTag . '"%');
+                });
             }
 
             // e.g. "Hindi · Romance · 2026 · Movies" - every active filter is named.

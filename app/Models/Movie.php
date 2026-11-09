@@ -35,10 +35,19 @@ class Movie extends Model
         return (string) config('auracinema.types.'.$this->type, 'Movie');
     }
 
-    /** Keywords as a plain list, e.g. ['hindi', 'romantic']. */
+    /** Keywords as a plain list, e.g. ['hindi', 'romantic']. Always clean & lowercase. */
     public function getTagListAttribute(): array
     {
-        return array_values(array_filter(explode(',', (string) $this->tags), 'strlen'));
+        if (empty($this->tags)) {
+            return [];
+        }
+
+        return collect(explode(',', (string) $this->tags))
+            ->map(fn ($t) => self::normalizeTag($t))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /** Turn what the admin typed ("Hindi, romantic ,2026") into the stored form ",hindi,romantic,2026,". */

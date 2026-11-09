@@ -39,7 +39,7 @@
                     <a href="{{ route('movies.index', ['year' => $movie->year]) }}" class="rounded bg-white/10 px-2 py-1 text-slate-200 hover:bg-white/20">{{ $movie->year }}</a>
                 @endif
                 @foreach($movie->tag_list as $tag)
-                    <a href="{{ route('movies.index', ['tag' => $tag]) }}" class="rounded bg-orange-500/10 px-2 py-1 capitalize text-orange-300 hover:bg-orange-500/20">#{{ $tag }}</a>
+                    <a href="{{ route('movies.index', ['tag' => mb_strtolower($tag)]) }}" class="rounded bg-orange-500/10 px-2 py-1 capitalize text-orange-300 hover:bg-orange-500/20">#{{ $tag }}</a>
                 @endforeach
                 @if($movie->episodes->isNotEmpty())
                     <span class="rounded bg-orange-500/15 px-2 py-1 font-semibold text-orange-300">{{ $movie->episodes->count() }} EPS</span>
@@ -106,7 +106,7 @@
             <div data-embed class="mx-auto w-full max-w-4xl">
                 <button type="button" data-embed-load data-embed-src="{{ $defaultPlayerSrc }}" data-embed-title="{{ $movie->title }}"
                         class="grid aspect-video w-full place-items-center rounded-lg bg-black ring-1 ring-white/10 transition hover:ring-orange-400/60"
-                        aria-label="Load the player for {{ $movie->title }}">
+                        aria-label="Load the player for {{ $movie->title }}"[cite: 13]>
                     <span class="flex items-center gap-2 rounded-full bg-orange-500 px-7 py-3 text-sm font-bold text-white">
                         <i class="fa-solid fa-play"></i> Watch now
                     </span>
