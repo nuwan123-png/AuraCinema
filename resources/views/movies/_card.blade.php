@@ -20,8 +20,10 @@
             </span>
         </span>
     </div>
-    <p class="mt-2 line-clamp-1 text-xs font-medium text-slate-300 group-hover:text-white">{{ $movie->title }}</p>
-    @if(in_array('sinhala sub', $movie->tag_list, true))
-        <p class="mt-0.5 line-clamp-1 text-[11px] font-semibold text-orange-400">සිංහල උපසිරසි සමඟ</p>
+    {{-- Shown above the title for movies carrying the "sinhala sub" keyword. --}}
+    @php($hasSub = in_array('sinhala sub', $movie->tag_list, true))
+    @if($hasSub)
+        <span class="mt-2 inline-block max-w-full truncate rounded bg-orange-500 px-2 py-0.5 text-[11px] font-bold text-white">සිංහල උපසිරසි සමඟ</span>
     @endif
+    <p class="{{ $hasSub ? 'mt-1' : 'mt-2' }} line-clamp-1 text-xs font-medium text-slate-300 group-hover:text-white">{{ $movie->title }}</p>
 </a>
