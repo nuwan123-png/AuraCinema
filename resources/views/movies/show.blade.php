@@ -142,9 +142,6 @@
                     </div>
                 </div>
             @endif
-                    </div>
-                </div>
-            @endif
         </section>
     @endif
 @endsection
