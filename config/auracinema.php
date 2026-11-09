@@ -27,7 +27,7 @@ return [
 
     // One-click keyword suggestions under the "Keywords" box of the add/edit form (you can still type any keyword).
     'quick_tags' => [
-        'romantic', 'family', 'dubbed', 'new release', 'top rated', 'classic', '2026', '2025', '2024', '2023',
+        'sinhala sub', 'romantic', 'family', 'dubbed', 'new release', 'top rated', 'classic', '2026', '2025', '2024', '2023',
     ],
 
     // Genres shown in the navbar dropdown and the add/edit form.
