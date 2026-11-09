@@ -4,17 +4,15 @@
     $tagList = $movie->tag_list ?? [];
     $tagsLower = mb_strtolower($rawTags);
 
-    // චිත්‍රපටය සෘජුවම සිංහල චිත්‍රපටයක්ද (original Sinhala) නැතහොත් උපසිරසි සහිත එකක්ද යන්න තීරණය කිරීම
     $isSinhalaMovie = in_array('sinhala', $tagList, true) || str_contains($tagsLower, ',sinhala,');
     $isSinhalaDubbed = in_array('dubbed', $tagList, true) || str_contains($tagsLower, 'dubbed');
-    
-    // ලේබලයේ පෙළ සකස් කිරීම
+
     if ($isSinhalaMovie && !in_array('sinhala sub', $tagList, true)) {
-        $badgeText = 'සිංහල'; // සිංහල චිත්‍රපට සඳහා "උපසිරසි සමඟ" කොටස ඉවත් කර ඇත
+        $badgeText = 'සිංහල';
     } elseif ($isSinhalaDubbed) {
         $badgeText = 'සිංහල හඬකැවූ';
     } else {
-        $badgeText = 'සිංහල උපසිරසි සමඟ'; // අනෙකුත් සියලුම චිත්‍රපට සඳහා
+        $badgeText = 'සිංහල උපසිරසි සමඟ';
     }
 @endphp
 
