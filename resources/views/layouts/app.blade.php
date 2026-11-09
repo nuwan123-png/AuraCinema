@@ -62,10 +62,7 @@
                         Genre <i class="fa-solid fa-chevron-down text-[9px]"></i>
                     </summary>
                     <div class="absolute inset-x-4 top-full z-50 mt-2 grid max-h-72 grid-cols-3 gap-1 sm:inset-x-auto sm:left-0 sm:w-60 sm:grid-cols-2 overflow-y-auto rounded-md border border-white/10 bg-zinc-900 p-2 text-xs normal-case shadow-xl">
-                        @php
-                            $navGenres = config('auracinema.genres', ['Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Drama', 'Horror', 'Romance', 'Sci-Fi', 'Thriller']);
-                        @endphp
-                        @foreach($navGenres as $g)
+                        @foreach(config('auracinema.genres', ['Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Horror', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller']) as $g)
                             <a href="{{ route('movies.index', ['genre' => $g]) }}" class="rounded px-2 py-1.5 hover:bg-white/10 {{ request('genre') === $g ? 'text-orange-400' : '' }}">{{ $g }}</a>
                         @endforeach
                     </div>
@@ -80,10 +77,7 @@
                         <div class="invisible absolute left-0 top-full z-50 pt-2 opacity-0 transition duration-150 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
                             <div class="grid w-48 grid-cols-2 gap-1 rounded-md border border-white/10 bg-zinc-900 p-2 text-xs normal-case shadow-xl">
                                 <a href="{{ route('movies.index', ['type' => $navKey]) }}" class="col-span-2 rounded px-2 py-1.5 font-bold text-orange-400 hover:bg-white/10">All {{ $navLabel }}</a>
-                                @php
-                                    $navLanguages = config('auracinema.languages', ['Sinhala', 'English', 'Tamil', 'Hindi', 'Malayalam', 'Telugu', 'Korean']);
-                                @endphp
-                                @foreach($navLanguages as $lang)
+                                @foreach(config('auracinema.languages', ['Sinhala', 'English', 'Tamil', 'Hindi', 'Malayalam', 'Telugu', 'Korean']) as $lang)
                                     <a href="{{ route('movies.index', ['type' => $navKey, 'language' => $lang]) }}" class="rounded px-2 py-1.5 hover:bg-white/10 {{ $navType === $navKey && request('language') === $lang ? 'text-orange-400' : '' }}">{{ $lang }}</a>
                                 @endforeach
                             </div>
