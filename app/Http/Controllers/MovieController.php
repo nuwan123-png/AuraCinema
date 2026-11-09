@@ -214,6 +214,14 @@ class MovieController extends Controller
         if ($embed !== '') {
             $request->merge(['embed_url' => EmbedUrl::normalize($embed) ?? $embed]);
         }
+        
+        // Clean download links (normalize streamtape embed URL to video URL if necessary)
+        foreach (['download_480p', 'download_720p', 'download_1080p'] as $field) {
+            $dlLink = trim((string) $request->input($field, ''));
+            if ($dlLink !== '') {
+                $request->merge([$field => str_replace('/e/', '/v/', $dlLink)]);
+            }
+        }
 
         $validated = $request->validate($this->rules());
 
@@ -234,7 +242,11 @@ class MovieController extends Controller
     /** Columns of the movies table from validated input. */
     private function movieData(array $validated, ?Movie $movie = null): array
     {
-        $data = Arr::only($validated, ['title', 'description', 'stream_url', 'embed_url', 'genre', 'year', 'language']);
+        $data = Arr::only($validated, [
+            'title', 'description', 'stream_url', 'embed_url', 'genre', 'year', 'language',
+            'download_480p', 'download_720p', 'download_1080p'
+        ]);
+        
         $data['tags'] = Movie::normalizeTags($validated['tags'] ?? null);
         $data['type'] = $validated['type'] ?? $movie?->type ?? 'movie';
 
@@ -295,6 +307,11 @@ class MovieController extends Controller
             'episodes' => ['nullable', 'array', 'max:500'],
             'episodes.*.number' => ['required', 'integer', 'between:1,9999'],
             'episodes.*.url' => ['required', 'url:http,https', 'max:500'],
+            
+            // Download Links Validation
+            'download_480p' => ['nullable', 'url:http,https', 'max:500'],
+            'download_720p' => ['nullable', 'url:http,https', 'max:500'],
+            'download_1080p' => ['nullable', 'url:http,https', 'max:500'],
         ];
     }
 }

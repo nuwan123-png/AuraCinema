@@ -22,6 +22,9 @@ class Movie extends Model
         'year',
         'language',
         'tags',
+        'download_480p',
+        'download_720p',
+        'download_1080p',
     ];
 
     /** Episodes of a series, in order (episode 1 first). */

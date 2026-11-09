@@ -112,3 +112,25 @@
            class="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">
     <p class="mt-1 text-xs text-slate-500">The player loads when a visitor clicks "Watch now".</p>
 </div>
+
+<div class="mt-6 space-y-4 rounded-lg border border-white/10 bg-white/5 p-4">
+    <h3 class="text-sm font-bold text-orange-400">Download Links (Streamtape)</h3>
+    
+    <div>
+        <label for="download_480p" class="mb-1 block text-xs font-semibold">480p Download Link</label>
+        <input type="url" name="download_480p" id="download_480p" value="{{ old('download_480p', $movie->download_480p ?? '') }}" class="w-full rounded-md border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none" placeholder="https://streamtape.com/v/...">
+        @error('download_480p') <span class="text-xs text-rose-500">{{ $message }}</span> @enderror
+    </div>
+
+    <div>
+        <label for="download_720p" class="mb-1 block text-xs font-semibold">720p Download Link</label>
+        <input type="url" name="download_720p" id="download_720p" value="{{ old('download_720p', $movie->download_720p ?? '') }}" class="w-full rounded-md border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none" placeholder="https://streamtape.com/v/...">
+        @error('download_720p') <span class="text-xs text-rose-500">{{ $message }}</span> @enderror
+    </div>
+
+    <div>
+        <label for="download_1080p" class="mb-1 block text-xs font-semibold">1080p Download Link</label>
+        <input type="url" name="download_1080p" id="download_1080p" value="{{ old('download_1080p', $movie->download_1080p ?? '') }}" class="w-full rounded-md border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none" placeholder="https://streamtape.com/v/...">
+        @error('download_1080p') <span class="text-xs text-rose-500">{{ $message }}</span> @enderror
+    </div>
+</div>
