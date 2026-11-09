@@ -55,14 +55,14 @@
     <input id="trailer" type="file" name="trailer" accept="video/mp4,video/webm,video/quicktime,video/x-matroska" class="w-full rounded-md border border-white/10 bg-black/30 p-2 text-xs text-slate-400">
 </div>
 
-{{-- Episodes: tick the box to add one Telegram link per episode (series / anime). --}}
+{{-- Episodes: tick the box to add Streamtape links for each episode (series / anime). --}}
 <div class="rounded-md border border-white/10 bg-black/20 p-3">
     <input type="hidden" name="has_episodes" value="0">
     <label class="flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-200">
         <input type="checkbox" name="has_episodes" value="1" data-episodes-toggle @checked($hasEpisodes) class="h-4 w-4 accent-orange-500">
         This title has episodes
     </label>
-    <p class="mt-1 text-xs text-slate-500">Tick this for a series or anime, then add a Telegram link for each episode.</p>
+    <p class="mt-1 text-xs text-slate-500">Tick this for a series or anime, then add a Streamtape embed link for each episode.</p>
 
     <div data-episodes-panel class="{{ $hasEpisodes ? '' : 'hidden' }} mt-4 space-y-3">
         <div data-episode-list class="space-y-2">
@@ -86,13 +86,8 @@
 </div>
 
 <div data-stream-field class="{{ $hasEpisodes ? 'hidden' : '' }}">
-    <label for="stream_url" class="mb-1.5 block text-xs font-semibold text-slate-300"><i class="fa-brands fa-telegram text-sky-400"></i> Full movie link (https only)</label>
-    <input id="stream_url" type="url" name="stream_url" maxlength="500" value="{{ old('stream_url', $movie?->stream_url) }}" placeholder="https://t.me/..." class="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">
-</div>
-
-<div>
-    <label for="embed_url" class="mb-1.5 block text-xs font-semibold text-slate-300"><i class="fa-solid fa-play text-orange-400"></i> Watch now (YouTube, Vimeo, Bunny Stream or Cloudflare Stream)</label>
+    <label for="embed_url" class="mb-1.5 block text-xs font-semibold text-slate-300"><i class="fa-solid fa-play text-orange-400"></i> Watch now (Streamtape, YouTube, Vimeo, Bunny Stream or Cloudflare Stream)</label>
     <input id="embed_url" type="text" name="embed_url" maxlength="800" value="{{ old('embed_url', $movie?->embed_url) }}" placeholder="Paste the player link or the whole iframe code"
            class="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">
-    <p class="mt-1 text-xs text-slate-500">Only for videos you have the right to show. The player loads when a visitor clicks "Watch now".</p>
+    <p class="mt-1 text-xs text-slate-500">The player loads when a visitor clicks "Watch now".</p>
 </div>
