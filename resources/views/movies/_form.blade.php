@@ -6,7 +6,14 @@
         : ($movie ? $movie->episodes->map(fn ($e) => ['number' => $e->number, 'url' => $e->url])->all() : []);
     $selectedType = old('type', $movie?->type ?? 'movie');
     $selectedGenre = old('genre', $movie?->genre);
+    $selectedLanguage = old('language', $movie?->language);
+
+    $popularTags = ['romantic', 'family', 'dubbed', 'new release', 'top rated', 'classic'];
+    $genreTags = ['action', 'adventure', 'animation', 'comedy', 'crime', 'documentary', 'drama', 'fantasy', 'horror', 'mystery', 'romance', 'sci-fi', 'thriller', 'war'];
+    $languageTags = ['hindi', 'tamil', 'malayalam', 'telugu', 'kannada', 'english', 'sinhala', 'korean', 'japanese', 'chinese'];
+    $yearTags = ['2027', '2026', '2025', '2024', '2023', '2022', '2021', '2020'];
 @endphp
+
 <div>
     <label for="title" class="mb-1.5 block text-xs font-semibold text-slate-300">Title</label>
     <input id="title" type="text" name="title" required maxlength="255" value="{{ old('title', $movie?->title) }}" class="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">
@@ -36,24 +43,50 @@
     </div>
 </div>
 
-<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
     <div>
         <label for="language" class="mb-1.5 block text-xs font-semibold text-slate-300">Language</label>
         <select id="language" name="language" class="w-full rounded-md border border-white/10 bg-zinc-900 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">
             <option value="">&mdash; none &mdash;</option>
-            @foreach(config('auracinema.languages') as $lang)
-                <option value="{{ $lang }}" @selected(old('language', $movie?->language) === $lang)>{{ $lang }}</option>
+            @foreach(config('auracinema.languages', ['Hindi', 'Tamil', 'Malayalam', 'Telugu', 'Kannada', 'English', 'Sinhala', 'Korean', 'Japanese', 'Chinese', 'Other']) as $lang)
+                <option value="{{ $lang }}" @selected($selectedLanguage === $lang)>{{ $lang }}</option>
             @endforeach
         </select>
     </div>
-    <div class="sm:col-span-2">
-        <label for="tags" class="mb-1.5 block text-xs font-semibold text-slate-300">Keywords <span class="font-normal text-slate-500">(comma separated; each one becomes a clickable filter)</span></label>
-        <input id="tags" type="text" name="tags" maxlength="300" value="{{ old('tags', $movie ? implode(', ', $movie->tag_list) : '') }}" placeholder="romantic, dubbed, 2026" class="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">
-        <div class="mt-2 flex flex-wrap gap-1.5">
-            @foreach(config('auracinema.quick_tags') as $quick)
-                <button type="button" data-tag-add="{{ $quick }}" class="rounded-full bg-white/10 px-2.5 py-1 text-[11px] text-slate-300 hover:bg-orange-500/30 hover:text-white">+ {{ $quick }}</button>
-            @endforeach
-        </div>
+    <div>
+        <label for="tags" class="mb-1.5 block text-xs font-semibold text-slate-300">Keywords <span class="text-slate-500">(comma separated; each one becomes a clickable filter)</span></label>
+        <input id="tags" type="text" name="tags" value="{{ old('tags', is_array($movie?->tags) ? implode(', ', $movie->tags) : $movie?->tags) }}" placeholder="romantic, dubbed, 2026" class="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">
+    </div>
+</div>
+
+{{-- Quick Add Keyword Suggestion Buttons --}}
+<div class="space-y-2 rounded-md border border-white/5 bg-white/[0.01] p-3 text-xs">
+    <div class="flex flex-wrap items-center gap-1.5">
+        <span class="mr-1 text-[11px] font-semibold text-slate-400">Popular:</span>
+        @foreach($popularTags as $t)
+            <button type="button" data-tag-add="{{ $t }}" class="rounded bg-white/5 px-2 py-1 text-slate-300 transition hover:bg-white/15 hover:text-white">+ {{ $t }}</button>
+        @endforeach
+    </div>
+
+    <div class="flex flex-wrap items-center gap-1.5 border-t border-white/5 pt-2">
+        <span class="mr-1 text-[11px] font-semibold text-slate-400">Genres:</span>
+        @foreach($genreTags as $t)
+            <button type="button" data-tag-add="{{ $t }}" class="rounded bg-white/5 px-2 py-1 text-slate-300 transition hover:bg-white/15 hover:text-white">+ {{ $t }}</button>
+        @endforeach
+    </div>
+
+    <div class="flex flex-wrap items-center gap-1.5 border-t border-white/5 pt-2">
+        <span class="mr-1 text-[11px] font-semibold text-slate-400">Languages:</span>
+        @foreach($languageTags as $t)
+            <button type="button" data-tag-add="{{ $t }}" class="rounded bg-white/5 px-2 py-1 text-slate-300 transition hover:bg-white/15 hover:text-white">+ {{ $t }}</button>
+        @endforeach
+    </div>
+
+    <div class="flex flex-wrap items-center gap-1.5 border-t border-white/5 pt-2">
+        <span class="mr-1 text-[11px] font-semibold text-slate-400">Years:</span>
+        @foreach($yearTags as $t)
+            <button type="button" data-tag-add="{{ $t }}" class="rounded bg-white/5 px-2 py-1 text-slate-300 transition hover:bg-white/15 hover:text-white">+ {{ $t }}</button>
+        @endforeach
     </div>
 </div>
 
@@ -61,6 +94,7 @@
     <label for="description" class="mb-1.5 block text-xs font-semibold text-slate-300">Description</label>
     <textarea id="description" name="description" rows="4" maxlength="5000" class="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">{{ old('description', $movie?->description) }}</textarea>
 </div>
+
 <div>
     <label for="image" class="mb-1.5 block text-xs font-semibold text-slate-300">Poster (JPG / PNG / WebP, max 10MB &mdash; resized automatically)</label>
     @if($movie?->image)
@@ -68,6 +102,7 @@
     @endif
     <input id="image" type="file" name="image" accept="image/jpeg,image/png,image/webp" class="w-full rounded-md border border-white/10 bg-black/30 p-2 text-xs text-slate-400">
 </div>
+
 <div>
     <label for="trailer" class="mb-1.5 block text-xs font-semibold text-slate-300">Trailer (MP4 / WebM / MOV / MKV, max 30MB &mdash; compressed automatically)</label>
     @if($movie?->trailer_url)
@@ -76,14 +111,14 @@
     <input id="trailer" type="file" name="trailer" accept="video/mp4,video/webm,video/quicktime,video/x-matroska" class="w-full rounded-md border border-white/10 bg-black/30 p-2 text-xs text-slate-400">
 </div>
 
-{{-- Episodes: tick the box to add one Telegram link per episode (series / anime). --}}
+{{-- Episodes: tick the box to add Streamtape links for each episode (series / anime) --}}
 <div class="rounded-md border border-white/10 bg-black/20 p-3">
     <input type="hidden" name="has_episodes" value="0">
     <label class="flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-200">
         <input type="checkbox" name="has_episodes" value="1" data-episodes-toggle @checked($hasEpisodes) class="h-4 w-4 accent-orange-500">
         This title has episodes
     </label>
-    <p class="mt-1 text-xs text-slate-500">Tick this for a series or anime, then add a Telegram link for each episode.</p>
+    <p class="mt-1 text-xs text-slate-500">Tick this for a series or anime, then add a Streamtape embed link for each episode.</p>
 
     <div data-episodes-panel class="{{ $hasEpisodes ? '' : 'hidden' }} mt-4 space-y-3">
         <div data-episode-list class="space-y-2">
@@ -107,13 +142,8 @@
 </div>
 
 <div data-stream-field class="{{ $hasEpisodes ? 'hidden' : '' }}">
-    <label for="stream_url" class="mb-1.5 block text-xs font-semibold text-slate-300"><i class="fa-brands fa-telegram text-sky-400"></i> Full movie link (https only)</label>
-    <input id="stream_url" type="url" name="stream_url" maxlength="500" value="{{ old('stream_url', $movie?->stream_url) }}" placeholder="https://t.me/..." class="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">
-</div>
-
-<div>
-    <label for="embed_url" class="mb-1.5 block text-xs font-semibold text-slate-300"><i class="fa-solid fa-play text-orange-400"></i> Watch now (YouTube, Vimeo, Bunny Stream or Cloudflare Stream)</label>
+    <label for="embed_url" class="mb-1.5 block text-xs font-semibold text-slate-300"><i class="fa-solid fa-play text-orange-400"></i> Watch now (Streamtape, YouTube, Vimeo, Bunny Stream or Cloudflare Stream)</label>
     <input id="embed_url" type="text" name="embed_url" maxlength="800" value="{{ old('embed_url', $movie?->embed_url) }}" placeholder="Paste the player link or the whole iframe code"
            class="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">
-    <p class="mt-1 text-xs text-slate-500">Only for videos you have the right to show. The player loads when a visitor clicks "Watch now".</p>
+    <p class="mt-1 text-xs text-slate-500">The player loads when a visitor clicks "Watch now".</p>
 </div>
