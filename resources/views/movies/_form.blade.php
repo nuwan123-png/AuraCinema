@@ -4,9 +4,6 @@
     $episodeRows = old('episodes') !== null
         ? array_values((array) old('episodes'))
         : ($movie ? $movie->episodes->map(fn ($e) => ['number' => $e->number, 'url' => $e->url])->all() : []);
-    $selectedType = old('type', $movie?->type ?? 'movie');
-    $selectedGenre = old('genre', $movie?->genre);
-    $selectedLanguage = old('language', $movie?->language);
 
     $popularTags = ['romantic', 'family', 'dubbed', 'new release', 'top rated', 'classic'];
     $genreTags = ['action', 'adventure', 'animation', 'comedy', 'crime', 'documentary', 'drama', 'fantasy', 'horror', 'mystery', 'romance', 'sci-fi', 'thriller', 'war'];
@@ -14,79 +11,47 @@
     $yearTags = ['2027', '2026', '2025', '2024', '2023', '2022', '2021', '2020'];
 @endphp
 
+{{-- Hidden field to preserve existing type without displaying on the form --}}
+<input type="hidden" name="type" value="{{ old('type', $movie?->type ?? 'movie') }}">
+
 <div>
     <label for="title" class="mb-1.5 block text-xs font-semibold text-slate-300">Title</label>
     <input id="title" type="text" name="title" required maxlength="255" value="{{ old('title', $movie?->title) }}" class="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">
 </div>
 
-<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-    <div>
-        <label for="type" class="mb-1.5 block text-xs font-semibold text-slate-300">Type</label>
-        <select id="type" name="type" class="w-full rounded-md border border-white/10 bg-zinc-900 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">
-            @foreach(config('auracinema.types') as $value => $label)
-                <option value="{{ $value }}" @selected($selectedType === $value)>{{ $label }}</option>
+{{-- Keywords & Quick-add buttons --}}
+<div class="space-y-2">
+    <label for="tags" class="block text-xs font-semibold text-slate-300">Keywords <span class="text-slate-500">(comma separated; each one becomes a clickable filter)</span></label>
+    <input id="tags" type="text" name="tags" value="{{ old('tags', is_array($movie?->tags) ? implode(', ', $movie->tags) : $movie?->tags) }}" placeholder="romantic, dubbed, 2026, sinhala" class="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">
+
+    <div class="space-y-2 rounded-md border border-white/5 bg-white/[0.01] p-3 text-xs">
+        <div class="flex flex-wrap items-center gap-1.5">
+            <span class="mr-1 text-[11px] font-semibold text-slate-400">Popular:</span>
+            @foreach($popularTags as $t)
+                <button type="button" data-tag-add="{{ $t }}" class="rounded bg-white/5 px-2 py-1 text-slate-300 transition hover:bg-white/15 hover:text-white">+ {{ $t }}</button>
             @endforeach
-        </select>
-    </div>
-    <div>
-        <label for="genre" class="mb-1.5 block text-xs font-semibold text-slate-300">Genre</label>
-        <select id="genre" name="genre" class="w-full rounded-md border border-white/10 bg-zinc-900 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">
-            <option value="">&mdash; none &mdash;</option>
-            @foreach(config('auracinema.genres') as $g)
-                <option value="{{ $g }}" @selected($selectedGenre === $g)>{{ $g }}</option>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-1.5 border-t border-white/5 pt-2">
+            <span class="mr-1 text-[11px] font-semibold text-slate-400">Genres:</span>
+            @foreach($genreTags as $t)
+                <button type="button" data-tag-add="{{ $t }}" class="rounded bg-white/5 px-2 py-1 text-slate-300 transition hover:bg-white/15 hover:text-white">+ {{ $t }}</button>
             @endforeach
-        </select>
-    </div>
-    <div>
-        <label for="year" class="mb-1.5 block text-xs font-semibold text-slate-300">Year</label>
-        <input id="year" type="number" name="year" min="1900" max="2100" value="{{ old('year', $movie?->year) }}" placeholder="{{ date('Y') }}" class="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">
-    </div>
-</div>
+        </div>
 
-<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-    <div>
-        <label for="language" class="mb-1.5 block text-xs font-semibold text-slate-300">Language</label>
-        <select id="language" name="language" class="w-full rounded-md border border-white/10 bg-zinc-900 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">
-            <option value="">&mdash; none &mdash;</option>
-            @foreach(config('auracinema.languages', ['Hindi', 'Tamil', 'Malayalam', 'Telugu', 'Kannada', 'English', 'Sinhala', 'Korean', 'Japanese', 'Chinese', 'Other']) as $lang)
-                <option value="{{ $lang }}" @selected($selectedLanguage === $lang)>{{ $lang }}</option>
+        <div class="flex flex-wrap items-center gap-1.5 border-t border-white/5 pt-2">
+            <span class="mr-1 text-[11px] font-semibold text-slate-400">Languages:</span>
+            @foreach($languageTags as $t)
+                <button type="button" data-tag-add="{{ $t }}" class="rounded bg-white/5 px-2 py-1 text-slate-300 transition hover:bg-white/15 hover:text-white">+ {{ $t }}</button>
             @endforeach
-        </select>
-    </div>
-    <div>
-        <label for="tags" class="mb-1.5 block text-xs font-semibold text-slate-300">Keywords <span class="text-slate-500">(comma separated; each one becomes a clickable filter)</span></label>
-        <input id="tags" type="text" name="tags" value="{{ old('tags', is_array($movie?->tags) ? implode(', ', $movie->tags) : $movie?->tags) }}" placeholder="romantic, dubbed, 2026" class="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">
-    </div>
-</div>
+        </div>
 
-{{-- Quick Add Keyword Suggestion Buttons --}}
-<div class="space-y-2 rounded-md border border-white/5 bg-white/[0.01] p-3 text-xs">
-    <div class="flex flex-wrap items-center gap-1.5">
-        <span class="mr-1 text-[11px] font-semibold text-slate-400">Popular:</span>
-        @foreach($popularTags as $t)
-            <button type="button" data-tag-add="{{ $t }}" class="rounded bg-white/5 px-2 py-1 text-slate-300 transition hover:bg-white/15 hover:text-white">+ {{ $t }}</button>
-        @endforeach
-    </div>
-
-    <div class="flex flex-wrap items-center gap-1.5 border-t border-white/5 pt-2">
-        <span class="mr-1 text-[11px] font-semibold text-slate-400">Genres:</span>
-        @foreach($genreTags as $t)
-            <button type="button" data-tag-add="{{ $t }}" class="rounded bg-white/5 px-2 py-1 text-slate-300 transition hover:bg-white/15 hover:text-white">+ {{ $t }}</button>
-        @endforeach
-    </div>
-
-    <div class="flex flex-wrap items-center gap-1.5 border-t border-white/5 pt-2">
-        <span class="mr-1 text-[11px] font-semibold text-slate-400">Languages:</span>
-        @foreach($languageTags as $t)
-            <button type="button" data-tag-add="{{ $t }}" class="rounded bg-white/5 px-2 py-1 text-slate-300 transition hover:bg-white/15 hover:text-white">+ {{ $t }}</button>
-        @endforeach
-    </div>
-
-    <div class="flex flex-wrap items-center gap-1.5 border-t border-white/5 pt-2">
-        <span class="mr-1 text-[11px] font-semibold text-slate-400">Years:</span>
-        @foreach($yearTags as $t)
-            <button type="button" data-tag-add="{{ $t }}" class="rounded bg-white/5 px-2 py-1 text-slate-300 transition hover:bg-white/15 hover:text-white">+ {{ $t }}</button>
-        @endforeach
+        <div class="flex flex-wrap items-center gap-1.5 border-t border-white/5 pt-2">
+            <span class="mr-1 text-[11px] font-semibold text-slate-400">Years:</span>
+            @foreach($yearTags as $t)
+                <button type="button" data-tag-add="{{ $t }}" class="rounded bg-white/5 px-2 py-1 text-slate-300 transition hover:bg-white/15 hover:text-white">+ {{ $t }}</button>
+            @endforeach
+        </div>
     </div>
 </div>
 
