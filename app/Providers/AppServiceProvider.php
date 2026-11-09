@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\View; // මෙය අලුතින් එක් කර ඇත
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -28,5 +29,10 @@ class AppServiceProvider extends ServiceProvider
         ) {
             URL::forceScheme('https');
         }
+
+        // Blade Cache Errors විසඳීම සඳහා Nav Variables Global ලෙස ලබා දීම
+        View::share('globalNavGenres', ['Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Horror', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller']);
+        View::share('globalNavLanguages', ['Sinhala', 'English', 'Tamil', 'Hindi', 'Malayalam', 'Telugu', 'Korean']);
+        View::share('globalNavTypes', ['movie' => 'Movies', 'series' => 'Drama / Series', 'anime' => 'Anime']);
     }
 }

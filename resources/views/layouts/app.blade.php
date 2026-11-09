@@ -26,16 +26,9 @@
 </head>
 <body class="flex min-h-screen flex-col bg-[#0b0b0f] font-sans text-slate-100 antialiased selection:bg-orange-500 selection:text-white">
 
-    {{-- Nav helpers & Variables (Blade parser safe) --}}
-    @php
-        $navType = request('type');
-        $navLink = fn (bool $active) => 'py-1.5 '.($active ? 'text-orange-400' : 'hover:text-white');
-        
-        $navGenres = config('auracinema.genres', ['Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Horror', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller']);
-        $navLanguages = config('auracinema.languages', ['Sinhala', 'English', 'Tamil', 'Hindi', 'Malayalam', 'Telugu', 'Korean']);
-        $navTypes = ['movie' => 'Movies', 'series' => 'Drama / Series', 'anime' => 'Anime'];
-        $navYears = range((int) date('Y') + 1, 2000);
-    @endphp
+    {{-- Nav helpers --}}
+    @php($navType = request('type'))
+    @php($navLink = fn (bool $active) => 'py-1.5 '.($active ? 'text-orange-400' : 'hover:text-white'))
 
     <header class="z-50 border-b border-white/5 bg-[#0b0b0f]/95 md:sticky md:top-0">
         <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
@@ -69,14 +62,14 @@
                         Genre <i class="fa-solid fa-chevron-down text-[9px]"></i>
                     </summary>
                     <div class="absolute inset-x-4 top-full z-50 mt-2 grid max-h-72 grid-cols-3 gap-1 sm:inset-x-auto sm:left-0 sm:w-60 sm:grid-cols-2 overflow-y-auto rounded-md border border-white/10 bg-zinc-900 p-2 text-xs normal-case shadow-xl">
-                        @foreach($navGenres as $g)
+                        @foreach($globalNavGenres as $g)
                             <a href="{{ route('movies.index', ['genre' => $g]) }}" class="rounded px-2 py-1.5 hover:bg-white/10 {{ request('genre') === $g ? 'text-orange-400' : '' }}">{{ $g }}</a>
                         @endforeach
                     </div>
                 </details>
 
                 {{-- Type and Language Menus --}}
-                @foreach($navTypes as $navKey => $navLabel)
+                @foreach($globalNavTypes as $navKey => $navLabel)
                     <div class="group relative">
                         <a href="{{ route('movies.index', ['type' => $navKey]) }}" class="flex items-center gap-1 {{ $navLink($navType === $navKey) }}">
                             {{ $navLabel }} <i class="fa-solid fa-chevron-down text-[9px]"></i>
@@ -84,7 +77,7 @@
                         <div class="invisible absolute left-0 top-full z-50 pt-2 opacity-0 transition duration-150 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
                             <div class="grid w-48 grid-cols-2 gap-1 rounded-md border border-white/10 bg-zinc-900 p-2 text-xs normal-case shadow-xl">
                                 <a href="{{ route('movies.index', ['type' => $navKey]) }}" class="col-span-2 rounded px-2 py-1.5 font-bold text-orange-400 hover:bg-white/10">All {{ $navLabel }}</a>
-                                @foreach($navLanguages as $lang)
+                                @foreach($globalNavLanguages as $lang)
                                     <a href="{{ route('movies.index', ['type' => $navKey, 'language' => $lang]) }}" class="rounded px-2 py-1.5 hover:bg-white/10 {{ $navType === $navKey && request('language') === $lang ? 'text-orange-400' : '' }}">{{ $lang }}</a>
                                 @endforeach
                             </div>
@@ -100,6 +93,7 @@
                         Year <i class="fa-solid fa-chevron-down text-[9px]"></i>
                     </summary>
                     <div class="absolute inset-x-4 top-full z-50 mt-2 grid max-h-72 grid-cols-4 gap-1 overflow-y-auto rounded-md border border-white/10 bg-zinc-900 p-2 text-xs normal-case shadow-xl sm:inset-x-auto sm:left-0 sm:w-52 sm:grid-cols-3">
+                        @php($navYears = range((int) date('Y') + 1, 2000))
                         @foreach($navYears as $y)
                             <a href="{{ route('movies.index', ['year' => $y]) }}" class="rounded px-2 py-1.5 text-center hover:bg-white/10 {{ (int) request('year') === $y ? 'text-orange-400' : '' }}">{{ $y }}</a>
                         @endforeach
