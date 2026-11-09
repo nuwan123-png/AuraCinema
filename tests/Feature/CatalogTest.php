@@ -124,6 +124,34 @@ class CatalogTest extends TestCase
         $this->get('/suggestions')->assertOk()->assertSee('Drama Show')->assertSee('Action Film');
     }
 
+    public function test_language_and_keywords_are_saved_and_filter_the_lists(): void
+    {
+        $this->withHeaders($this->admin())->post('/movies', [
+            'title' => 'Hindi Love', 'type' => 'movie', 'language' => 'Hindi', 'year' => 2026,
+            'tags' => ' Romantic, 2026 ,romantic, New Release!! ',
+        ])->assertRedirect();
+        Movie::create(['title' => 'Tamil Action', 'type' => 'movie', 'language' => 'Tamil', 'year' => 2025, 'tags' => ',action,']);
+        Movie::create(['title' => 'Hindi Series', 'type' => 'series', 'language' => 'Hindi', 'tags' => ',drama,']);
+
+        $saved = Movie::where('title', 'Hindi Love')->firstOrFail();
+        $this->assertSame(',romantic,2026,new release,', $saved->tags);
+
+        $this->get('/movies?language=Hindi')->assertOk()->assertSee('Hindi Love')->assertSee('Hindi Series')->assertDontSee('Tamil Action');
+        $this->get('/movies?type=movie&language=Hindi')->assertOk()->assertSee('Hindi Love')->assertDontSee('Hindi Series');
+        $this->get('/movies?tag=romantic')->assertOk()->assertSee('Hindi Love')->assertDontSee('Tamil Action');
+        $this->get('/movies?tag=roman')->assertOk()->assertDontSee('Hindi Love'); // exact keyword, not a prefix
+        $this->get('/movies?language=Klingon')->assertOk(); // unknown values are ignored, not an error
+    }
+
+    public function test_navbar_shows_languages_on_hover_menus(): void
+    {
+        $html = $this->get('/')->assertOk()->getContent();
+
+        $this->assertStringContainsString('language=Hindi', $html);
+        $this->assertStringContainsString('language=Malayalam', $html);
+        $this->assertStringContainsString('All Movies', $html);
+    }
+
     public function test_visitors_can_send_a_request_and_only_the_admin_can_read_them(): void
     {
         $this->post('/request', ['title' => 'Some Movie', 'note' => 'please'])->assertRedirect(route('home'));

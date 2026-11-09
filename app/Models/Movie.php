@@ -20,6 +20,8 @@ class Movie extends Model
         'type',
         'genre',
         'year',
+        'language',
+        'tags',
     ];
 
     /** Episodes of a series, in order (episode 1 first). */
@@ -31,6 +33,33 @@ class Movie extends Model
     public function getTypeLabelAttribute(): string
     {
         return (string) config('auracinema.types.'.$this->type, 'Movie');
+    }
+
+    /** Keywords as a plain list, e.g. ['hindi', 'romantic']. */
+    public function getTagListAttribute(): array
+    {
+        return array_values(array_filter(explode(',', (string) $this->tags), 'strlen'));
+    }
+
+    /** Turn what the admin typed ("Hindi, romantic ,2026") into the stored form ",hindi,romantic,2026,". */
+    public static function normalizeTags(?string $input): ?string
+    {
+        $tags = collect(explode(',', (string) $input))
+            ->map(fn ($t) => self::normalizeTag($t))
+            ->filter()
+            ->unique()
+            ->take(12)
+            ->values();
+
+        return $tags->isEmpty() ? null : ','.$tags->implode(',').',';
+    }
+
+    public static function normalizeTag(?string $tag): string
+    {
+        $tag = mb_strtolower(trim((string) $tag));
+        $tag = preg_replace('/[^\p{L}\p{N} \-]+/u', '', $tag) ?? '';
+
+        return mb_substr(trim(preg_replace('/\s+/', ' ', $tag) ?? ''), 0, 30);
     }
 
     public function getPosterUrlAttribute(): ?string

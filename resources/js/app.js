@@ -4,6 +4,18 @@ document.addEventListener('submit', (e) => {
     if (message && !window.confirm(message)) e.preventDefault();
 });
 
+// ---- Add/edit form: one-click keyword suggestions append to the Keywords box ----
+document.querySelectorAll('[data-tag-add]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+        const input = document.getElementById('tags');
+        if (!input) return;
+        const tag = btn.dataset.tagAdd;
+        const current = input.value.split(',').map((t) => t.trim()).filter(Boolean);
+        if (!current.map((t) => t.toLowerCase()).includes(tag.toLowerCase())) current.push(tag);
+        input.value = current.join(', ');
+    }),
+);
+
 // ---- Horizontal rows: arrow buttons ----
 document.querySelectorAll('[data-row]').forEach((row) => {
     const track = row.querySelector('[data-track]');
@@ -139,11 +151,11 @@ if (episodesToggle) {
         sync();
         if (episodesToggle.checked && list.children.length === 0) addRow(1);
     });
-    panel.querySelector('[data-episode-add]').addEventListener('click', () => addRow(nextNumber()).querySelector('input[type=url], input[type=text]').focus());
+    panel.querySelector('[data-episode-add]').addEventListener('click', () => addRow(nextNumber()).querySelector('input[type=url]').focus());
     panel.querySelector('[data-episode-bulk]').addEventListener('click', () => {
         const count = Math.min(200, Math.max(1, parseInt(bulkInput.value, 10) || 0));
         for (let i = 0; i < count; i += 1) addRow(nextNumber());
-        list.lastElementChild?.querySelector('input[type=url], input[type=text]')?.scrollIntoView({ block: 'nearest' });
+        list.lastElementChild?.querySelector('input[type=url]')?.scrollIntoView({ block: 'nearest' });
     });
     list.addEventListener('click', (e) => {
         const remove = e.target.closest('[data-episode-remove]');
@@ -153,46 +165,19 @@ if (episodesToggle) {
     sync();
 }
 
-// ---- "Watch now" player mount function (No sandbox to prevent Streamtape blocking) ----
-function mountPlayer(container, src, title) {
-    const frame = document.createElement('iframe');
-    frame.src = src;
-    frame.title = title || 'Video player';
-    frame.className = 'aspect-video w-full rounded-lg bg-black ring-1 ring-white/10 md:aspect-auto md:h-[500px]';
-    frame.allowFullscreen = true;
-    frame.allow = 'autoplay; fullscreen; picture-in-picture; encrypted-media';
-    frame.referrerPolicy = 'no-referrer';
-    container.innerHTML = '';
-    container.appendChild(frame);
-}
-
-// Click Watch Now button
+// ---- "Watch now" player: the iframe is only created when the visitor clicks ----
 document.querySelectorAll('[data-embed-load]').forEach((button) => {
     button.addEventListener('click', () => {
-        const container = button.closest('[data-embed]');
-        if (container) {
-            mountPlayer(container, button.dataset.embedSrc, button.dataset.embedTitle);
-        }
-    });
-});
-
-// Click Episode button -> Load that episode in the Watch Now player
-document.querySelectorAll('[data-episode-btn]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-        const src = btn.dataset.embedSrc;
-        const title = btn.dataset.embedTitle;
-        const container = document.querySelector('[data-embed]');
-        const watchSection = document.getElementById('watch');
-        const watchTitle = document.getElementById('watch-title');
-
-        if (watchTitle && title) {
-            watchTitle.textContent = title;
-        }
-
-        if (container && src) {
-            mountPlayer(container, src, title);
-            watchSection?.scrollIntoView({ behavior: 'smooth' });
-        }
+        const frame = document.createElement('iframe');
+        frame.src = button.dataset.embedSrc;
+        frame.title = button.dataset.embedTitle || 'Video player';
+        frame.className = 'aspect-video w-full rounded-lg bg-black ring-1 ring-white/10 md:aspect-auto md:h-[500px]';
+        frame.allowFullscreen = true;
+        frame.allow = 'autoplay; fullscreen; picture-in-picture; encrypted-media';
+        frame.referrerPolicy = 'strict-origin-when-cross-origin';
+        // Keeps the player from navigating or taking over the page it is embedded in.
+        frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox');
+        button.replaceWith(frame);
     });
 });
 

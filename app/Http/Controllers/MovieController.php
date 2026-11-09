@@ -24,17 +24,21 @@ class MovieController extends Controller
         $type = (string) $request->query('type', '');
         $genre = (string) $request->query('genre', '');
         $year = (int) $request->query('year', 0);
+        $language = (string) $request->query('language', '');
+        $tag = Movie::normalizeTag((string) $request->query('tag', ''));
 
         // Only accept values we actually offer (the navbar links), ignore anything else.
         $type = array_key_exists($type, config('auracinema.types')) ? $type : '';
         $genre = in_array($genre, config('auracinema.genres'), true) ? $genre : '';
+        $language = in_array($language, config('auracinema.languages'), true) ? $language : '';
         $year = ($year >= 1900 && $year <= 2100) ? $year : 0;
 
-        if ($q !== '' || $type !== '' || $genre !== '' || $year !== 0) {
+        if ($q !== '' || $type !== '' || $genre !== '' || $year !== 0 || $language !== '' || $tag !== '') {
             $query = Movie::query()->withCount('episodes');
 
             if ($q !== '') {
-                $query->where('title', 'like', '%'.addcslashes($q, '%_\\').'%');
+                $like = '%'.addcslashes($q, '%_\\').'%';
+                $query->where(fn ($w) => $w->where('title', 'like', $like)->orWhere('tags', 'like', $like));
             }
             if ($type !== '') {
                 $query->where('type', $type);
@@ -42,20 +46,30 @@ class MovieController extends Controller
             if ($genre !== '') {
                 $query->where('genre', $genre);
             }
+            if ($language !== '') {
+                $query->where('language', $language);
+            }
             if ($year !== 0) {
                 $query->where('year', $year);
             }
+            if ($tag !== '') {
+                $query->where('tags', 'like', '%,'.addcslashes($tag, '%_\\').',%');
+            }
 
-            $heading = match (true) {
-                $q !== '' => 'Results for “'.$q.'”',
-                $genre !== '' => 'Genre: '.$genre,
-                $year !== 0 => 'Year: '.$year,
-                default => match ($type) {
-                    'movie' => 'Movies',
-                    'series' => 'Drama / Series',
-                    default => 'Anime',
-                },
-            };
+            // e.g. "Hindi · Romance · 2026 · Movies" - every active filter is named.
+            $heading = $q !== ''
+                ? 'Results for “'.$q.'”'
+                : collect([
+                    $language,
+                    $genre,
+                    $year ?: null,
+                    $tag !== '' ? '#'.$tag : null,
+                    $type !== '' ? match ($type) {
+                        'movie' => 'Movies',
+                        'series' => 'Drama / Series',
+                        default => 'Anime',
+                    } : null,
+                ])->filter()->implode(' · ');
 
             return view('movies.browse', [
                 'heading' => $heading,
@@ -218,7 +232,8 @@ class MovieController extends Controller
     /** Columns of the movies table from validated input. */
     private function movieData(array $validated, ?Movie $movie = null): array
     {
-        $data = Arr::only($validated, ['title', 'description', 'stream_url', 'embed_url', 'genre', 'year']);
+        $data = Arr::only($validated, ['title', 'description', 'stream_url', 'embed_url', 'genre', 'year', 'language']);
+        $data['tags'] = Movie::normalizeTags($validated['tags'] ?? null);
         $data['type'] = $validated['type'] ?? $movie?->type ?? 'movie';
 
         // A series uses per-episode links; a single "full movie" link would just be confusing next to them.
@@ -273,6 +288,8 @@ class MovieController extends Controller
             'type' => ['nullable', Rule::in(array_keys(config('auracinema.types')))],
             'genre' => ['nullable', Rule::in(config('auracinema.genres'))],
             'year' => ['nullable', 'integer', 'between:1900,2100'],
+            'language' => ['nullable', Rule::in(config('auracinema.languages'))],
+            'tags' => ['nullable', 'string', 'max:300'],
             'episodes' => ['nullable', 'array', 'max:500'],
             'episodes.*.number' => ['required', 'integer', 'between:1,9999'],
             'episodes.*.url' => ['required', 'url:http,https', 'max:500'],

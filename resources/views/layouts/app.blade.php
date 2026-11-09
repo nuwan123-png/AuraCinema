@@ -66,9 +66,22 @@
                     </div>
                 </details>
 
-                <a href="{{ route('movies.index', ['type' => 'movie']) }}" class="{{ $navLink($navType === 'movie') }}">Movies</a>
-                <a href="{{ route('movies.index', ['type' => 'series']) }}" class="{{ $navLink($navType === 'series') }}">Drama / Series</a>
-                <a href="{{ route('movies.index', ['type' => 'anime']) }}" class="{{ $navLink($navType === 'anime') }}">Anime</a>
+                {{-- Movies / Drama / Anime: hover (or keyboard focus) opens the language list. Tapping the word itself still opens the full list. --}}
+                @foreach(['movie' => 'Movies', 'series' => 'Drama / Series', 'anime' => 'Anime'] as $navKey => $navLabel)
+                    <div class="group relative">
+                        <a href="{{ route('movies.index', ['type' => $navKey]) }}" class="flex items-center gap-1 {{ $navLink($navType === $navKey) }}">
+                            {{ $navLabel }} <i class="fa-solid fa-chevron-down text-[9px]"></i>
+                        </a>
+                        <div class="invisible absolute left-0 top-full z-50 pt-2 opacity-0 transition duration-150 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
+                            <div class="grid w-48 grid-cols-2 gap-1 rounded-md border border-white/10 bg-zinc-900 p-2 text-xs normal-case shadow-xl">
+                                <a href="{{ route('movies.index', ['type' => $navKey]) }}" class="col-span-2 rounded px-2 py-1.5 font-bold text-orange-400 hover:bg-white/10">All {{ $navLabel }}</a>
+                                @foreach(config('auracinema.languages') as $lang)
+                                    <a href="{{ route('movies.index', ['type' => $navKey, 'language' => $lang]) }}" class="rounded px-2 py-1.5 hover:bg-white/10 {{ $navType === $navKey && request('language') === $lang ? 'text-orange-400' : '' }}">{{ $lang }}</a>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
                 <a href="{{ route('suggestions') }}" class="{{ $navLink(request()->routeIs('suggestions')) }}">Suggestion</a>
 
                 <details data-menu class="sm:relative">

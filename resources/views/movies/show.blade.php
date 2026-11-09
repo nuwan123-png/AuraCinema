@@ -32,9 +32,15 @@
                 @if($movie->genre)
                     <a href="{{ route('movies.index', ['genre' => $movie->genre]) }}" class="rounded bg-white/10 px-2 py-1 text-slate-200 hover:bg-white/20">{{ $movie->genre }}</a>
                 @endif
+                @if($movie->language)
+                    <a href="{{ route('movies.index', ['language' => $movie->language]) }}" class="rounded bg-white/10 px-2 py-1 text-slate-200 hover:bg-white/20">{{ $movie->language }}</a>
+                @endif
                 @if($movie->year)
                     <a href="{{ route('movies.index', ['year' => $movie->year]) }}" class="rounded bg-white/10 px-2 py-1 text-slate-200 hover:bg-white/20">{{ $movie->year }}</a>
                 @endif
+                @foreach($movie->tag_list as $tag)
+                    <a href="{{ route('movies.index', ['tag' => $tag]) }}" class="rounded bg-orange-500/10 px-2 py-1 capitalize text-orange-300 hover:bg-orange-500/20">#{{ $tag }}</a>
+                @endforeach
                 @if($movie->episodes->isNotEmpty())
                     <span class="rounded bg-orange-500/15 px-2 py-1 font-semibold text-orange-300">{{ $movie->episodes->count() }} EPS</span>
                 @endif
@@ -42,8 +48,14 @@
             <p class="mb-5 text-xs text-slate-400">Added {{ $movie->created_at->format('d M Y') }}</p>
             <p class="mb-6 max-w-3xl whitespace-pre-line text-sm leading-relaxed text-slate-300">{{ $movie->description ?: 'No synopsis provided.' }}</p>
 
+            @if($movie->stream_url)
+                <a href="{{ $movie->stream_url }}" target="_blank" rel="noopener noreferrer nofollow"
+                   class="inline-flex items-center gap-2 rounded-md bg-sky-500 px-5 py-2.5 text-sm font-bold text-white hover:bg-sky-400">
+                    <i class="fa-brands fa-telegram"></i> Watch full movie
+                </a>
+            @endif
             @if(request()->cookie('aura_admin'))
-                <a href="{{ route('movies.edit', $movie) }}" class="inline-flex items-center gap-2 rounded-md bg-orange-500 px-5 py-2.5 text-sm font-bold text-white hover:bg-orange-600">
+                <a href="{{ route('movies.edit', $movie) }}" class="ml-2 inline-flex items-center gap-2 rounded-md bg-orange-500 px-5 py-2.5 text-sm font-bold text-white hover:bg-orange-600">
                     <i class="fa-solid fa-pen-to-square"></i> Edit
                 </a>
             @endif
@@ -51,21 +63,16 @@
     </div>
 
     @if($movie->episodes->isNotEmpty())
+        {{-- Each tile opens that episode's Telegram link in a new tab. --}}
         <section class="mb-10" id="episodes">
             <h2 class="mb-3 border-l-4 border-orange-500 pl-3 text-base font-bold uppercase tracking-wide text-orange-400">Episodes</h2>
             <div class="grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10">
                 @foreach($movie->episodes as $episode)
-                    @php
-                        $epEmbed = \App\Support\EmbedUrl::normalize($episode->url) ?: $episode->url;
-                    @endphp
-                    <button type="button"
-                            data-episode-btn
-                            data-embed-src="{{ $epEmbed }}"
-                            data-embed-title="{{ $movie->title }} - Episode {{ $episode->number }}"
-                            aria-label="Watch episode {{ $episode->number }}"
-                            class="flex items-center justify-center gap-1.5 rounded-md bg-white/5 py-3 text-sm font-semibold text-slate-200 ring-1 ring-white/5 transition hover:bg-orange-500 hover:text-white">
-                        <i class="fa-solid fa-play text-xs text-orange-400"></i> Ep {{ $episode->number }}
-                    </button>
+                    <a href="{{ $episode->url }}" target="_blank" rel="noopener noreferrer nofollow"
+                       aria-label="Watch episode {{ $episode->number }}"
+                       class="flex items-center justify-center gap-1.5 rounded-md bg-white/5 py-3 text-sm font-semibold text-slate-200 ring-1 ring-white/5 transition hover:bg-sky-500 hover:text-white">
+                        <i class="fa-brands fa-telegram text-xs text-sky-400"></i>{{ $episode->number }}
+                    </a>
                 @endforeach
             </div>
         </section>
@@ -75,6 +82,7 @@
         <h2 class="mb-3 text-base font-bold">Trailer</h2>
         @if($movie->trailer_url)
             <div data-player class="relative mx-auto aspect-video w-full max-w-4xl overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
+                {{-- No src and preload="none": nothing is downloaded until the user presses play. --}}
                 <video data-src="{{ $movie->trailer_file_url }}" preload="none" playsinline
                        @if($movie->image) poster="{{ $movie->poster_url }}" @endif
                        class="h-full w-full bg-black object-contain"></video>
@@ -89,18 +97,14 @@
         @endif
     </section>
 
-    @php
-        $firstEpisode = $movie->episodes->first();
-        $defaultPlayerSrc = $movie->embed_url ?: ($firstEpisode ? (\App\Support\EmbedUrl::normalize($firstEpisode->url) ?: $firstEpisode->url) : null);
-    @endphp
-
-    @if($defaultPlayerSrc)
+    @if($movie->embed_url)
+        {{-- Nothing from the player host is loaded until the visitor clicks. app.js builds the iframe then. --}}
         <section class="mt-10" id="watch">
-            <h2 class="mb-3 text-base font-bold" id="watch-title">Watch now</h2>
+            <h2 class="mb-3 text-base font-bold">Watch now</h2>
             <div data-embed class="mx-auto w-full max-w-4xl">
-                <button type="button" data-embed-load data-embed-src="{{ $defaultPlayerSrc }}" data-embed-title="{{ $movie->title }}"
+                <button type="button" data-embed-load data-embed-src="{{ $movie->embed_url }}" data-embed-title="{{ $movie->title }}"
                         class="grid aspect-video w-full place-items-center rounded-lg bg-black ring-1 ring-white/10 transition hover:ring-orange-400/60"
-                        aria-label="Load the player for {{ $movie->title }}"[cite: 13]>
+                        aria-label="Load the player for {{ $movie->title }}">
                     <span class="flex items-center gap-2 rounded-full bg-orange-500 px-7 py-3 text-sm font-bold text-white">
                         <i class="fa-solid fa-play"></i> Watch now
                     </span>

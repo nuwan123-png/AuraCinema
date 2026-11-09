@@ -20,6 +20,16 @@ return [
         'anime' => 'Anime',
     ],
 
+    // Languages shown when you hover Movies / Drama / Anime in the navbar, and in the add/edit form.
+    'languages' => [
+        'Hindi', 'Tamil', 'Malayalam', 'Telugu', 'Kannada', 'English', 'Sinhala', 'Korean', 'Japanese', 'Chinese', 'Other',
+    ],
+
+    // One-click keyword suggestions under the "Keywords" box of the add/edit form (you can still type any keyword).
+    'quick_tags' => [
+        'romantic', 'family', 'dubbed', 'new release', 'top rated', 'classic', '2026', '2025', '2024', '2023',
+    ],
+
     // Genres shown in the navbar dropdown and the add/edit form.
     'genres' => [
         'Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Family',
