@@ -5,14 +5,14 @@
 @section('robots', 'noindex,follow')
 
 @section('content')
-    <h1 class="mb-3 text-lg font-bold">{{ $heading }}</h1>
+    <h1 class="section-title mb-4 !text-xl sm:!text-2xl">{{ $heading }}</h1>
 
     {{-- Narrow the current list by language (keeps the other filters), or clear the filters. --}}
     <div class="mb-5 flex flex-wrap items-center gap-2 text-xs">
         @foreach(config('auracinema.languages') as $lang)
             @php($active = request('language') === $lang)
             <a href="{{ $active ? request()->fullUrlWithQuery(['language' => null, 'page' => null]) : request()->fullUrlWithQuery(['language' => $lang, 'page' => null]) }}"
-               class="rounded-full px-3 py-1 font-semibold {{ $active ? 'bg-orange-500 text-white' : 'bg-white/10 text-slate-300 hover:bg-white/20' }}">{{ $lang }}</a>
+               class="rounded-full border px-3.5 py-1.5 font-semibold transition {{ $active ? 'border-orange-400 bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow shadow-orange-500/30' : 'border-white/10 bg-white/5 text-slate-300 hover:border-orange-400/50 hover:bg-orange-500/10 hover:text-orange-200' }}">{{ $lang }}</a>
         @endforeach
         @if(request()->hasAny(['type', 'genre', 'year', 'language', 'tag', 'q']))
             <a href="{{ route('movies.index') }}" class="ml-1 text-slate-400 underline hover:text-white">Clear filters</a>
@@ -29,6 +29,6 @@
             @include('movies._pager', ['paginator' => $results])
         @endif
     @else
-        <p class="py-16 text-center text-sm text-slate-400">No titles found here yet.</p>
+        <p class="rounded-xl border border-white/10 bg-white/[0.03] py-16 text-center text-sm text-slate-400">No titles found here yet.</p>
     @endif
 @endsection

@@ -16,8 +16,12 @@
         <span class="text-slate-200">{{ $movie->title }}</span>
     </nav>
 
-    <div class="mb-10 flex flex-col gap-6 md:flex-row md:gap-10">
-        <div class="aspect-[2/3] w-44 shrink-0 self-center overflow-hidden rounded-lg bg-zinc-900 ring-1 ring-white/10 md:self-start">
+    <div class="relative isolate mb-10 flex flex-col gap-6 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-5 shadow-2xl shadow-black/40 sm:p-8 md:flex-row md:gap-10">
+        @if($movie->image)
+            <img src="{{ $movie->poster_url }}" alt="" aria-hidden="true" width="48" height="72" loading="lazy" decoding="async"
+                 class="pointer-events-none absolute inset-0 -z-10 h-full w-full scale-125 object-cover opacity-20 blur-3xl">
+        @endif
+        <div class="aspect-[2/3] w-44 shrink-0 self-center overflow-hidden rounded-xl bg-zinc-900 shadow-2xl shadow-black/60 ring-1 ring-white/15 md:self-start">
             @if($movie->image)
                 <img src="{{ $movie->poster_url }}" alt="{{ $movie->title }}" width="480" height="720" fetchpriority="high" decoding="async" class="h-full w-full object-cover">
             @else
@@ -26,17 +30,17 @@
         </div>
 
         <div class="min-w-0 flex-1">
-            <h1 class="mb-2 text-3xl font-extrabold tracking-tight">{{ $movie->title }}</h1>
+            <h1 class="mb-3 text-3xl font-extrabold tracking-tight sm:text-4xl">{{ $movie->title }}</h1>
             <p class="mb-2 flex flex-wrap items-center gap-2 text-xs">
-                <a href="{{ route('movies.index', ['type' => $movie->type]) }}" class="rounded bg-white/10 px-2 py-1 font-semibold text-slate-200 hover:bg-white/20">{{ $movie->type_label }}</a>
+                <a href="{{ route('movies.index', ['type' => $movie->type]) }}" class="chip">{{ $movie->type_label }}</a>
                 @if($movie->genre)
-                    <a href="{{ route('movies.index', ['genre' => $movie->genre]) }}" class="rounded bg-white/10 px-2 py-1 text-slate-200 hover:bg-white/20">{{ $movie->genre }}</a>
+                    <a href="{{ route('movies.index', ['genre' => $movie->genre]) }}" class="chip">{{ $movie->genre }}</a>
                 @endif
                 @if($movie->language)
-                    <a href="{{ route('movies.index', ['language' => $movie->language]) }}" class="rounded bg-white/10 px-2 py-1 text-slate-200 hover:bg-white/20">{{ $movie->language }}</a>
+                    <a href="{{ route('movies.index', ['language' => $movie->language]) }}" class="chip">{{ $movie->language }}</a>
                 @endif
                 @if($movie->year)
-                    <a href="{{ route('movies.index', ['year' => $movie->year]) }}" class="rounded bg-white/10 px-2 py-1 text-slate-200 hover:bg-white/20">{{ $movie->year }}</a>
+                    <a href="{{ route('movies.index', ['year' => $movie->year]) }}" class="chip">{{ $movie->year }}</a>
                 @endif
                 
                 {{-- Tags සදහා දෝෂ රහිත නිවැරදි ලූපය --}}
@@ -44,21 +48,28 @@
                     $cleanTags = array_filter(array_map('trim', explode(',', (string) $movie->tags)));
                 @endphp
                 @foreach($cleanTags as $tag)
-                    <a href="{{ route('movies.index', ['tag' => mb_strtolower($tag)]) }}" class="rounded bg-orange-500/10 px-2 py-1 capitalize text-orange-300 hover:bg-orange-500/20">#{{ $tag }}</a>
+                    <a href="{{ route('movies.index', ['tag' => mb_strtolower($tag)]) }}" class="chip-tag">#{{ $tag }}</a>
                 @endforeach
 
                 @if($movie->episodes->isNotEmpty())
-                    <span class="rounded bg-orange-500/15 px-2 py-1 font-semibold text-orange-300">{{ $movie->episodes->count() }} EPS</span>
+                    <span class="rounded-full bg-gradient-to-r from-orange-500 to-amber-500 px-3 py-1 text-xs font-bold text-white">{{ $movie->episodes->count() }} EPS</span>
                 @endif
             </p>
             <p class="mb-5 text-xs text-slate-400">Added {{ $movie->created_at->format('d M Y') }}</p>
             <p class="mb-6 max-w-3xl whitespace-pre-line text-sm leading-relaxed text-slate-300">{{ $movie->description ?: 'No synopsis provided.' }}</p>
 
-            @if(request()->cookie('aura_admin'))
-                <a href="{{ route('movies.edit', $movie) }}" class="inline-flex items-center gap-2 rounded-md bg-orange-500 px-5 py-2.5 text-sm font-bold text-white hover:bg-orange-600">
-                    <i class="fa-solid fa-pen-to-square"></i> Edit
-                </a>
-            @endif
+            <div class="flex flex-wrap items-center gap-3">
+                @if($movie->trailer_url)
+                    <button type="button" data-trailer-open class="btn-ghost" aria-haspopup="dialog">
+                        <i class="fa-solid fa-video text-orange-400"></i> Trailer
+                    </button>
+                @endif
+                @if(request()->cookie('aura_admin'))
+                    <a href="{{ route('movies.edit', $movie) }}" class="btn-aura">
+                        <i class="fa-solid fa-pen-to-square"></i> Edit
+                    </a>
+                @endif
+            </div>
         </div>
     </div>
 
@@ -83,23 +94,19 @@
         </section>
     @endif
 
-    <section>
-        <h2 class="mb-3 text-base font-bold">Trailer</h2>
-        @if($movie->trailer_url)
-            <div data-player class="relative mx-auto aspect-video w-full max-w-4xl overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
-                <video data-src="{{ $movie->trailer_file_url }}" preload="none" playsinline
-                       @if($movie->image) poster="{{ $movie->poster_url }}" @endif
-                       class="h-full w-full bg-black object-contain"></video>
-                <button type="button" data-play class="absolute inset-0 grid place-items-center bg-black/40 transition hover:bg-black/30" aria-label="Play trailer">
-                    <span class="flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-black">
-                        <i class="fa-solid fa-play"></i><span data-play-label>Play</span>
-                    </span>
-                </button>
+    @if($movie->trailer_url)
+        {{-- Trailer pop-up: opens from the Trailer button; the file is only requested when you open it. --}}
+        <dialog data-trailer-dialog aria-label="{{ $movie->title }} trailer"
+                class="w-[min(94vw,60rem)] overflow-hidden rounded-2xl border border-white/10 bg-black p-0 text-white shadow-2xl shadow-orange-500/10">
+            <div class="flex items-center justify-between gap-3 border-b border-white/10 bg-zinc-950 px-4 py-3">
+                <p class="flex min-w-0 items-center gap-2 text-sm font-bold"><i class="fa-solid fa-video text-orange-400"></i><span class="truncate">{{ $movie->title }} &middot; Trailer</span></p>
+                <button type="button" data-trailer-close class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/10 transition hover:bg-orange-500" aria-label="Close trailer"><i class="fa-solid fa-xmark"></i></button>
             </div>
-        @else
-            <p class="rounded-lg border border-white/5 bg-white/[0.03] py-12 text-center text-sm text-slate-500">No trailer uploaded for this title.</p>
-        @endif
-    </section>
+            <video data-trailer-video data-src="{{ $movie->trailer_file_url }}" preload="none" playsinline controls
+                   @if($movie->image) poster="{{ $movie->poster_url }}" @endif
+                   class="aspect-video max-h-[75vh] w-full bg-black object-contain"></video>
+        </dialog>
+    @endif
 
     @php
         $firstEpisode = $movie->episodes->first();

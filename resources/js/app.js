@@ -210,55 +210,140 @@ document.querySelectorAll('[data-episode-btn]').forEach((btn) => {
     });
 });
 
-// ---- Trailer player: lazy source + release buffer when paused ----
-const IDLE_MS = 15000;
+// ---- Trailer pop-up: the video file is only requested when the dialog opens ----
+document.querySelectorAll('[data-trailer-dialog]').forEach((dialog) => {
+    const video = dialog.querySelector('video[data-src]');
+    const open = document.querySelector('[data-trailer-open]');
+    if (!video || !open || typeof dialog.showModal !== 'function') return;
 
-document.querySelectorAll('[data-player]').forEach((box) => {
-    const video = box.querySelector('video[data-src]');
-    const overlay = box.querySelector('[data-play]');
-    const label = box.querySelector('[data-play-label]');
-    if (!video || !overlay) return;
+    open.addEventListener('click', () => {
+        dialog.showModal();
+        if (!video.getAttribute('src')) video.src = video.dataset.src;
+        video.play().catch(() => {});
+    });
 
-    let resumeAt = 0;
-    let timer = null;
-
-    const attach = () => {
-        clearTimeout(timer);
-        video.preload = 'auto';
-        video.src = video.dataset.src;
-        video.controls = true;
-        overlay.classList.add('hidden');
-        video.addEventListener(
-            'loadedmetadata',
-            () => {
-                if (resumeAt > 0 && resumeAt < video.duration) video.currentTime = resumeAt;
-                video.play().catch(() => {});
-            },
-            { once: true },
-        );
-    };
-
-    const release = () => {
-        resumeAt = video.currentTime;
+    // Release the connection and memory when it is closed (Esc, X button or a click outside the box).
+    dialog.addEventListener('close', () => {
+        video.pause();
         video.removeAttribute('src');
-        video.controls = false;
-        video.preload = 'none';
         video.load();
-        if (label) label.textContent = 'Resume';
-        overlay.classList.remove('hidden');
+        open.focus();
+    });
+    dialog.querySelector('[data-trailer-close]')?.addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', (e) => {
+        if (e.target === dialog) dialog.close();
+    });
+});
+
+// ---- Live search: matching titles appear under the search box while you type ----
+document.querySelectorAll('[data-live-search]').forEach((form) => {
+    const input = form.querySelector('input[name="q"]');
+    const box = form.querySelector('[data-live-results]');
+    if (!input || !box) return;
+
+    let timer = null;
+    let controller = null;
+    let active = -1;
+
+    const hide = () => {
+        box.hidden = true;
+        box.replaceChildren();
+        active = -1;
+        input.setAttribute('aria-expanded', 'false');
     };
 
-    overlay.addEventListener('click', attach);
-    video.addEventListener('play', () => clearTimeout(timer));
-    video.addEventListener('pause', () => {
-        if (video.ended || !video.currentSrc) return;
+    const links = () => [...box.querySelectorAll('a[data-live-item]')];
+
+    const highlight = (i) => {
+        const items = links();
+        if (!items.length) return;
+        active = (i + items.length) % items.length;
+        items.forEach((a, n) => a.classList.toggle('bg-orange-500/15', n === active));
+        items[active].scrollIntoView({ block: 'nearest' });
+    };
+
+    const el = (tag, className, text) => {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text) node.textContent = text;
+        return node;
+    };
+
+    const render = (data, query) => {
+        box.replaceChildren();
+        active = -1;
+
+        if (!data.items.length) {
+            box.append(el('p', 'px-4 py-5 text-center text-sm text-slate-400', `No titles match "${query}"`));
+        } else {
+            data.items.forEach((item) => {
+                const a = el('a', 'flex items-center gap-3 border-b border-white/5 px-3 py-2.5 transition hover:bg-orange-500/15');
+                a.href = item.url;
+                a.setAttribute('role', 'option');
+                a.dataset.liveItem = '';
+
+                const thumb = el('span', 'h-16 w-11 shrink-0 overflow-hidden rounded-md bg-zinc-800 ring-1 ring-white/10');
+                if (item.poster) {
+                    const img = el('img', 'h-full w-full object-cover');
+                    img.src = item.poster;
+                    img.alt = '';
+                    img.width = 44;
+                    img.height = 64;
+                    img.loading = 'lazy';
+                    thumb.append(img);
+                }
+
+                const text = el('span', 'min-w-0 flex-1');
+                text.append(el('span', 'block truncate text-sm font-semibold text-white', item.year ? `${item.title} (${item.year})` : item.title));
+                if (item.meta) text.append(el('span', 'mt-0.5 block truncate text-xs font-medium text-orange-300', item.meta));
+
+                a.append(thumb, text);
+                box.append(a);
+            });
+
+            const all = el('a', 'btn-aura !m-3 !rounded-lg !py-2.5 !text-sm', `View all ${data.total} result${data.total === 1 ? '' : 's'}`);
+            all.href = `${form.action}?q=${encodeURIComponent(query)}`;
+            all.dataset.liveItem = '';
+            box.append(all);
+        }
+
+        box.hidden = false;
+        input.setAttribute('aria-expanded', 'true');
+    };
+
+    const search = async () => {
+        const query = input.value.trim();
+        if (query.length < 2) return hide();
+
+        controller?.abort();
+        controller = new AbortController();
+        try {
+            const res = await fetch(`${form.dataset.liveUrl}?q=${encodeURIComponent(query)}`, {
+                headers: { Accept: 'application/json' },
+                signal: controller.signal,
+            });
+            if (!res.ok) return hide();
+            if (input.value.trim() === query) render(await res.json(), query);
+        } catch (err) {
+            if (err.name !== 'AbortError') hide();
+        }
+    };
+
+    input.addEventListener('input', () => {
         clearTimeout(timer);
-        timer = setTimeout(release, IDLE_MS);
+        timer = setTimeout(search, 200);
     });
-    video.addEventListener('ended', () => {
-        resumeAt = 0;
+    input.addEventListener('focus', () => {
+        if (input.value.trim().length >= 2 && box.hidden) search();
     });
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden && !video.paused) video.pause();
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') return hide();
+        if (box.hidden) return;
+        if (e.key === 'ArrowDown') { e.preventDefault(); highlight(active + 1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); highlight(active - 1); }
+        else if (e.key === 'Enter' && active >= 0) { e.preventDefault(); links()[active].click(); }
+    });
+    document.addEventListener('click', (e) => {
+        if (!form.contains(e.target)) hide();
     });
 });

@@ -15,6 +15,7 @@ Route::middleware(['throttle:60,1', 'admin'])->group(function () {
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap']);
 Route::get('/robots.txt', [SeoController::class, 'robots']);
 Route::get('/', [MovieController::class, 'index'])->name('home');
+Route::get('/search/live', [MovieController::class, 'liveSearch'])->middleware('throttle:60,1')->name('search.live');
 Route::get('/suggestions', [MovieController::class, 'suggestions'])->name('suggestions');
 Route::get('/request', [RequestController::class, 'create'])->name('request.create');
 Route::post('/request', [RequestController::class, 'store'])->middleware('throttle:5,1')->name('request.store');

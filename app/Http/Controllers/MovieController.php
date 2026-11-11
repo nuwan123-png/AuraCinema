@@ -18,6 +18,35 @@ class MovieController extends Controller
 {
     public function __construct(private MediaOptimizer $media) {}
 
+    /** Search-as-you-type: a few matching titles as JSON for the dropdown under the search box. */
+    public function liveSearch(Request $request)
+    {
+        $q = mb_substr(trim((string) $request->query('q', '')), 0, 80);
+        if (mb_strlen($q) < 2) {
+            return response()->json(['items' => [], 'total' => 0]);
+        }
+
+        $like = '%'.addcslashes($q, '%_\\').'%';
+        $op = DB::connection()->getDriverName() === 'pgsql' ? 'ilike' : 'like'; // Postgres LIKE is case-sensitive
+
+        $query = Movie::query()->where(fn ($w) => $w->where('title', $op, $like)->orWhere('tags', $op, $like));
+        $total = (clone $query)->count();
+
+        $items = $query->orderByRaw('CASE WHEN title '.$op.' ? THEN 0 ELSE 1 END', [addcslashes($q, '%_\\').'%'])
+            ->latest('id')
+            ->limit(6)
+            ->get(['id', 'title', 'year', 'type', 'genre', 'language', 'image'])
+            ->map(fn (Movie $m) => [
+                'title' => $m->title,
+                'year' => $m->year,
+                'meta' => collect([$m->type_label, $m->genre, $m->language])->filter()->implode(' · '),
+                'poster' => $m->image ? $m->poster_url : null,
+                'url' => route('movies.show', $m),
+            ]);
+
+        return response()->json(['items' => $items, 'total' => $total]);
+    }
+
     public function index(Request $request)
     {
         $q = trim((string) $request->query('q', ''));
