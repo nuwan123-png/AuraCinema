@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * Where posters and trailers live.
@@ -14,6 +15,43 @@ use Illuminate\Support\Facades\Storage;
 class MediaStore
 {
     private const CACHE_CONTROL = 'public, max-age=31536000, immutable'; // file names are random, so they never change
+
+    /**
+     * A readable, unique file name (without extension): "happy-raj-2026-k3f9a2".
+     * The short random tail keeps two movies with the same title apart and makes a replaced file get a NEW
+     * address (files are cached for a year, so re-using the same name would show the old file).
+     */
+    public static function baseName(?string $title, $year = null): string
+    {
+        $slug = trim(Str::slug(Str::limit((string) $title, 60, '')), '-') ?: 'movie';
+        $year = (int) $year;
+
+        return $slug.($year >= 1900 && $year <= 2100 ? '-'.$year : '').'-'.Str::lower(Str::random(6));
+    }
+
+    /** True for the old random names (32-40 letters/digits) that are hard to recognise in the bucket. */
+    public static function hasRandomName(?string $path): bool
+    {
+        return $path !== null && (bool) preg_match('/^[A-Za-z0-9]{32,40}\.[A-Za-z0-9]+$/', basename($path));
+    }
+
+    /** Copy a stored file to a new name on every disk that has it. The old file is NOT removed (call forget). */
+    public static function copy(string $from, string $to): bool
+    {
+        $done = false;
+
+        if (Storage::disk('public')->exists($from)) {
+            Storage::disk('public')->copy($from, $to);
+            $done = Storage::disk('public')->exists($to);
+        }
+
+        if (($remote = self::remoteName()) !== null && Storage::disk($remote)->exists($from)) {
+            Storage::disk($remote)->copy($from, $to);
+            $done = Storage::disk($remote)->exists($to) || $done;
+        }
+
+        return $done;
+    }
 
     public static function remoteName(): ?string
     {

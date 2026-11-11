@@ -22,7 +22,15 @@ class OptimizeTrailer
         set_time_limit(0);
         ignore_user_abort(true);
 
-        $new = $media->transcodeTrailer($this->path);
+        $movie = Movie::find($this->movieId);
+        if (! $movie || $movie->trailer_url !== $this->path) {
+            // Movie was deleted or its trailer replaced before we started: nothing to compress.
+            MediaStore::forget($this->path);
+
+            return;
+        }
+
+        $new = $media->transcodeTrailer($this->path, MediaStore::baseName($movie->title, $movie->year));
         if ($new === null) {
             // Could not compress it: still move the original upload to R2 so it is served from there.
             MediaStore::publish($this->path);

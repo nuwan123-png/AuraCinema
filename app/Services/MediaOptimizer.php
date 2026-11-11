@@ -17,20 +17,20 @@ class MediaOptimizer
     private const MAX_PIXELS = 24_000_000;  // decompression-bomb guard (24MP ~ 96MB in GD)
 
     /** Resize an uploaded poster to a small WebP and return its path on the public disk. */
-    public function storePoster(UploadedFile $file): string
+    public function storePoster(UploadedFile $file, ?string $base = null): string
     {
         try {
-            return $this->toWebp($file->getRealPath());
+            return $this->toWebp($file->getRealPath(), $base);
         } catch (RuntimeException $e) {
             throw ValidationException::withMessages(['image' => $e->getMessage()]);
         }
     }
 
     /** Re-encode a poster that is already stored. Returns the new path, or null if it cannot be read. */
-    public function reencodePoster(string $path): ?string
+    public function reencodePoster(string $path, ?string $base = null): ?string
     {
         try {
-            return $this->toWebp(Storage::disk('public')->path($path));
+            return $this->toWebp(Storage::disk('public')->path($path), $base);
         } catch (RuntimeException $e) {
             Log::warning('Poster re-encode failed', ['path' => $path, 'error' => $e->getMessage()]);
 
@@ -42,11 +42,11 @@ class MediaOptimizer
      * Transcode to 720p-ish H.264/AAC with the moov atom at the front (+faststart),
      * so playback starts immediately and seeking works over HTTP range requests.
      */
-    public function transcodeTrailer(string $path): ?string
+    public function transcodeTrailer(string $path, ?string $base = null): ?string
     {
         $disk = Storage::disk('public');
         $in = $disk->path($path);
-        $outRel = 'trailers/'.Str::random(32).'.mp4';
+        $outRel = 'trailers/'.($base ?: Str::random(32)).'.mp4';
         $out = $disk->path($outRel);
 
         $process = new Process([
@@ -71,7 +71,7 @@ class MediaOptimizer
         return $outRel;
     }
 
-    private function toWebp(string $absolutePath): string
+    private function toWebp(string $absolutePath, ?string $base = null): string
     {
         $info = @getimagesize($absolutePath);
         if (! $info) {
@@ -99,7 +99,7 @@ class MediaOptimizer
         $binary = (string) ob_get_clean();
         unset($src, $dst);
 
-        $rel = 'posters/'.Str::random(32).'.webp';
+        $rel = 'posters/'.($base ?: Str::random(32)).'.webp';
         Storage::disk('public')->put($rel, $binary);
         MediaStore::publish($rel);
 

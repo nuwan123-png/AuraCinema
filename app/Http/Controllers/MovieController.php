@@ -141,10 +141,10 @@ class MovieController extends Controller
         $data = $this->movieData($validated);
 
         if ($request->hasFile('image')) {
-            $data['image'] = $this->media->storePoster($request->file('image'));
+            $data['image'] = $this->media->storePoster($request->file('image'), MediaStore::baseName($validated['title'], $validated['year'] ?? null));
         }
         if ($request->hasFile('trailer')) {
-            $data['trailer_url'] = $request->file('trailer')->store('trailers', 'public');
+            $data['trailer_url'] = $this->storeTrailer($request, $validated);
         }
 
         $movie = DB::transaction(function () use ($data, $validated) {
@@ -159,6 +159,15 @@ class MovieController extends Controller
         }
 
         return redirect()->route('movies.show', $movie)->with('success', 'Movie added. The trailer is being compressed in the background.');
+    }
+
+    /** Save the uploaded trailer under a readable name; it is compressed (and renamed once more) in the background. */
+    private function storeTrailer(Request $request, array $validated): string
+    {
+        $ext = strtolower($request->file('trailer')->getClientOriginalExtension());
+        $ext = in_array($ext, ['mp4', 'webm', 'mov', 'mkv'], true) ? $ext : 'mp4';
+
+        return $request->file('trailer')->storeAs('trailers', MediaStore::baseName($validated['title'], $validated['year'] ?? null).'.'.$ext, 'public');
     }
 
     public function show(Movie $movie)
@@ -181,13 +190,13 @@ class MovieController extends Controller
         $data = $this->movieData($validated, $movie);
 
         if ($request->hasFile('image')) {
-            $data['image'] = $this->media->storePoster($request->file('image'));
+            $data['image'] = $this->media->storePoster($request->file('image'), MediaStore::baseName($validated['title'], $validated['year'] ?? null));
             MediaStore::forget($movie->image);
         }
 
         $newTrailer = null;
         if ($request->hasFile('trailer')) {
-            $newTrailer = $request->file('trailer')->store('trailers', 'public');
+            $newTrailer = $this->storeTrailer($request, $validated);
             $data['trailer_url'] = $newTrailer;
             MediaStore::forget($movie->trailer_url);
         }
