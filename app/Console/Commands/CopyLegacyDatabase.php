@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Support\PgSequences;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -63,7 +64,7 @@ class CopyLegacyDatabase extends Command
                 });
                 $this->info("{$table}: copied {$n}");
 
-                $this->resetSequence($target, $table);
+                PgSequences::reset($target, $table);
             }
         });
 
@@ -75,17 +76,5 @@ class CopyLegacyDatabase extends Command
     private function orderColumn(string $table): string
     {
         return Schema::hasColumn($table, 'id') ? 'id' : 'email';
-    }
-
-    /** Postgres does not advance its id counter when ids are inserted explicitly, so set it. */
-    private function resetSequence($target, string $table): void
-    {
-        if ($target->getDriverName() !== 'pgsql' || ! Schema::hasColumn($table, 'id')) {
-            return;
-        }
-
-        $target->statement(
-            "SELECT setval(pg_get_serial_sequence('{$table}', 'id'), COALESCE((SELECT MAX(id) FROM {$table}), 1), (SELECT MAX(id) FROM {$table}) IS NOT NULL)"
-        );
     }
 }
