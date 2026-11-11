@@ -21,6 +21,10 @@ class MediaNamingTest extends TestCase
         $this->assertMatchesRegularExpression('/^happy-raj-2026-[a-z0-9]{6}$/', $a);
         $this->assertNotSame($a, $b);
         $this->assertMatchesRegularExpression('/^movie-[a-z0-9]{6}$/', MediaStore::baseName('???', null));
+        // the title already ends with a year (even a different one): no second year
+        $this->assertMatchesRegularExpression('/^robin-hood-2025-[a-z0-9]{6}$/', MediaStore::baseName('Robin Hood (2025)', 2025));
+        $this->assertMatchesRegularExpression('/^sattendru-maarudhu-vaanilai-2026-[a-z0-9]{6}$/', MediaStore::baseName('Sattendru Maarudhu Vaanilai (2026)', 2024));
+        $this->assertMatchesRegularExpression('/^despicable-me-4-sinhala-dubbed-2025-[a-z0-9]{6}$/', MediaStore::baseName('Despicable Me 4 Sinhala Dubbed', 2025));
         $this->assertStringStartsWith('o-romeo-2026-', MediaStore::baseName('O\' Romeo!', 2026));
         $this->assertLessThan(90, strlen(MediaStore::baseName(str_repeat('Long ', 80), 2026)));
     }

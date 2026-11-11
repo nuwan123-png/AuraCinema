@@ -26,7 +26,10 @@ class MediaStore
         $slug = trim(Str::slug(Str::limit((string) $title, 60, '')), '-') ?: 'movie';
         $year = (int) $year;
 
-        return $slug.($year >= 1900 && $year <= 2100 ? '-'.$year : '').'-'.Str::lower(Str::random(6));
+        // Titles are often saved as "Robin Hood (2025)": do not add a second year after it.
+        $hasYear = (bool) preg_match('/-(19|20)\d\d$/', $slug);
+
+        return $slug.(! $hasYear && $year >= 1900 && $year <= 2100 ? '-'.$year : '').'-'.Str::lower(Str::random(6));
     }
 
     /** True for the old random names (32-40 letters/digits) that are hard to recognise in the bucket. */
