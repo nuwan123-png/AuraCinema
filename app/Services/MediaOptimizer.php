@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\MediaStore;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -100,6 +101,7 @@ class MediaOptimizer
 
         $rel = 'posters/'.Str::random(32).'.webp';
         Storage::disk('public')->put($rel, $binary);
+        MediaStore::publish($rel);
 
         return $rel;
     }

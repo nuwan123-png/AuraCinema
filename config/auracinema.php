@@ -20,6 +20,11 @@ return [
         'anime' => 'Anime',
     ],
 
+    // Where posters/trailers are kept: "public" (this server) or "r2" (Cloudflare R2, see config/filesystems.php).
+    'media_disk' => env('MEDIA_DISK', 'public'),
+    // Public address of the R2 bucket, e.g. https://pub-xxxx.r2.dev (no trailing slash).
+    'media_url' => env('R2_PUBLIC_URL'),
+
     // Languages shown when you hover Movies / Drama / Anime in the navbar, and in the add/edit form.
     'languages' => [
         'Hindi', 'Tamil', 'Malayalam', 'Telugu', 'Kannada', 'English', 'Sinhala', 'Korean', 'Japanese', 'Chinese', 'Other',

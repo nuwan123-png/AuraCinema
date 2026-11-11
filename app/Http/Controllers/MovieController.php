@@ -10,7 +10,7 @@ use App\Support\EmbedUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
+use App\Support\MediaStore;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -149,22 +149,17 @@ class MovieController extends Controller
     {
         $validated = $this->validated($request);
         $data = $this->movieData($validated, $movie);
-        $disk = Storage::disk('public');
 
         if ($request->hasFile('image')) {
             $data['image'] = $this->media->storePoster($request->file('image'));
-            if ($movie->image) {
-                $disk->delete($movie->image);
-            }
+            MediaStore::forget($movie->image);
         }
 
         $newTrailer = null;
         if ($request->hasFile('trailer')) {
             $newTrailer = $request->file('trailer')->store('trailers', 'public');
             $data['trailer_url'] = $newTrailer;
-            if ($movie->trailer_url) {
-                $disk->delete($movie->trailer_url);
-            }
+            MediaStore::forget($movie->trailer_url);
         }
 
         DB::transaction(function () use ($movie, $data, $validated) {
@@ -181,11 +176,8 @@ class MovieController extends Controller
 
     public function destroy(Movie $movie)
     {
-        $disk = Storage::disk('public');
         foreach ([$movie->image, $movie->trailer_url] as $path) {
-            if ($path) {
-                $disk->delete($path);
-            }
+            MediaStore::forget($path);
         }
         $movie->delete();
 

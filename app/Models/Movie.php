@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\MediaStore;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -77,12 +78,12 @@ class Movie extends Model
 
     public function getPosterUrlAttribute(): ?string
     {
-        return $this->image ? asset('storage/'.$this->image) : null;
+        return MediaStore::url($this->image);
     }
 
     public function getTrailerFileUrlAttribute(): ?string
     {
-        return $this->trailer_url ? asset('storage/'.$this->trailer_url) : null;
+        return MediaStore::url($this->trailer_url);
     }
 
     /** schema.org Movie data for Google (JSON, safe to print inside a <script type="application/ld+json"> tag). */
@@ -95,9 +96,17 @@ class Movie extends Model
             '@type' => $this->type === 'movie' ? 'Movie' : 'TVSeries',
             'name' => $this->title,
             'description' => $this->description,
-            'image' => $this->image ? $base.'/storage/'.$this->image : null,
+            'image' => $this->image ? $this->absoluteMediaUrl($this->image, $base) : null,
             'url' => $base.'/movies/'.$this->id,
             'dateCreated' => $this->created_at?->toDateString(),
         ]), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP);
+    }
+
+    /** Poster URL for JSON-LD: R2 address when the file lives there, else the site's own /storage path. */
+    private function absoluteMediaUrl(string $path, string $base): string
+    {
+        $url = (string) MediaStore::url($path);
+
+        return str_contains($url, '/storage/') ? $base.'/storage/'.$path : $url;
     }
 }
