@@ -12,10 +12,10 @@ RUN npm run build
 # ---------- 2) Runtime ----------
 FROM php:8.4-fpm-alpine
 
-RUN apk add --no-cache nginx ffmpeg libpng libjpeg-turbo libwebp libzip oniguruma \
-    && apk add --no-cache --virtual .build-deps libpng-dev libjpeg-turbo-dev libwebp-dev libzip-dev oniguruma-dev \
+RUN apk add --no-cache nginx ffmpeg libpng libjpeg-turbo libwebp libzip oniguruma libpq \
+    && apk add --no-cache --virtual .build-deps libpng-dev libjpeg-turbo-dev libwebp-dev libzip-dev oniguruma-dev postgresql-dev \
     && docker-php-ext-configure gd --with-jpeg --with-webp \
-    && docker-php-ext-install -j"$(nproc)" pdo_mysql mbstring exif bcmath gd zip opcache \
+    && docker-php-ext-install -j"$(nproc)" pdo_mysql pdo_pgsql mbstring exif bcmath gd zip opcache \
     && apk del .build-deps
 
 COPY docker/php.ini /usr/local/etc/php/conf.d/zz-app.ini

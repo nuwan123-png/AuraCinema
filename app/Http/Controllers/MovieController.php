@@ -38,7 +38,8 @@ class MovieController extends Controller
 
             if ($q !== '') {
                 $like = '%'.addcslashes($q, '%_\\').'%';
-                $query->where(fn ($w) => $w->where('title', 'like', $like)->orWhere('tags', 'like', $like));
+                $op = DB::connection()->getDriverName() === 'pgsql' ? 'ilike' : 'like'; // Postgres LIKE is case-sensitive
+                $query->where(fn ($w) => $w->where('title', $op, $like)->orWhere('tags', $op, $like));
             }
             if ($type !== '') {
                 $query->where('type', $type);
