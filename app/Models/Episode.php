@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Episode extends Model
 {
-    protected $fillable = ['movie_id', 'number', 'url'];
+    protected $fillable = ['movie_id', 'number', 'url', 'subtitle_url'];
 
     public function movie(): BelongsTo
     {

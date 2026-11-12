@@ -327,6 +327,7 @@ class MovieController extends Controller
                     'movie_id' => $movie->id,
                     'number' => (int) $row['number'],
                     'url' => $row['url'],
+                    'subtitle_url' => filled($row['subtitle_url'] ?? null) ? $row['subtitle_url'] : null,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ])
@@ -360,6 +361,7 @@ class MovieController extends Controller
             'episodes' => ['nullable', 'array', 'max:500'],
             'episodes.*.number' => ['required', 'integer', 'between:1,9999'],
             'episodes.*.url' => ['required', 'url:http,https', 'max:500'],
+            'episodes.*.subtitle_url' => ['nullable', 'url:http,https', 'max:500'],
             
             // Download Links Validation
             'download_480p' => ['nullable', 'url:http,https', 'max:500'],

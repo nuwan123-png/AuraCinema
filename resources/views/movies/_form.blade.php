@@ -3,7 +3,7 @@
     $hasEpisodes = (string) old('has_episodes', ($movie && $movie->episodes->isNotEmpty()) ? '1' : '0') === '1';
     $episodeRows = old('episodes') !== null
         ? array_values((array) old('episodes'))
-        : ($movie ? $movie->episodes->map(fn ($e) => ['number' => $e->number, 'url' => $e->url])->all() : []);
+        : ($movie ? $movie->episodes->map(fn ($e) => ['number' => $e->number, 'url' => $e->url, 'subtitle_url' => $e->subtitle_url])->all() : []);
 
     $popularTags = ['romantic', 'family', 'dubbed', 'new release', 'top rated', 'classic'];
     $genreTags = ['action', 'adventure', 'animation', 'comedy', 'crime', 'documentary', 'drama', 'fantasy', 'horror', 'mystery', 'romance', 'sci-fi', 'thriller', 'war'];
@@ -88,12 +88,12 @@
     <div data-episodes-panel class="{{ $hasEpisodes ? '' : 'hidden' }} mt-4 space-y-3">
         <div data-episode-list class="space-y-2">
             @foreach($episodeRows as $i => $row)
-                @include('movies._episode_row', ['i' => $i, 'number' => $row['number'] ?? '', 'url' => $row['url'] ?? ''])
+                @include('movies._episode_row', ['i' => $i, 'number' => $row['number'] ?? '', 'url' => $row['url'] ?? '', 'subtitle' => $row['subtitle_url'] ?? ''])
             @endforeach
         </div>
 
         <template data-episode-template>
-            @include('movies._episode_row', ['i' => '__i__', 'number' => '', 'url' => ''])
+            @include('movies._episode_row', ['i' => '__i__', 'number' => '', 'url' => '', 'subtitle' => ''])
         </template>
 
         <div class="flex flex-wrap items-center gap-2">
