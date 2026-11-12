@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 
 // Admin routes FIRST so /movies/create is not swallowed by /movies/{movie}.
 Route::middleware(['throttle:60,1', 'admin'])->group(function () {
+    Route::get('/admin/incomplete', [MovieController::class, 'incomplete'])->name('movies.incomplete');
     Route::resource('movies', MovieController::class)->except(['index', 'show']);
     Route::get('/requests', [RequestController::class, 'index'])->name('requests.index');
     Route::delete('/requests/{movieRequest}', [RequestController::class, 'destroy'])->name('requests.destroy');

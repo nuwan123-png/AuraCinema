@@ -170,6 +170,20 @@ class MovieController extends Controller
         return $request->file('trailer')->storeAs('trailers', MediaStore::baseName($validated['title'], $validated['year'] ?? null).'.'.$ext, 'public');
     }
 
+    /** Admin: every title that still has empty form fields, newest first. */
+    public function incomplete()
+    {
+        $all = Movie::query()
+            ->withCount('episodes')
+            ->with('episodes:id,movie_id,number,subtitle_url')
+            ->latest('id')
+            ->get();
+
+        $movies = $all->filter(fn (Movie $m) => $m->isIncomplete())->values();
+
+        return view('movies.incomplete', ['movies' => $movies, 'total' => $all->count()]);
+    }
+
     public function show(Movie $movie)
     {
         $movie->load('episodes');

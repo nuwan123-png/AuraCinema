@@ -6,6 +6,7 @@
 @section('content')
 <div class="mx-auto my-6 max-w-2xl rounded-xl border border-white/10 bg-zinc-900/60 p-6 sm:p-8">
     <h1 class="mb-6 text-xl font-bold">Edit title</h1>
+    @include('movies._incomplete_notice', ['movie' => $movie, 'force' => true])
     <form action="{{ route('movies.update', $movie) }}" method="POST" enctype="multipart/form-data" class="space-y-4">
         @csrf
         @method('PUT')

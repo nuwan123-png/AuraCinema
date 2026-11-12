@@ -35,6 +35,76 @@ class Movie extends Model
         return $this->hasMany(Episode::class)->orderBy('number');
     }
 
+    /** Cached result of missingFields() (admin-only helper). */
+    private ?array $missingFieldsCache = null;
+
+    /**
+     * Admin helper: names of the form fields that are still empty.
+     * To stop flagging a field, just delete (or comment out) its line below.
+     */
+    public function missingFields(): array
+    {
+        if ($this->missingFieldsCache !== null) {
+            return $this->missingFieldsCache;
+        }
+
+        // Plain movies loaded with withCount('episodes') = 0 need no extra query.
+        $count = $this->attributes['episodes_count'] ?? null;
+        $episodes = ($count !== null && (int) $count === 0) ? collect() : $this->episodes;
+        $hasEpisodes = $episodes->isNotEmpty();
+
+        $missing = [];
+
+        if (blank($this->description)) {
+            $missing[] = 'Description';
+        }
+        if (blank($this->image)) {
+            $missing[] = 'Poster';
+        }
+        if (blank($this->trailer_url)) {
+            $missing[] = 'Trailer';
+        }
+        if (blank($this->tags)) {
+            $missing[] = 'Keywords';
+        }
+
+        // "Watch now": a single embed link, or episodes for a series.
+        if (! $hasEpisodes && blank($this->embed_url)) {
+            $missing[] = 'Watch now link (or episodes)';
+        }
+
+        if (blank($this->download_480p)) {
+            $missing[] = '480p download';
+        }
+        if (blank($this->download_720p)) {
+            $missing[] = '720p download';
+        }
+        if (blank($this->download_1080p)) {
+            $missing[] = '1080p download';
+        }
+
+        // Subtitles: one link for the title, or (series) a subtitle on every episode.
+        if (blank($this->subtitle_url)) {
+            if ($hasEpisodes) {
+                $without = $episodes->filter(fn ($e) => blank($e->subtitle_url))->pluck('number')->sort()->values();
+                if ($without->isNotEmpty()) {
+                    $missing[] = $without->count() > 6
+                        ? 'Subtitles for '.$without->count().' episodes'
+                        : 'Subtitle for Ep '.$without->implode(', ');
+                }
+            } else {
+                $missing[] = 'Subtitle link';
+            }
+        }
+
+        return $this->missingFieldsCache = $missing;
+    }
+
+    public function isIncomplete(): bool
+    {
+        return $this->missingFields() !== [];
+    }
+
     public function getTypeLabelAttribute(): string
     {
         return (string) config('auracinema.types.'.$this->type, 'Movie');

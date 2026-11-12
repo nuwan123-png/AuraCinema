@@ -11,6 +11,8 @@
 @endpush
 
 @section('content')
+    @include('movies._incomplete_notice', ['movie' => $movie])
+
     <nav class="mb-5 text-xs text-slate-400" aria-label="Breadcrumb">
         <a href="{{ route('home') }}" class="hover:text-white">Home</a> <span class="mx-1">/</span>
         <span class="text-slate-200">{{ $movie->title }}</span>

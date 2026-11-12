@@ -16,6 +16,14 @@
             <span class="absolute left-1.5 top-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[9px] font-bold text-white ring-1 ring-white/20 backdrop-blur">{{ $movie->episodes_count }} EPS</span>
         @endif
 
+        {{-- Admin only: warns when some form fields are still empty --}}
+        @if(request()->cookie('aura_admin') && $movie->isIncomplete())
+            <span title="Missing: {{ implode(', ', $movie->missingFields()) }}"
+                  class="absolute inset-x-1.5 bottom-1.5 z-20 truncate rounded-md bg-rose-600/95 px-2 py-1 text-center text-[10px] font-extrabold uppercase tracking-wide text-white shadow">
+                <i class="fa-solid fa-triangle-exclamation"></i> Incomplete
+            </span>
+        @endif
+
         {{-- Play icon and label badge: fades in on hover --}}
         <span class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-t from-black/80 via-black/40 to-black/20 p-2 text-center opacity-0 transition duration-200 group-hover:opacity-100 group-focus-visible:opacity-100" aria-hidden="true">
             <span class="flex h-11 w-11 scale-75 items-center justify-center rounded-full border-2 border-orange-400 bg-orange-500/80 text-white shadow-lg shadow-orange-500/40 transition duration-200 group-hover:scale-100 group-focus-visible:scale-100">
