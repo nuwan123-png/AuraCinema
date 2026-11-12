@@ -11,8 +11,6 @@
 @endpush
 
 @section('content')
-    @include('movies._incomplete_notice', ['movie' => $movie])
-
     <nav class="mb-5 text-xs text-slate-400" aria-label="Breadcrumb">
         <a href="{{ route('home') }}" class="hover:text-white">Home</a> <span class="mx-1">/</span>
         <span class="text-slate-200">{{ $movie->title }}</span>
@@ -75,6 +73,69 @@
         </div>
     </div>
 
+    @if($movie->gallery_items)
+        {{-- Gallery: pictures slide sideways; click one to see it large. --}}
+        <section class="mb-8 rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6" id="gallery" data-row aria-label="{{ $movie->title }} pictures">
+            <div class="mb-4 flex items-center justify-between gap-3">
+                <h2 class="border-l-4 border-orange-500 pl-3 text-base font-bold uppercase tracking-wide text-orange-400">Gallery</h2>
+                <div class="flex gap-2">
+                    <button type="button" data-dir="-1" aria-label="Scroll left" class="grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-white/5 text-xs transition hover:border-orange-400/60 hover:bg-orange-500/15"><i class="fa-solid fa-chevron-left"></i></button>
+                    <button type="button" data-dir="1" aria-label="Scroll right" class="grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-white/5 text-xs transition hover:border-orange-400/60 hover:bg-orange-500/15"><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+            </div>
+            <div data-track class="row-track -mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 py-1">
+                @foreach($movie->gallery_items as $i => $item)
+                    <button type="button" data-lightbox-open data-full="{{ $item['url'] }}" aria-label="Open picture {{ $i + 1 }} of {{ count($movie->gallery_items) }}"
+                            class="aspect-video w-64 shrink-0 snap-start overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-white/10 transition hover:ring-orange-400/60 sm:w-80">
+                        <img src="{{ $item['url'] }}" alt="{{ $movie->title }} picture {{ $i + 1 }}" width="640" height="360" loading="lazy" decoding="async" class="h-full w-full object-cover">
+                    </button>
+                @endforeach
+            </div>
+        </section>
+
+        <dialog data-lightbox aria-label="{{ $movie->title }} pictures"
+                class="w-[min(96vw,72rem)] overflow-hidden rounded-2xl border border-white/10 bg-black p-0 text-white shadow-2xl shadow-orange-500/10">
+            <div class="relative grid place-items-center bg-black">
+                <img data-lightbox-img src="" alt="" class="max-h-[85vh] w-full object-contain">
+                <button type="button" data-lightbox-close aria-label="Close" class="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-black/60 transition hover:bg-orange-500"><i class="fa-solid fa-xmark"></i></button>
+                <button type="button" data-lightbox-prev aria-label="Previous picture" class="absolute left-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-black/60 transition hover:bg-orange-500"><i class="fa-solid fa-chevron-left"></i></button>
+                <button type="button" data-lightbox-next aria-label="Next picture" class="absolute right-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-black/60 transition hover:bg-orange-500"><i class="fa-solid fa-chevron-right"></i></button>
+                <p data-lightbox-count class="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs"></p>
+            </div>
+        </dialog>
+    @endif
+
+    @if($movie->cast_list)
+        <section class="mb-10 rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6" id="cast" data-row aria-label="{{ $movie->title }} cast">
+            <div class="mb-4 flex items-center justify-between gap-3">
+                <h2 class="border-l-4 border-orange-500 pl-3 text-base font-bold uppercase tracking-wide text-orange-400">Cast</h2>
+                <div class="flex gap-2">
+                    <button type="button" data-dir="-1" aria-label="Scroll left" class="grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-white/5 text-xs transition hover:border-orange-400/60 hover:bg-orange-500/15"><i class="fa-solid fa-chevron-left"></i></button>
+                    <button type="button" data-dir="1" aria-label="Scroll right" class="grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-white/5 text-xs transition hover:border-orange-400/60 hover:bg-orange-500/15"><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+            </div>
+            <div data-track class="row-track -mx-1 flex snap-x gap-4 overflow-x-auto px-1 py-1">
+                @foreach($movie->cast_list as $member)
+                    <figure class="w-28 shrink-0 snap-start text-center sm:w-32">
+                        <div class="mb-2 aspect-[3/4] overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-white/10">
+                            @if($member['photo'])
+                                <img src="{{ $member['photo'] }}" alt="{{ $member['name'] }}" width="240" height="320" loading="lazy" decoding="async" class="h-full w-full object-cover">
+                            @else
+                                <div class="grid h-full w-full place-items-center bg-gradient-to-br from-orange-500/20 to-zinc-900 text-3xl font-extrabold text-orange-300" aria-hidden="true">{{ mb_strtoupper(mb_substr($member['name'], 0, 1)) }}</div>
+                            @endif
+                        </div>
+                        <figcaption>
+                            <span class="block text-sm font-semibold leading-tight text-white">{{ $member['name'] }}</span>
+                            @if($member['role'])
+                                <span class="mt-0.5 block text-xs leading-tight text-slate-400">{{ $member['role'] }}</span>
+                            @endif
+                        </figcaption>
+                    </figure>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
     @if($movie->episodes->isNotEmpty())
         <section class="mb-10" id="episodes">
             <h2 class="mb-3 border-l-4 border-orange-500 pl-3 text-base font-bold uppercase tracking-wide text-orange-400">Episodes</h2>
@@ -127,20 +188,12 @@
                     </span>
                 </button>
             </div>
-        </section>
-    @endif
 
-    @php
-        $episodeSubs = $movie->episodes->filter(fn ($e) => filled($e->subtitle_url));
-    @endphp
-
-    {{-- Download & Subtitles Section (shown even when there is no "Watch now" player) --}}
-    @if($movie->download_480p || $movie->download_720p || $movie->download_1080p || $movie->subtitle_url || $episodeSubs->isNotEmpty())
-        <section class="mt-10" id="downloads">
-                <div class="mx-auto grid w-full max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
+            {{-- Download & Subtitles Section --}}
+            @if($movie->download_480p || $movie->download_720p || $movie->download_1080p || $movie->subtitle_url)
+                <div class="mx-auto mt-10 grid w-full max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
                     
                     {{-- 1. Select Quality Box (Left) --}}
-                    @if($movie->download_480p || $movie->download_720p || $movie->download_1080p)
                     <div class="rounded-xl border border-white/10 bg-white/5 p-5 shadow-lg">
                         <h3 class="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-200">
                             <i class="fa-solid fa-hard-drive text-orange-500"></i> Select Quality
@@ -209,17 +262,15 @@
                             @endif
                         </div>
                     </div>
-                    @endif
 
                     {{-- 2. Subtitles Box (Right) - Only shows if subtitle link is added --}}
-                    @if($movie->subtitle_url || $episodeSubs->isNotEmpty())
+                    @if($movie->subtitle_url)
                         <div class="rounded-xl border border-white/10 bg-white/5 p-5 shadow-lg">
                             <h3 class="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-200">
                                 <i class="fa-regular fa-closed-captioning text-orange-500"></i> Subtitles
                             </h3>
                             
                             <div class="space-y-3">
-                                @if($movie->subtitle_url)
                                 <a href="{{ $movie->subtitle_url }}" target="_blank" class="group flex items-center justify-between rounded-lg bg-black/40 p-3 ring-1 ring-white/5 transition hover:bg-black/60 hover:ring-orange-500/50">
                                     <div class="flex items-center gap-4">
                                         <div class="grid h-12 w-12 place-items-center rounded bg-orange-500/10 text-xl text-orange-400 transition group-hover:bg-orange-500/20">
@@ -234,22 +285,6 @@
                                         <i class="fa-solid fa-download"></i>
                                     </div>
                                 </a>
-                                @endif
-
-                                {{-- Per-episode subtitles (series) --}}
-                                @if($episodeSubs->isNotEmpty())
-                                    <div>
-                                        <div class="mb-2 text-[10px] font-semibold uppercase text-slate-500">Episode subtitles</div>
-                                        <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                                            @foreach($episodeSubs as $episode)
-                                                <a href="{{ $episode->subtitle_url }}" target="_blank" rel="noopener"
-                                                   class="group flex items-center justify-center gap-1.5 rounded-md bg-black/40 py-2.5 text-xs font-semibold text-slate-200 ring-1 ring-white/5 transition hover:bg-orange-500 hover:text-white">
-                                                    <i class="fa-solid fa-download text-[10px] text-orange-400 group-hover:text-white"></i> Ep {{ $episode->number }}
-                                                </a>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                @endif
                             </div>
                         </div>
                     @else
@@ -258,6 +293,7 @@
                     @endif
 
                 </div>
+            @endif
         </section>
     @endif
 @endsection

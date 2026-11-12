@@ -16,6 +16,8 @@ use Illuminate\Validation\ValidationException;
 
 class MovieController extends Controller
 {
+    private const MAX_GALLERY = 12;
+
     public function __construct(private MediaOptimizer $media) {}
 
     /** Search-as-you-type: a few matching titles as JSON for the dropdown under the search box. */
@@ -140,19 +142,31 @@ class MovieController extends Controller
         $validated = $this->validated($request);
         $data = $this->movieData($validated);
 
-        if ($request->hasFile('image')) {
-            $data['image'] = $this->media->storePoster($request->file('image'), MediaStore::baseName($validated['title'], $validated['year'] ?? null));
-        }
-        if ($request->hasFile('trailer')) {
-            $data['trailer_url'] = $this->storeTrailer($request, $validated);
-        }
+        $created = []; // every file written below, so a failed save can remove them again
+        $orphans = [];
+        try {
+            if ($request->hasFile('image')) {
+                $data['image'] = $this->media->storePoster($request->file('image'), MediaStore::baseName($validated['title'], $validated['year'] ?? null));
+                $created[] = $data['image'];
+            }
+            if ($request->hasFile('trailer')) {
+                $data['trailer_url'] = $this->storeTrailer($request, $validated);
+                $created[] = $data['trailer_url'];
+            }
+            $data['gallery'] = $this->buildGallery($request, $validated, null, $created, $orphans) ?: null;
+            $data['cast_members'] = $this->buildCast($request, $validated, null, $created, $orphans) ?: null;
 
-        $movie = DB::transaction(function () use ($data, $validated) {
-            $movie = Movie::create($data);
-            $this->syncEpisodes($movie, $validated['episodes'] ?? []);
+            $movie = DB::transaction(function () use ($data, $validated) {
+                $movie = Movie::create($data);
+                $this->syncEpisodes($movie, $validated['episodes'] ?? []);
 
-            return $movie;
-        });
+                return $movie;
+            });
+        } catch (\Throwable $e) {
+            array_map([MediaStore::class, 'forget'], $created);
+
+            throw $e;
+        }
 
         if ($request->hasFile('trailer')) {
             OptimizeTrailer::dispatchAfterResponse($movie->id, $data['trailer_url']);
@@ -168,20 +182,6 @@ class MovieController extends Controller
         $ext = in_array($ext, ['mp4', 'webm', 'mov', 'mkv'], true) ? $ext : 'mp4';
 
         return $request->file('trailer')->storeAs('trailers', MediaStore::baseName($validated['title'], $validated['year'] ?? null).'.'.$ext, 'public');
-    }
-
-    /** Admin: every title that still has empty form fields, newest first. */
-    public function incomplete()
-    {
-        $all = Movie::query()
-            ->withCount('episodes')
-            ->with('episodes:id,movie_id,number,subtitle_url')
-            ->latest('id')
-            ->get();
-
-        $movies = $all->filter(fn (Movie $m) => $m->isIncomplete())->values();
-
-        return view('movies.incomplete', ['movies' => $movies, 'total' => $all->count()]);
     }
 
     public function show(Movie $movie)
@@ -206,38 +206,44 @@ class MovieController extends Controller
         $oldImage = $movie->image;
         $oldTrailer = $movie->trailer_url;
 
+        $created = []; // new files, removed again if the save fails
+        $orphans = []; // replaced/removed files, deleted only after the save succeeded
+
         $newImage = null;
-        if ($request->hasFile('image')) {
-            $newImage = $this->media->storePoster($request->file('image'), MediaStore::baseName($validated['title'], $validated['year'] ?? null));
-            $data['image'] = $newImage;
-        }
-
         $newTrailer = null;
-        if ($request->hasFile('trailer')) {
-            $newTrailer = $this->storeTrailer($request, $validated);
-            $data['trailer_url'] = $newTrailer;
-        }
-
         try {
+            if ($request->hasFile('image')) {
+                $newImage = $this->media->storePoster($request->file('image'), MediaStore::baseName($validated['title'], $validated['year'] ?? null));
+                $data['image'] = $newImage;
+                $created[] = $newImage;
+            }
+            if ($request->hasFile('trailer')) {
+                $newTrailer = $this->storeTrailer($request, $validated);
+                $data['trailer_url'] = $newTrailer;
+                $created[] = $newTrailer;
+            }
+            $data['gallery'] = $this->buildGallery($request, $validated, $movie, $created, $orphans) ?: null;
+            $data['cast_members'] = $this->buildCast($request, $validated, $movie, $created, $orphans) ?: null;
+
             DB::transaction(function () use ($movie, $data, $validated) {
                 $movie->update($data);
                 $this->syncEpisodes($movie, $validated['episodes'] ?? []);
             });
         } catch (\Throwable $e) {
             // Saving failed: the movie still points at the OLD files, so throw the new uploads away instead.
-            MediaStore::forget($newImage);
-            MediaStore::forget($newTrailer);
+            array_map([MediaStore::class, 'forget'], $created);
 
             throw $e;
         }
 
         // Saved: only now is it safe to delete the replaced files (from the server and from R2).
         if ($newImage) {
-            MediaStore::forget($oldImage);
+            $orphans[] = $oldImage;
         }
         if ($newTrailer) {
-            MediaStore::forget($oldTrailer);
+            $orphans[] = $oldTrailer;
         }
+        array_map([MediaStore::class, 'forget'], array_filter($orphans));
 
         if ($newTrailer) {
             OptimizeTrailer::dispatchAfterResponse($movie->id, $newTrailer);
@@ -248,15 +254,81 @@ class MovieController extends Controller
 
     public function destroy(Movie $movie)
     {
-        $files = [$movie->image, $movie->trailer_url];
+        $files = array_merge(
+            [$movie->image, $movie->trailer_url],
+            $movie->gallery ?: [],
+            collect($movie->cast_members ?: [])->pluck('photo')->all(),
+        );
         $movie->delete();
 
         // Row first, files second: a failed delete can never leave a movie pointing at missing files.
-        foreach ($files as $path) {
+        foreach (array_filter($files) as $path) {
             MediaStore::forget($path);
         }
 
         return redirect()->route('movies.index')->with('success', 'Movie deleted.');
+    }
+
+    /**
+     * Gallery = kept pictures + newly uploaded ones. Removed pictures go to $orphans (deleted after the save).
+     * New files are recorded in $created so a failed save can remove them again.
+     *
+     * @return list<string>
+     */
+    private function buildGallery(Request $request, array $validated, ?Movie $movie, array &$created, array &$orphans): array
+    {
+        $current = array_values(array_filter((array) ($movie?->gallery ?: []), 'is_string'));
+        $remove = array_values(array_intersect((array) ($validated['gallery_remove'] ?? []), $current));
+        $keep = array_values(array_diff($current, $remove));
+        $files = array_values(array_filter((array) $request->file('gallery_new')));
+
+        if (count($keep) + count($files) > self::MAX_GALLERY) {
+            throw ValidationException::withMessages(['gallery_new' => 'A gallery can hold at most '.self::MAX_GALLERY.' pictures.']);
+        }
+
+        foreach ($files as $file) {
+            $path = $this->media->storeGalleryImage($file, MediaStore::baseName($validated['title'], $validated['year'] ?? null));
+            $created[] = $path;
+            $keep[] = $path;
+        }
+        $orphans = array_merge($orphans, $remove);
+
+        return $keep;
+    }
+
+    /**
+     * Cast members from the form rows. A row keeps its old photo unless a new one is uploaded;
+     * photos that are no longer used go to $orphans.
+     *
+     * @return list<array{name:string,role:string,photo:?string}>
+     */
+    private function buildCast(Request $request, array $validated, ?Movie $movie, array &$created, array &$orphans): array
+    {
+        $currentPhotos = collect($movie?->cast_members ?: [])->pluck('photo')->filter()->values()->all();
+        $kept = [];
+        $members = [];
+
+        foreach (($validated['cast'] ?? []) as $key => $row) {
+            $photo = null;
+            $upload = $request->file("cast.$key.photo");
+            $existing = $row['existing_photo'] ?? null;
+
+            if ($upload) {
+                $photo = $this->media->storeCastPhoto($upload, MediaStore::baseName($row['name'], null));
+                $created[] = $photo;
+            } elseif ($existing && in_array($existing, $currentPhotos, true) && ! in_array($existing, $kept, true)) {
+                $photo = $existing;
+            }
+
+            if ($photo && ! in_array($photo, $created, true)) {
+                $kept[] = $photo;
+            }
+            $members[] = ['name' => trim($row['name']), 'role' => trim((string) ($row['role'] ?? '')), 'photo' => $photo];
+        }
+
+        $orphans = array_merge($orphans, array_values(array_diff($currentPhotos, $kept)));
+
+        return $members;
     }
 
     /**
@@ -274,6 +346,14 @@ class MovieController extends Controller
                 ->all()
             : [];
         $request->merge(['episodes' => $rows]);
+
+        // Cast rows the admin left completely empty are dropped. Keys are kept on purpose:
+        // the uploaded photos are matched to their row by that key.
+        $castRows = collect($request->input('cast', []))
+            ->filter(fn ($row, $key) => is_array($row) && (filled($row['name'] ?? null) || filled($row['role'] ?? null)
+                || filled($row['existing_photo'] ?? null) || $request->hasFile("cast.$key.photo")))
+            ->all();
+        $request->merge(['cast' => $castRows]);
 
         // "Watch now": accept a link or a pasted <iframe> snippet. Normalise it to a safe player URL,
         // or leave it as-is (non-empty) so the validation rule below rejects it with a clear message.
@@ -341,7 +421,6 @@ class MovieController extends Controller
                     'movie_id' => $movie->id,
                     'number' => (int) $row['number'],
                     'url' => $row['url'],
-                    'subtitle_url' => filled($row['subtitle_url'] ?? null) ? $row['subtitle_url'] : null,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ])
@@ -375,13 +454,23 @@ class MovieController extends Controller
             'episodes' => ['nullable', 'array', 'max:500'],
             'episodes.*.number' => ['required', 'integer', 'between:1,9999'],
             'episodes.*.url' => ['required', 'url:http,https', 'max:500'],
-            'episodes.*.subtitle_url' => ['nullable', 'url:http,https', 'max:500'],
             
             // Download Links Validation
             'download_480p' => ['nullable', 'url:http,https', 'max:500'],
             'download_720p' => ['nullable', 'url:http,https', 'max:500'],
             'download_1080p' => ['nullable', 'url:http,https', 'max:500'],
             'subtitle_url' => ['nullable', 'url:http,https', 'max:500'],
+
+            // Gallery pictures and cast (resized to WebP on save)
+            'gallery_new' => ['nullable', 'array', 'max:'.self::MAX_GALLERY],
+            'gallery_new.*' => ['image', 'mimes:jpeg,png,jpg,webp', 'max:10240'],
+            'gallery_remove' => ['nullable', 'array'],
+            'gallery_remove.*' => ['string', 'max:255'],
+            'cast' => ['nullable', 'array', 'max:24'],
+            'cast.*.name' => ['required', 'string', 'max:80'],
+            'cast.*.role' => ['nullable', 'string', 'max:80'],
+            'cast.*.photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
+            'cast.*.existing_photo' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

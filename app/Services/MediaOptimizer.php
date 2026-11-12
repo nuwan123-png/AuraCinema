@@ -14,6 +14,8 @@ use Symfony\Component\Process\Process;
 class MediaOptimizer
 {
     private const POSTER_WIDTH = 480;       // grid cards + hero are never wider than this on screen
+    private const GALLERY_WIDTH = 1280;     // gallery pictures open large in the viewer
+    private const CAST_WIDTH = 240;         // cast photos are small cards
     private const MAX_PIXELS = 24_000_000;  // decompression-bomb guard (24MP ~ 96MB in GD)
 
     /** Resize an uploaded poster to a small WebP and return its path on the public disk. */
@@ -23,6 +25,27 @@ class MediaOptimizer
             return $this->toWebp($file->getRealPath(), $base);
         } catch (RuntimeException $e) {
             throw ValidationException::withMessages(['image' => $e->getMessage()]);
+        }
+    }
+
+    /** Resize a gallery picture (max 1280px wide WebP) and return its path. */
+    public function storeGalleryImage(UploadedFile $file, string $base): string
+    {
+        return $this->storeOrFail($file, 'gallery', 'gallery_new', $base, self::GALLERY_WIDTH);
+    }
+
+    /** Resize a cast photo (max 240px wide WebP) and return its path. */
+    public function storeCastPhoto(UploadedFile $file, string $base): string
+    {
+        return $this->storeOrFail($file, 'cast', 'cast', $base, self::CAST_WIDTH);
+    }
+
+    private function storeOrFail(UploadedFile $file, string $folder, string $errorKey, string $base, int $width): string
+    {
+        try {
+            return $this->toWebp($file->getRealPath(), $base, $folder, $width);
+        } catch (RuntimeException $e) {
+            throw ValidationException::withMessages([$errorKey => $e->getMessage()]);
         }
     }
 
@@ -71,7 +94,7 @@ class MediaOptimizer
         return $outRel;
     }
 
-    private function toWebp(string $absolutePath, ?string $base = null): string
+    private function toWebp(string $absolutePath, ?string $base = null, string $folder = 'posters', int $width = self::POSTER_WIDTH): string
     {
         $info = @getimagesize($absolutePath);
         if (! $info) {
@@ -87,7 +110,7 @@ class MediaOptimizer
             throw new RuntimeException('The poster could not be decoded.');
         }
 
-        $tw = min(self::POSTER_WIDTH, $w);
+        $tw = min($width, $w);
         $th = max(1, (int) round($h * $tw / $w));
         $dst = imagecreatetruecolor($tw, $th);
         imagealphablending($dst, false);
@@ -99,7 +122,7 @@ class MediaOptimizer
         $binary = (string) ob_get_clean();
         unset($src, $dst);
 
-        $rel = 'posters/'.($base ?: Str::random(32)).'.webp';
+        $rel = $folder.'/'.($base ?: Str::random(32)).'.webp';
         Storage::disk('public')->put($rel, $binary);
         MediaStore::publish($rel);
 

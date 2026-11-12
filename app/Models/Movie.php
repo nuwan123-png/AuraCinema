@@ -27,82 +27,19 @@ class Movie extends Model
         'download_720p',
         'download_1080p',
         'subtitle_url',
+        'gallery',
+        'cast_members',
+    ];
+
+    protected $casts = [
+        'gallery' => 'array',
+        'cast_members' => 'array',
     ];
 
     /** Episodes of a series, in order (episode 1 first). */
     public function episodes(): HasMany
     {
         return $this->hasMany(Episode::class)->orderBy('number');
-    }
-
-    /** Cached result of missingFields() (admin-only helper). */
-    private ?array $missingFieldsCache = null;
-
-    /**
-     * Admin helper: names of the form fields that are still empty.
-     * To stop flagging a field, just delete (or comment out) its line below.
-     */
-    public function missingFields(): array
-    {
-        if ($this->missingFieldsCache !== null) {
-            return $this->missingFieldsCache;
-        }
-
-        // Plain movies loaded with withCount('episodes') = 0 need no extra query.
-        $count = $this->attributes['episodes_count'] ?? null;
-        $episodes = ($count !== null && (int) $count === 0) ? collect() : $this->episodes;
-        $hasEpisodes = $episodes->isNotEmpty();
-
-        $missing = [];
-
-        if (blank($this->description)) {
-            $missing[] = 'Description';
-        }
-        if (blank($this->image)) {
-            $missing[] = 'Poster';
-        }
-        if (blank($this->trailer_url)) {
-            $missing[] = 'Trailer';
-        }
-        if (blank($this->tags)) {
-            $missing[] = 'Keywords';
-        }
-
-        // "Watch now": a single embed link, or episodes for a series.
-        if (! $hasEpisodes && blank($this->embed_url)) {
-            $missing[] = 'Watch now link (or episodes)';
-        }
-
-        if (blank($this->download_480p)) {
-            $missing[] = '480p download';
-        }
-        if (blank($this->download_720p)) {
-            $missing[] = '720p download';
-        }
-        if (blank($this->download_1080p)) {
-            $missing[] = '1080p download';
-        }
-
-        // Subtitles: one link for the title, or (series) a subtitle on every episode.
-        if (blank($this->subtitle_url)) {
-            if ($hasEpisodes) {
-                $without = $episodes->filter(fn ($e) => blank($e->subtitle_url))->pluck('number')->sort()->values();
-                if ($without->isNotEmpty()) {
-                    $missing[] = $without->count() > 6
-                        ? 'Subtitles for '.$without->count().' episodes'
-                        : 'Subtitle for Ep '.$without->implode(', ');
-                }
-            } else {
-                $missing[] = 'Subtitle link';
-            }
-        }
-
-        return $this->missingFieldsCache = $missing;
-    }
-
-    public function isIncomplete(): bool
-    {
-        return $this->missingFields() !== [];
     }
 
     public function getTypeLabelAttribute(): string
@@ -154,6 +91,30 @@ class Movie extends Model
     public function getTrailerFileUrlAttribute(): ?string
     {
         return MediaStore::url($this->trailer_url);
+    }
+
+    /** Gallery pictures as [['path' => ..., 'url' => ...], ...] ready for the page. */
+    public function getGalleryItemsAttribute(): array
+    {
+        return collect($this->gallery ?: [])
+            ->filter(fn ($p) => is_string($p) && $p !== '')
+            ->map(fn ($p) => ['path' => $p, 'url' => (string) MediaStore::url($p)])
+            ->values()
+            ->all();
+    }
+
+    /** Cast as [['name','role','photo' => url|null], ...] ready for the page. */
+    public function getCastListAttribute(): array
+    {
+        return collect($this->cast_members ?: [])
+            ->filter(fn ($c) => is_array($c) && filled($c['name'] ?? null))
+            ->map(fn ($c) => [
+                'name' => (string) $c['name'],
+                'role' => (string) ($c['role'] ?? ''),
+                'photo' => ! empty($c['photo']) ? MediaStore::url($c['photo']) : null,
+            ])
+            ->values()
+            ->all();
     }
 
     /** schema.org Movie data for Google (JSON, safe to print inside a <script type="application/ld+json"> tag). */

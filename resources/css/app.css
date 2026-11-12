@@ -56,9 +56,9 @@ main { animation: aura-in 0.45s ease both; }
 @media (prefers-reduced-motion: reduce) { main { animation: none; } html { scroll-behavior: auto; } }
 
 /* Trailer pop-up */
-dialog[data-trailer-dialog] { margin: auto; }
-dialog[data-trailer-dialog]::backdrop { background: rgba(5, 5, 8, 0.85); backdrop-filter: blur(6px); }
-dialog[data-trailer-dialog][open] { animation: aura-in 0.25s ease both; }
+dialog[data-trailer-dialog], dialog[data-lightbox] { margin: auto; }
+dialog[data-trailer-dialog]::backdrop, dialog[data-lightbox]::backdrop { background: rgba(5, 5, 8, 0.85); backdrop-filter: blur(6px); }
+dialog[data-trailer-dialog][open], dialog[data-lightbox][open] { animation: aura-in 0.25s ease both; }
 
 /* Hide the horizontal scrollbar on the movie rows (they scroll by touch / arrows). */
 .row-track { scrollbar-width: none; }

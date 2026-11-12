@@ -167,6 +167,57 @@ if (episodesToggle) {
     sync();
 }
 
+// ---- Add/edit form: cast rows ----
+document.querySelectorAll('[data-cast-panel]').forEach((panel) => {
+    const list = panel.querySelector('[data-cast-list]');
+    const template = panel.querySelector('template[data-cast-template]');
+    let next = list.children.length + 100; // unique row numbers, so every photo input matches its own row
+
+    panel.querySelector('[data-cast-add]').addEventListener('click', () => {
+        if (list.children.length >= 24) return;
+        const html = template.innerHTML.replaceAll('__i__', String(next));
+        next += 1;
+        list.insertAdjacentHTML('beforeend', html);
+        list.lastElementChild.querySelector('input[type=text]').focus();
+    });
+    list.addEventListener('click', (e) => {
+        const remove = e.target.closest('[data-cast-remove]');
+        if (remove) remove.closest('[data-cast-row]').remove();
+    });
+});
+
+// ---- Gallery viewer: click a picture to see it large; arrows / keyboard to move ----
+document.querySelectorAll('[data-lightbox]').forEach((dialog) => {
+    const buttons = [...document.querySelectorAll('[data-lightbox-open]')];
+    const img = dialog.querySelector('[data-lightbox-img]');
+    const count = dialog.querySelector('[data-lightbox-count]');
+    if (!buttons.length || typeof dialog.showModal !== 'function') return;
+    let index = 0;
+
+    const show = (i) => {
+        index = (i + buttons.length) % buttons.length;
+        img.src = buttons[index].dataset.full;
+        count.textContent = `${index + 1} / ${buttons.length}`;
+    };
+    buttons.forEach((btn, i) =>
+        btn.addEventListener('click', () => {
+            show(i);
+            dialog.showModal();
+        }),
+    );
+    dialog.querySelector('[data-lightbox-prev]').addEventListener('click', () => show(index - 1));
+    dialog.querySelector('[data-lightbox-next]').addEventListener('click', () => show(index + 1));
+    dialog.querySelector('[data-lightbox-close]').addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', (e) => {
+        if (e.target === dialog) dialog.close();
+    });
+    dialog.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') show(index - 1);
+        if (e.key === 'ArrowRight') show(index + 1);
+    });
+    dialog.addEventListener('close', () => img.removeAttribute('src'));
+});
+
 // ---- "Watch now" player mount function (NO sandbox: ensures Streamtape works) ----
 function mountPlayer(container, src, title) {
     const frame = document.createElement('iframe');

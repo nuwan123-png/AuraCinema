@@ -3,7 +3,7 @@
     $hasEpisodes = (string) old('has_episodes', ($movie && $movie->episodes->isNotEmpty()) ? '1' : '0') === '1';
     $episodeRows = old('episodes') !== null
         ? array_values((array) old('episodes'))
-        : ($movie ? $movie->episodes->map(fn ($e) => ['number' => $e->number, 'url' => $e->url, 'subtitle_url' => $e->subtitle_url])->all() : []);
+        : ($movie ? $movie->episodes->map(fn ($e) => ['number' => $e->number, 'url' => $e->url])->all() : []);
 
     $popularTags = ['romantic', 'family', 'dubbed', 'new release', 'top rated', 'classic'];
     $genreTags = ['action', 'adventure', 'animation', 'comedy', 'crime', 'documentary', 'drama', 'fantasy', 'horror', 'mystery', 'romance', 'sci-fi', 'thriller', 'war'];
@@ -76,6 +76,52 @@
     <input id="trailer" type="file" name="trailer" accept="video/mp4,video/webm,video/quicktime,video/x-matroska" class="w-full rounded-md border border-white/10 bg-black/30 p-2 text-xs text-slate-400">
 </div>
 
+{{-- Gallery: movie stills shown in a slider on the movie page --}}
+@php
+    $galleryItems = $movie?->gallery_items ?? [];
+    $castRows = old('cast') !== null
+        ? array_values((array) old('cast'))
+        : collect($movie?->cast_members ?: [])->map(fn ($c) => ['name' => $c['name'] ?? '', 'role' => $c['role'] ?? '', 'existing_photo' => $c['photo'] ?? ''])->all();
+@endphp
+<div class="rounded-md border border-white/10 bg-black/20 p-3">
+    <p class="mb-1 text-xs font-semibold text-slate-300"><i class="fa-solid fa-images text-orange-400"></i> Gallery pictures (JPG / PNG / WebP, up to 12, max 10MB each &mdash; resized automatically)</p>
+    @if($galleryItems)
+        <div class="mb-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+            @foreach($galleryItems as $item)
+                <label class="block cursor-pointer text-center text-[11px] text-slate-400">
+                    <img src="{{ $item['url'] }}" alt="" width="160" height="90" loading="lazy" class="mb-1 aspect-video w-full rounded object-cover ring-1 ring-white/10">
+                    <input type="checkbox" name="gallery_remove[]" value="{{ $item['path'] }}" class="mr-1 accent-rose-500"> Remove
+                </label>
+            @endforeach
+        </div>
+    @endif
+    <input id="gallery_new" type="file" name="gallery_new[]" multiple accept="image/jpeg,image/png,image/webp" class="w-full rounded-md border border-white/10 bg-black/30 p-2 text-xs text-slate-400">
+    @error('gallery_new') <span class="text-xs text-rose-500">{{ $message }}</span> @enderror
+    @error('gallery_new.*') <span class="text-xs text-rose-500">{{ $message }}</span> @enderror
+</div>
+
+{{-- Cast: name, role and photo for each actor --}}
+<div class="rounded-md border border-white/10 bg-black/20 p-3" data-cast-panel>
+    <p class="mb-2 text-xs font-semibold text-slate-300"><i class="fa-solid fa-users text-orange-400"></i> Cast (up to 24, photos resized automatically)</p>
+    <div data-cast-list class="space-y-2">
+        @foreach($castRows as $i => $row)
+            @include('movies._cast_row', [
+                'i' => $i,
+                'name' => $row['name'] ?? '',
+                'role' => $row['role'] ?? '',
+                'photo' => $row['existing_photo'] ?? '',
+                'photoUrl' => !empty($row['existing_photo']) ? \App\Support\MediaStore::url($row['existing_photo']) : null,
+            ])
+        @endforeach
+    </div>
+    <template data-cast-template>
+        @include('movies._cast_row', ['i' => '__i__', 'name' => '', 'role' => '', 'photo' => '', 'photoUrl' => null])
+    </template>
+    <button type="button" data-cast-add class="mt-2 rounded-md bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20"><i class="fa-solid fa-plus"></i> Add cast member</button>
+    @error('cast') <span class="block text-xs text-rose-500">{{ $message }}</span> @enderror
+    @error('cast.*') <span class="block text-xs text-rose-500">{{ $message }}</span> @enderror
+</div>
+
 {{-- Episodes: tick the box to add Streamtape links for each episode (series / anime) --}}
 <div class="rounded-md border border-white/10 bg-black/20 p-3">
     <input type="hidden" name="has_episodes" value="0">
@@ -88,12 +134,12 @@
     <div data-episodes-panel class="{{ $hasEpisodes ? '' : 'hidden' }} mt-4 space-y-3">
         <div data-episode-list class="space-y-2">
             @foreach($episodeRows as $i => $row)
-                @include('movies._episode_row', ['i' => $i, 'number' => $row['number'] ?? '', 'url' => $row['url'] ?? '', 'subtitle' => $row['subtitle_url'] ?? ''])
+                @include('movies._episode_row', ['i' => $i, 'number' => $row['number'] ?? '', 'url' => $row['url'] ?? ''])
             @endforeach
         </div>
 
         <template data-episode-template>
-            @include('movies._episode_row', ['i' => '__i__', 'number' => '', 'url' => '', 'subtitle' => ''])
+            @include('movies._episode_row', ['i' => '__i__', 'number' => '', 'url' => ''])
         </template>
 
         <div class="flex flex-wrap items-center gap-2">
