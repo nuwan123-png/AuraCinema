@@ -184,6 +184,20 @@ class MovieController extends Controller
         return $request->file('trailer')->storeAs('trailers', MediaStore::baseName($validated['title'], $validated['year'] ?? null).'.'.$ext, 'public');
     }
 
+    /** Admin: every title that still has empty form fields, newest first. */
+    public function incomplete()
+    {
+        $all = Movie::query()
+            ->withCount('episodes')
+            ->with('episodes:id,movie_id,number,subtitle_url')
+            ->latest('id')
+            ->get();
+
+        $movies = $all->filter(fn (Movie $m) => $m->isIncomplete())->values();
+
+        return view('movies.incomplete', ['movies' => $movies, 'total' => $all->count()]);
+    }
+
     public function show(Movie $movie)
     {
         $movie->load('episodes');
@@ -421,6 +435,7 @@ class MovieController extends Controller
                     'movie_id' => $movie->id,
                     'number' => (int) $row['number'],
                     'url' => $row['url'],
+                    'subtitle_url' => filled($row['subtitle_url'] ?? null) ? $row['subtitle_url'] : null,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ])
@@ -454,6 +469,7 @@ class MovieController extends Controller
             'episodes' => ['nullable', 'array', 'max:500'],
             'episodes.*.number' => ['required', 'integer', 'between:1,9999'],
             'episodes.*.url' => ['required', 'url:http,https', 'max:500'],
+            'episodes.*.subtitle_url' => ['nullable', 'url:http,https', 'max:500'],
             
             // Download Links Validation
             'download_480p' => ['nullable', 'url:http,https', 'max:500'],

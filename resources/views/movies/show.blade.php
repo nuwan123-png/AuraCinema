@@ -11,6 +11,8 @@
 @endpush
 
 @section('content')
+    @include('movies._incomplete_notice', ['movie' => $movie])
+
     <nav class="mb-5 text-xs text-slate-400" aria-label="Breadcrumb">
         <a href="{{ route('home') }}" class="hover:text-white">Home</a> <span class="mx-1">/</span>
         <span class="text-slate-200">{{ $movie->title }}</span>
@@ -188,12 +190,20 @@
                     </span>
                 </button>
             </div>
+        </section>
+    @endif
 
-            {{-- Download & Subtitles Section --}}
-            @if($movie->download_480p || $movie->download_720p || $movie->download_1080p || $movie->subtitle_url)
-                <div class="mx-auto mt-10 grid w-full max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
+    @php
+        $episodeSubs = $movie->episodes->filter(fn ($e) => filled($e->subtitle_url));
+    @endphp
+
+    {{-- Download & Subtitles Section (shown even when there is no "Watch now" player) --}}
+    @if($movie->download_480p || $movie->download_720p || $movie->download_1080p || $movie->subtitle_url || $episodeSubs->isNotEmpty())
+        <section class="mt-10" id="downloads">
+                <div class="mx-auto grid w-full max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
                     
                     {{-- 1. Select Quality Box (Left) --}}
+                    @if($movie->download_480p || $movie->download_720p || $movie->download_1080p)
                     <div class="rounded-xl border border-white/10 bg-white/5 p-5 shadow-lg">
                         <h3 class="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-200">
                             <i class="fa-solid fa-hard-drive text-orange-500"></i> Select Quality
@@ -262,15 +272,17 @@
                             @endif
                         </div>
                     </div>
+                    @endif
 
                     {{-- 2. Subtitles Box (Right) - Only shows if subtitle link is added --}}
-                    @if($movie->subtitle_url)
+                    @if($movie->subtitle_url || $episodeSubs->isNotEmpty())
                         <div class="rounded-xl border border-white/10 bg-white/5 p-5 shadow-lg">
                             <h3 class="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-200">
                                 <i class="fa-regular fa-closed-captioning text-orange-500"></i> Subtitles
                             </h3>
                             
                             <div class="space-y-3">
+                                @if($movie->subtitle_url)
                                 <a href="{{ $movie->subtitle_url }}" target="_blank" class="group flex items-center justify-between rounded-lg bg-black/40 p-3 ring-1 ring-white/5 transition hover:bg-black/60 hover:ring-orange-500/50">
                                     <div class="flex items-center gap-4">
                                         <div class="grid h-12 w-12 place-items-center rounded bg-orange-500/10 text-xl text-orange-400 transition group-hover:bg-orange-500/20">
@@ -285,6 +297,22 @@
                                         <i class="fa-solid fa-download"></i>
                                     </div>
                                 </a>
+                                @endif
+
+                                {{-- Per-episode subtitles (series) --}}
+                                @if($episodeSubs->isNotEmpty())
+                                    <div>
+                                        <div class="mb-2 text-[10px] font-semibold uppercase text-slate-500">Episode subtitles</div>
+                                        <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                                            @foreach($episodeSubs as $episode)
+                                                <a href="{{ $episode->subtitle_url }}" target="_blank" rel="noopener"
+                                                   class="group flex items-center justify-center gap-1.5 rounded-md bg-black/40 py-2.5 text-xs font-semibold text-slate-200 ring-1 ring-white/5 transition hover:bg-orange-500 hover:text-white">
+                                                    <i class="fa-solid fa-download text-[10px] text-orange-400 group-hover:text-white"></i> Ep {{ $episode->number }}
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     @else
@@ -293,7 +321,6 @@
                     @endif
 
                 </div>
-            @endif
         </section>
     @endif
 @endsection
