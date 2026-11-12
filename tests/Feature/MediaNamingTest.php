@@ -91,4 +91,33 @@ class MediaNamingTest extends TestCase
         $this->assertSame('posters/ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ.webp', $c->fresh()->image); // not found: left alone
         $this->assertStringStartsWith('https://pub-test.r2.dev/posters/happy-raj-2026-', $a->poster_url);
     }
+
+    public function test_replacing_and_deleting_remove_the_old_files_from_r2(): void
+    {
+        config(['auracinema.media_disk' => 'r2', 'auracinema.media_url' => 'https://pub-test.r2.dev',
+            'auracinema.admin_user' => 'nuwan', 'auracinema.admin_password_hash' => \Illuminate\Support\Facades\Hash::make('secret-pass')]);
+        Storage::fake('public');
+        Storage::fake('r2');
+        $auth = ['Authorization' => 'Basic '.base64_encode('nuwan:secret-pass')];
+
+        Storage::disk('r2')->put('posters/old-poster-2026-aaaaaa.webp', 'old');
+        Storage::disk('r2')->put('trailers/old-trailer-2026-bbbbbb.mp4', 'old');
+        $movie = Movie::create(['title' => 'Sigma', 'year' => 2026, 'type' => 'movie', 'image' => 'posters/old-poster-2026-aaaaaa.webp', 'trailer_url' => 'trailers/old-trailer-2026-bbbbbb.mp4']);
+
+        $this->withHeaders($auth)->put('/movies/'.$movie->id, [
+            'title' => 'Sigma', 'type' => 'movie', 'year' => 2026,
+            'image' => UploadedFile::fake()->image('new.jpg', 600, 900),
+        ])->assertRedirect();
+
+        $movie = $movie->fresh();
+        $this->assertNotSame('posters/old-poster-2026-aaaaaa.webp', $movie->image);
+        Storage::disk('r2')->assertMissing('posters/old-poster-2026-aaaaaa.webp');   // old poster gone from R2
+        Storage::disk('r2')->assertExists('trailers/old-trailer-2026-bbbbbb.mp4');    // trailer untouched
+        $newPoster = $movie->image;
+
+        $this->withHeaders($auth)->delete('/movies/'.$movie->id)->assertRedirect();
+
+        Storage::disk('r2')->assertMissing('trailers/old-trailer-2026-bbbbbb.mp4');
+        $this->assertFalse(Storage::disk('r2')->exists($newPoster) || Storage::disk('public')->exists($newPoster));
+    }
 }

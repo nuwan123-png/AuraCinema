@@ -189,22 +189,41 @@ class MovieController extends Controller
         $validated = $this->validated($request);
         $data = $this->movieData($validated, $movie);
 
+        $oldImage = $movie->image;
+        $oldTrailer = $movie->trailer_url;
+
+        $newImage = null;
         if ($request->hasFile('image')) {
-            $data['image'] = $this->media->storePoster($request->file('image'), MediaStore::baseName($validated['title'], $validated['year'] ?? null));
-            MediaStore::forget($movie->image);
+            $newImage = $this->media->storePoster($request->file('image'), MediaStore::baseName($validated['title'], $validated['year'] ?? null));
+            $data['image'] = $newImage;
         }
 
         $newTrailer = null;
         if ($request->hasFile('trailer')) {
             $newTrailer = $this->storeTrailer($request, $validated);
             $data['trailer_url'] = $newTrailer;
-            MediaStore::forget($movie->trailer_url);
         }
 
-        DB::transaction(function () use ($movie, $data, $validated) {
-            $movie->update($data);
-            $this->syncEpisodes($movie, $validated['episodes'] ?? []);
-        });
+        try {
+            DB::transaction(function () use ($movie, $data, $validated) {
+                $movie->update($data);
+                $this->syncEpisodes($movie, $validated['episodes'] ?? []);
+            });
+        } catch (\Throwable $e) {
+            // Saving failed: the movie still points at the OLD files, so throw the new uploads away instead.
+            MediaStore::forget($newImage);
+            MediaStore::forget($newTrailer);
+
+            throw $e;
+        }
+
+        // Saved: only now is it safe to delete the replaced files (from the server and from R2).
+        if ($newImage) {
+            MediaStore::forget($oldImage);
+        }
+        if ($newTrailer) {
+            MediaStore::forget($oldTrailer);
+        }
 
         if ($newTrailer) {
             OptimizeTrailer::dispatchAfterResponse($movie->id, $newTrailer);
@@ -215,10 +234,13 @@ class MovieController extends Controller
 
     public function destroy(Movie $movie)
     {
-        foreach ([$movie->image, $movie->trailer_url] as $path) {
+        $files = [$movie->image, $movie->trailer_url];
+        $movie->delete();
+
+        // Row first, files second: a failed delete can never leave a movie pointing at missing files.
+        foreach ($files as $path) {
             MediaStore::forget($path);
         }
-        $movie->delete();
 
         return redirect()->route('movies.index')->with('success', 'Movie deleted.');
     }
