@@ -11,8 +11,16 @@
     $yearTags = ['2027', '2026', '2025', '2024', '2023', '2022', '2021', '2020'];
 @endphp
 
-{{-- Hidden field to preserve existing type without displaying on the form --}}
-<input type="hidden" name="type" value="{{ old('type', $movie?->type ?? 'movie') }}">
+{{-- Type decides which menu the title appears under (Movies / Drama / Series / Anime) --}}
+<div>
+    <label for="type" class="mb-1.5 block text-xs font-semibold text-slate-300">Type</label>
+    <select id="type" name="type" class="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">
+        @foreach(config('auracinema.types') as $typeKey => $typeLabel)
+            <option value="{{ $typeKey }}" @selected(old('type', $movie?->type ?? 'movie') === $typeKey)>{{ $typeLabel }}</option>
+        @endforeach
+    </select>
+    @error('type') <span class="text-xs text-rose-500">{{ $message }}</span> @enderror
+</div>
 
 <div>
     <label for="title" class="mb-1.5 block text-xs font-semibold text-slate-300">Title</label>
