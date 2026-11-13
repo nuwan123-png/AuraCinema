@@ -141,19 +141,31 @@
     @if($movie->episodes->isNotEmpty())
         <section class="mb-10" id="episodes">
             <h2 class="mb-3 border-l-4 border-orange-500 pl-3 text-base font-bold uppercase tracking-wide text-orange-400">Episodes</h2>
-            <div class="grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10">
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 @foreach($movie->episodes as $episode)
                     @php
                         $epEmbed = \App\Support\EmbedUrl::normalize($episode->url) ?: $episode->url;
                     @endphp
-                    <button type="button"
-                            data-episode-btn
-                            data-embed-src="{{ $epEmbed }}"
-                            data-embed-title="{{ $movie->title }} - Episode {{ $episode->number }}"
-                            aria-label="Watch episode {{ $episode->number }}"
-                            class="flex items-center justify-center gap-1.5 rounded-md bg-white/5 py-3 text-sm font-semibold text-slate-200 ring-1 ring-white/5 transition hover:bg-orange-500 hover:text-white">
-                        <i class="fa-solid fa-play text-xs text-orange-400"></i> Ep {{ $episode->number }}
-                    </button>
+                    <div class="flex flex-col rounded-md bg-white/5 p-2 ring-1 ring-white/10">
+                        {{-- 1. Watch Button --}}
+                        <button type="button"
+                                data-episode-btn
+                                data-embed-src="{{ $epEmbed }}"
+                                data-embed-title="{{ $movie->title }} - Episode {{ $episode->number }}"
+                                aria-label="Watch episode {{ $episode->number }}"
+                                class="flex w-full items-center justify-center gap-1.5 rounded bg-black/40 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-orange-500 hover:text-white">
+                            <i class="fa-solid fa-play text-xs text-orange-400"></i> Ep {{ $episode->number }}
+                        </button>
+                        
+                        {{-- 2. Download Button (Only shows if link exists) --}}
+                        @if(!empty($episode->download_url))
+                            <a href="{{ str_replace('/e/', '/v/', $episode->download_url) }}" 
+                               target="_blank" 
+                               class="mt-2 flex w-full items-center justify-center gap-1.5 rounded bg-blue-600/20 py-1.5 text-xs font-medium text-blue-400 transition hover:bg-blue-600 hover:text-white">
+                                <i class="fa-solid fa-download"></i> Download
+                            </a>
+                        @endif
+                    </div>
                 @endforeach
             </div>
         </section>

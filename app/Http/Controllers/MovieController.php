@@ -356,6 +356,12 @@ class MovieController extends Controller
         $rows = $hasEpisodes
             ? collect($request->input('episodes', []))
                 ->filter(fn ($row) => is_array($row) && filled($row['url'] ?? null))
+                ->map(function ($row) {
+                    if (!empty($row['download_url'])) {
+                        $row['download_url'] = str_replace('/e/', '/v/', $row['download_url']);
+                    }
+                    return $row;
+                })
                 ->values()
                 ->all()
             : [];
@@ -436,6 +442,7 @@ class MovieController extends Controller
                     'number' => (int) $row['number'],
                     'url' => $row['url'],
                     'subtitle_url' => filled($row['subtitle_url'] ?? null) ? $row['subtitle_url'] : null,
+                    'download_url' => filled($row['download_url'] ?? null) ? $row['download_url'] : null,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ])
@@ -470,6 +477,7 @@ class MovieController extends Controller
             'episodes.*.number' => ['required', 'integer', 'between:1,9999'],
             'episodes.*.url' => ['required', 'url:http,https', 'max:500'],
             'episodes.*.subtitle_url' => ['nullable', 'url:http,https', 'max:500'],
+            'episodes.*.download_url' => ['nullable', 'url:http,https', 'max:500'],
             
             // Download Links Validation
             'download_480p' => ['nullable', 'url:http,https', 'max:500'],

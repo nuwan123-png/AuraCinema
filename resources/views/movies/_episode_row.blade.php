@@ -15,4 +15,15 @@
                class="min-w-0 flex-1 rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white focus:border-orange-400/60 focus:outline-none">
         <span class="w-9 shrink-0"></span>
     </div>
+    
+    <div class="mt-2 flex items-center bg-gray-900 rounded-md border border-gray-700 overflow-hidden">
+        <div class="px-3 py-2 bg-gray-800 text-gray-400 border-r border-gray-700">
+            <i class="fas fa-download text-sm"></i>
+        </div>
+        <input type="url" 
+            name="episodes[{{ $index ?? 0 }}][download_url]" 
+            value="{{ $episode->download_url ?? '' }}" 
+            class="flex-1 bg-transparent border-0 text-gray-300 px-3 py-2 text-sm focus:ring-0" 
+            placeholder="https://... (Download link - optional)">
+    </div>
 </div>
