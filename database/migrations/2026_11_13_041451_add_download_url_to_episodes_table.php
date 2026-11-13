@@ -6,23 +6,17 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
+    public function up()
     {
         Schema::table('episodes', function (Blueprint $table) {
-            //
+            $table->string('download_url')->nullable()->after('embed_url');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
+    public function down()
     {
         Schema::table('episodes', function (Blueprint $table) {
-            //
+            $table->dropColumn('download_url');
         });
     }
 };
