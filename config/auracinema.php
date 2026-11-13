@@ -13,6 +13,9 @@ return [
     // Today: http://18.138.235.17   Later, if you buy a domain: just change SITE_URL, no code change.
     'site_url' => env('SITE_URL', env('APP_URL', 'http://localhost')),
 
+    // Google Search Console ownership token (public, goes into a <meta> tag). Change it with GOOGLE_SITE_VERIFICATION.
+    'google_verification' => env('GOOGLE_SITE_VERIFICATION', 'QAEtx_c2iJIWFBV0gO1khYOkx1Bdb4pc5ygvhmzPqYg'),
+
     // WhatsApp number visitors chat with to request a movie (country code, digits only). Change it with WHATSAPP_NUMBER.
     'whatsapp_number' => env('WHATSAPP_NUMBER', '94788402670'),
 

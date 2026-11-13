@@ -9,6 +9,9 @@
     <title>@yield('title', 'AuraCinema') | Movies &amp; Trailers</title>
     <meta name="description" content="@yield('description', $defaultDescription)">
     <meta name="robots" content="@yield('robots', 'index,follow')">
+    @if(config('auracinema.google_verification'))
+        <meta name="google-site-verification" content="{{ config('auracinema.google_verification') }}">
+    @endif
     <link rel="canonical" href="{{ $siteUrl.request()->getPathInfo() }}">
     <meta property="og:site_name" content="AuraCinema">
     <meta property="og:type" content="@yield('og_type', 'website')">
