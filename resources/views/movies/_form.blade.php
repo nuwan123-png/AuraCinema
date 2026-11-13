@@ -3,7 +3,7 @@
     $hasEpisodes = (string) old('has_episodes', ($movie && $movie->episodes->isNotEmpty()) ? '1' : '0') === '1';
     $episodeRows = old('episodes') !== null
         ? array_values((array) old('episodes'))
-        : ($movie ? $movie->episodes->map(fn ($e) => ['number' => $e->number, 'url' => $e->url, 'subtitle_url' => $e->subtitle_url])->all() : []);
+        : ($movie ? $movie->episodes->map(fn ($e) => ['number' => $e->number, 'url' => $e->url, 'subtitle_url' => $e->subtitle_url, 'download_url' => $e->download_url])->all() : []);
 
     $popularTags = ['romantic', 'family', 'dubbed', 'new release', 'top rated', 'classic'];
     $genreTags = ['action', 'adventure', 'animation', 'comedy', 'crime', 'documentary', 'drama', 'fantasy', 'horror', 'mystery', 'romance', 'sci-fi', 'thriller', 'war'];
@@ -126,20 +126,20 @@
 <div class="rounded-md border border-white/10 bg-black/20 p-3">
     <input type="hidden" name="has_episodes" value="0">
     <label class="flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-200">
-        <input type="checkbox" name="has_episodes" value="1" data-episodes-toggle @checked($hasEpisodes) class="h-4 w-4 accent-orange-500">
+        <input type="checkbox" id="has_episodes" name="has_episodes" value="1" data-episodes-toggle @checked($hasEpisodes) class="h-4 w-4 accent-orange-500">
         This title has episodes
     </label>
     <p class="mt-1 text-xs text-slate-500">Tick this for a series or anime, then add a Streamtape embed link for each episode.</p>
 
-    <div data-episodes-panel class="{{ $hasEpisodes ? '' : 'hidden' }} mt-4 space-y-3">
+    <div data-episodes-panel id="episodes_ui" class="{{ $hasEpisodes ? '' : 'hidden' }} mt-4 space-y-3">
         <div data-episode-list class="space-y-2">
             @foreach($episodeRows as $i => $row)
-                @include('movies._episode_row', ['i' => $i, 'number' => $row['number'] ?? '', 'url' => $row['url'] ?? '', 'subtitle' => $row['subtitle_url'] ?? ''])
+                @include('movies._episode_row', ['i' => $i, 'number' => $row['number'] ?? '', 'url' => $row['url'] ?? '', 'subtitle' => $row['subtitle_url'] ?? '', 'download' => $row['download_url'] ?? ''])
             @endforeach
         </div>
 
         <template data-episode-template>
-            @include('movies._episode_row', ['i' => '__i__', 'number' => '', 'url' => '', 'subtitle' => ''])
+            @include('movies._episode_row', ['i' => '__i__', 'number' => '', 'url' => '', 'subtitle' => '', 'download' => ''])
         </template>
 
         <div class="flex flex-wrap items-center gap-2">
@@ -152,39 +152,62 @@
     </div>
 </div>
 
-<div data-stream-field class="{{ $hasEpisodes ? 'hidden' : '' }}">
-    <label for="embed_url" class="mb-1.5 block text-xs font-semibold text-slate-300"><i class="fa-solid fa-play text-orange-400"></i> Watch now (Streamtape, YouTube, Vimeo, Bunny Stream or Cloudflare Stream)</label>
-    <input id="embed_url" type="text" name="embed_url" maxlength="800" value="{{ old('embed_url', $movie?->embed_url) }}" placeholder="Paste the player link or the whole iframe code"
-           class="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">
-    <p class="mt-1 text-xs text-slate-500">The player loads when a visitor clicks "Watch now".</p>
-</div>
-
-<div class="mt-6 space-y-4 rounded-lg border border-white/10 bg-white/5 p-4">
-    <h3 class="text-sm font-bold text-orange-400">Download Links (Streamtape)</h3>
-    
-    <div>
-        <label for="download_480p" class="mb-1 block text-xs font-semibold">480p Download Link</label>
-        <input type="url" name="download_480p" id="download_480p" value="{{ old('download_480p', $movie->download_480p ?? '') }}" class="w-full rounded-md border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none" placeholder="https://streamtape.com/v/...">
-        @error('download_480p') <span class="text-xs text-rose-500">{{ $message }}</span> @enderror
+<div data-movie-only class="{{ $hasEpisodes ? 'hidden' : '' }}">
+    <div data-stream-field class="mt-6">
+        <label for="embed_url" class="mb-1.5 block text-xs font-semibold text-slate-300"><i class="fa-solid fa-play text-orange-400"></i> Watch now (Streamtape, YouTube, Vimeo, Bunny Stream or Cloudflare Stream)</label>
+        <input id="embed_url" type="text" name="embed_url" maxlength="800" value="{{ old('embed_url', $movie?->embed_url) }}" placeholder="Paste the player link or the whole iframe code"
+            class="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">
+        <p class="mt-1 text-xs text-slate-500">The player loads when a visitor clicks "Watch now".</p>
     </div>
 
-    <div>
-        <label for="download_720p" class="mb-1 block text-xs font-semibold">720p Download Link</label>
-        <input type="url" name="download_720p" id="download_720p" value="{{ old('download_720p', $movie->download_720p ?? '') }}" class="w-full rounded-md border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none" placeholder="https://streamtape.com/v/...">
-        @error('download_720p') <span class="text-xs text-rose-500">{{ $message }}</span> @enderror
-    </div>
-
-    <div>
-        <label for="download_1080p" class="mb-1 block text-xs font-semibold">1080p Download Link</label>
-        <input type="url" name="download_1080p" id="download_1080p" value="{{ old('download_1080p', $movie->download_1080p ?? '') }}" class="w-full rounded-md border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none" placeholder="https://streamtape.com/v/...">
-        @error('download_1080p') <span class="text-xs text-rose-500">{{ $message }}</span> @enderror
-    </div>
     <div class="mt-6 space-y-4 rounded-lg border border-white/10 bg-white/5 p-4">
-    <h3 class="text-sm font-bold text-orange-400">Subtitle Link</h3>
-    <div>
-        <label for="subtitle_url" class="mb-1 block text-xs font-semibold">Sinhala Subtitle Link (Google Drive, MediaFire etc.)</label>
-        <input type="url" name="subtitle_url" id="subtitle_url" value="{{ old('subtitle_url', $movie->subtitle_url ?? '') }}" class="w-full rounded-md border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none" placeholder="https://...">
-        @error('subtitle_url') <span class="text-xs text-rose-500">{{ $message }}</span> @enderror
+        <h3 class="text-sm font-bold text-orange-400">Download Links (Streamtape)</h3>
+        
+        <div>
+            <label for="download_480p" class="mb-1 block text-xs font-semibold">480p Download Link</label>
+            <input type="url" name="download_480p" id="download_480p" value="{{ old('download_480p', $movie->download_480p ?? '') }}" class="w-full rounded-md border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none" placeholder="https://streamtape.com/v/...">
+            @error('download_480p') <span class="text-xs text-rose-500">{{ $message }}</span> @enderror
+        </div>
+
+        <div>
+            <label for="download_720p" class="mb-1 block text-xs font-semibold">720p Download Link</label>
+            <input type="url" name="download_720p" id="download_720p" value="{{ old('download_720p', $movie->download_720p ?? '') }}" class="w-full rounded-md border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none" placeholder="https://streamtape.com/v/...">
+            @error('download_720p') <span class="text-xs text-rose-500">{{ $message }}</span> @enderror
+        </div>
+
+        <div>
+            <label for="download_1080p" class="mb-1 block text-xs font-semibold">1080p Download Link</label>
+            <input type="url" name="download_1080p" id="download_1080p" value="{{ old('download_1080p', $movie->download_1080p ?? '') }}" class="w-full rounded-md border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none" placeholder="https://streamtape.com/v/...">
+            @error('download_1080p') <span class="text-xs text-rose-500">{{ $message }}</span> @enderror
+        </div>
+    </div>
+        
+    <div class="mt-6 space-y-4 rounded-lg border border-white/10 bg-white/5 p-4">
+        <h3 class="text-sm font-bold text-orange-400">Subtitle Link</h3>
+        <div>
+            <label for="subtitle_url" class="mb-1 block text-xs font-semibold">Sinhala Subtitle Link (Google Drive, MediaFire etc.)</label>
+            <input type="url" name="subtitle_url" id="subtitle_url" value="{{ old('subtitle_url', $movie->subtitle_url ?? '') }}" class="w-full rounded-md border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none" placeholder="https://...">
+            @error('subtitle_url') <span class="text-xs text-rose-500">{{ $message }}</span> @enderror
+        </div>
     </div>
 </div>
-</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const hasEpisodes = document.getElementById('has_episodes');
+        const episodesUi = document.getElementById('episodes_ui');
+        const movieOnlyUi = document.querySelector('[data-movie-only]');
+
+        function toggleMode() {
+            if (hasEpisodes.checked) {
+                episodesUi.classList.remove('hidden');
+                movieOnlyUi.classList.add('hidden');
+            } else {
+                episodesUi.classList.add('hidden');
+                movieOnlyUi.classList.remove('hidden');
+            }
+        }
+
+        hasEpisodes.addEventListener('change', toggleMode);
+    });
+</script>

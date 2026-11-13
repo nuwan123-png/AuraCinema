@@ -75,32 +75,34 @@ class Movie extends Model
             $missing[] = 'Keywords';
         }
 
-        // "Watch now": a single embed link, or episodes for a series.
-        if (! $hasEpisodes && blank($this->embed_url)) {
-            $missing[] = 'Watch now link (or episodes)';
-        }
-
-        if (blank($this->download_480p)) {
-            $missing[] = '480p download';
-        }
-        if (blank($this->download_720p)) {
-            $missing[] = '720p download';
-        }
-        if (blank($this->download_1080p)) {
-            $missing[] = '1080p download';
-        }
-
-        // Subtitles: one link for the title, or (series) a subtitle on every episode.
-        if (blank($this->subtitle_url)) {
-            if ($hasEpisodes) {
-                $without = $episodes->filter(fn ($e) => blank($e->subtitle_url))->pluck('number')->sort()->values();
-                if ($without->isNotEmpty()) {
-                    $missing[] = $without->count() > 6
-                        ? 'Subtitles for '.$without->count().' episodes'
-                        : 'Subtitle for Ep '.$without->implode(', ');
-                }
-            } else {
+        // Only Movie specific requirements
+        if (! $hasEpisodes) {
+            // Watch now Embed URL
+            if (blank($this->embed_url)) {
+                $missing[] = 'Watch now link (or episodes)';
+            }
+            // Movie Download Links
+            if (blank($this->download_480p)) {
+                $missing[] = '480p download';
+            }
+            if (blank($this->download_720p)) {
+                $missing[] = '720p download';
+            }
+            if (blank($this->download_1080p)) {
+                $missing[] = '1080p download';
+            }
+            // Movie Subtitle Link
+            if (blank($this->subtitle_url)) {
                 $missing[] = 'Subtitle link';
+            }
+        } 
+        // Series specific Subtitle requirements
+        else {
+            $without = $episodes->filter(fn ($e) => blank($e->subtitle_url))->pluck('number')->sort()->values();
+            if ($without->isNotEmpty()) {
+                $missing[] = $without->count() > 6
+                    ? 'Subtitles for '.$without->count().' episodes'
+                    : 'Subtitle for Ep '.$without->implode(', ');
             }
         }
 
