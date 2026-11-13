@@ -11,12 +11,11 @@ return new class extends Migration
         Schema::create('episodes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('movie_id')->constrained()->cascadeOnDelete();
-            $table->integer('number');
+            $table->unsignedSmallInteger('number');
             $table->string('url', 500);
-            $table->string('subtitle_url', 500)->nullable();
-            $table->string('download_url', 500)->nullable(); // අපේ අලුත් Download ලින්ක් එක
             $table->timestamps();
 
+            // One link per episode number; also makes "episodes of this series, in order" an index lookup.
             $table->unique(['movie_id', 'number']);
         });
     }
