@@ -81,16 +81,16 @@ class Movie extends Model
             if (blank($this->embed_url)) {
                 $missing[] = 'Watch now link (or episodes)';
             }
-            // Movie Download Links
-            if (blank($this->download_480p)) {
-                $missing[] = '480p download';
+            
+            // Movie Download Links (One link is enough)
+            $hasAnyDownloadLink = !blank($this->download_480p) || 
+                                  !blank($this->download_720p) || 
+                                  !blank($this->download_1080p);
+            
+            if (!$hasAnyDownloadLink) {
+                $missing[] = 'At least one download link (480p, 720p, or 1080p)';
             }
-            if (blank($this->download_720p)) {
-                $missing[] = '720p download';
-            }
-            if (blank($this->download_1080p)) {
-                $missing[] = '1080p download';
-            }
+            
             // Movie Subtitle Link
             if (blank($this->subtitle_url)) {
                 $missing[] = 'Subtitle link';
