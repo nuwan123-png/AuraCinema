@@ -108,7 +108,9 @@
                     </div>
                 </details>
 
-                <a href="{{ route('request.create') }}" class="{{ $navLink(request()->routeIs('request.create')) }}">Request</a>
+                @php($waRequest = 'https://wa.me/'.preg_replace('/\D/', '', (string) config('auracinema.whatsapp_number')).'?text='.rawurlencode("Hi AuraCinema, I'd like to request a movie: "))
+                {{-- Visitors request a movie by chatting with the owner on WhatsApp --}}
+                <a href="{{ $waRequest }}" target="_blank" rel="noopener" class="{{ $navLink(false) }}"><i class="fa-brands fa-whatsapp text-emerald-400"></i> Request</a>
             </div>
         </nav>
     </header>

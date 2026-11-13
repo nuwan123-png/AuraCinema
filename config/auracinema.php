@@ -13,6 +13,9 @@ return [
     // Today: http://18.138.235.17   Later, if you buy a domain: just change SITE_URL, no code change.
     'site_url' => env('SITE_URL', env('APP_URL', 'http://localhost')),
 
+    // WhatsApp number visitors chat with to request a movie (country code, digits only). Change it with WHATSAPP_NUMBER.
+    'whatsapp_number' => env('WHATSAPP_NUMBER', '94788402670'),
+
     // What a title can be (the value is stored in movies.type).
     'types' => [
         'movie' => 'Movie',
