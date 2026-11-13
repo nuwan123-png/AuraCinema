@@ -286,6 +286,35 @@ document.querySelectorAll('[data-trailer-dialog]').forEach((dialog) => {
     });
 });
 
+// ---- Quick trailer from a poster card: one shared dialog, the file is only requested when it opens ----
+(() => {
+    const dialog = document.querySelector('[data-card-trailer-dialog]');
+    const video = dialog?.querySelector('video');
+    const title = dialog?.querySelector('[data-card-trailer-title]');
+    if (!dialog || !video || typeof dialog.showModal !== 'function') return;
+
+    let opener = null;
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-card-trailer]');
+        if (!btn) return;
+        opener = btn;
+        title.textContent = btn.dataset.title + ' \u00b7 Trailer';
+        video.src = btn.dataset.src;
+        dialog.showModal();
+        video.play().catch(() => {});
+    });
+    dialog.addEventListener('close', () => {
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+        opener?.focus();
+    });
+    dialog.querySelector('[data-card-trailer-close]')?.addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', (e) => {
+        if (e.target === dialog) dialog.close();
+    });
+})();
+
 // ---- Live search: matching titles appear under the search box while you type ----
 document.querySelectorAll('[data-live-search]').forEach((form) => {
     const input = form.querySelector('input[name="q"]');

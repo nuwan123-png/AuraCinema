@@ -160,6 +160,12 @@ class Movie extends Model
         return MediaStore::url($this->image);
     }
 
+    /** Added within the last 14 days: shows the NEW badge on the poster card. */
+    public function isNew(): bool
+    {
+        return $this->created_at !== null && $this->created_at->gt(now()->subDays(14));
+    }
+
     public function getTrailerFileUrlAttribute(): ?string
     {
         return MediaStore::url($this->trailer_url);

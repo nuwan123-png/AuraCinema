@@ -147,5 +147,6 @@
         <p class="mt-3">&copy; {{ date('Y') }} AuraCinema. Built with Laravel.</p>
         <p class="mt-2"><a href="{{ route('movies.create') }}" class="transition hover:text-orange-300">Admin</a></p>
     </footer>
+    @stack('modals')
 </body>
 </html>
