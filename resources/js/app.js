@@ -349,6 +349,17 @@ document.querySelectorAll('[data-live-search]').forEach((form) => {
         return node;
     };
 
+    // Spinner shown from the first keystroke until the results arrive.
+    const showLoading = () => {
+        const row = el('div', 'flex items-center justify-center gap-3 px-4 py-6 text-sm font-semibold text-sky-400');
+        row.setAttribute('role', 'status');
+        row.append(el('span', 'h-5 w-5 animate-spin rounded-full border-2 border-sky-400 border-t-transparent'), el('span', '', '\u0DC3\u0DD9\u0DC0\u0DD4\u0DB8\u0DCA \u0D9A\u0DBB\u0DB8\u0DD2\u0DB1\u0DCA...'));
+        box.replaceChildren(row);
+        active = -1;
+        box.hidden = false;
+        input.setAttribute('aria-expanded', 'true');
+    };
+
     const render = (data, query) => {
         box.replaceChildren();
         active = -1;
@@ -397,6 +408,7 @@ document.querySelectorAll('[data-live-search]').forEach((form) => {
 
         controller?.abort();
         controller = new AbortController();
+        showLoading();
         try {
             const res = await fetch(`${form.dataset.liveUrl}?q=${encodeURIComponent(query)}`, {
                 headers: { Accept: 'application/json' },
@@ -411,6 +423,7 @@ document.querySelectorAll('[data-live-search]').forEach((form) => {
 
     input.addEventListener('input', () => {
         clearTimeout(timer);
+        if (input.value.trim().length >= 2) showLoading();
         timer = setTimeout(search, 200);
     });
     input.addEventListener('focus', () => {
