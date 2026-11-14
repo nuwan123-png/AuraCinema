@@ -5,14 +5,15 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>{{ config('app.name', 'AuraCinema') }}</title>
         
-        <!-- Font Awesome for icons -->
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        
+        @fonts
+
+        <!-- Styles / Scripts -->
         @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
             @vite(['resources/css/app.css', 'resources/js/app.js'])
         @else
-            <!-- Add Tailwind CSS from CDN for fallback if Vite is not running -->
-            <script src="https://cdn.tailwindcss.com"></script>
+            <style>
+                /* Vite is required for styling in production */
+            </style>
         @endif
     </head>
     <body class="bg-[#0a0a0a] text-[#EDEDEC] min-h-screen">
