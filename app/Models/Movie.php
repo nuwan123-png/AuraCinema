@@ -91,18 +91,25 @@ class Movie extends Model
                 $missing[] = 'At least one download link (480p, 720p, or 1080p)';
             }
             
-            // Movie Subtitle Link
-            if (blank($this->subtitle_url)) {
+            // Movie Subtitle Link (Ignore for Sinhala movies)
+            // Language is 'Sinhala' (case-insensitive)
+            $isSinhala = strtolower($this->language) === 'sinhala';
+            
+            if (!$isSinhala && blank($this->subtitle_url)) {
                 $missing[] = 'Subtitle link';
             }
         } 
         // Series specific Subtitle requirements
         else {
-            $without = $episodes->filter(fn ($e) => blank($e->subtitle_url))->pluck('number')->sort()->values();
-            if ($without->isNotEmpty()) {
-                $missing[] = $without->count() > 6
-                    ? 'Subtitles for '.$without->count().' episodes'
-                    : 'Subtitle for Ep '.$without->implode(', ');
+            $isSinhala = strtolower($this->language) === 'sinhala';
+            
+            if (!$isSinhala) {
+                $without = $episodes->filter(fn ($e) => blank($e->subtitle_url))->pluck('number')->sort()->values();
+                if ($without->isNotEmpty()) {
+                    $missing[] = $without->count() > 6
+                        ? 'Subtitles for '.$without->count().' episodes'
+                        : 'Subtitle for Ep '.$without->implode(', ');
+                }
             }
         }
 
