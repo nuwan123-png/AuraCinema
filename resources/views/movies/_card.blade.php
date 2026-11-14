@@ -2,14 +2,11 @@
 @php
     $incomplete = request()->cookie('aura_admin') && $movie->isIncomplete();
     $hasTrailer = filled($movie->trailer_url);
-    // Check if this card is being rendered in the Upcoming/Trailers section
     $isUpcomingSection = isset($isUpcoming) && $isUpcoming;
 @endphp
-
 <div class="group relative {{ $class ?? 'w-36 shrink-0 snap-start sm:w-44' }}">
 <a href="{{ route('movies.show', $movie) }}" class="block">
     <div class="relative aspect-[2/3] w-full overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-white/10 transition duration-300 group-hover:z-10 group-hover:-translate-y-1 group-hover:scale-[1.04] group-hover:shadow-[0_14px_34px_-8px_rgba(249,115,22,0.45)] group-hover:ring-2 group-hover:ring-orange-400/70">
-        
         @if($movie->image)
             <img src="{{ $movie->poster_url }}" alt="{{ $movie->title }}" width="480" height="720"
                  loading="lazy" decoding="async" class="h-full w-full object-cover">
@@ -30,7 +27,7 @@
             @endif
         </div>
 
-        {{-- Year and language --}}
+        {{-- Year and language: a small strip along the bottom; it fades out on hover to make room for the Trailer button --}}
         @if($movie->year || $movie->language)
             <div class="pointer-events-none absolute inset-x-0 {{ $incomplete ? 'bottom-8' : 'bottom-0' }} flex items-center gap-1.5 bg-gradient-to-t from-black/85 to-transparent px-2 pb-1.5 pt-6 text-[10px] font-bold text-white transition duration-200 group-hover:opacity-0 group-focus-within:opacity-0 z-20">
                 @if($movie->year)<span>{{ $movie->year }}</span>@endif
@@ -47,16 +44,16 @@
             </span>
         @endif
 
-        {{-- Hover effect specifically for the "Upcoming/Watch Trailers" section --}}
         @if($isUpcomingSection)
-            <div class="absolute inset-0 bg-black/85 opacity-0 group-hover:opacity-100 transition duration-300 flex flex-col items-center justify-center text-center p-3 z-30">
+            {{-- Hover effect for Upcoming (Watch the trailers) section --}}
+            <span class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center bg-black/85 p-2 text-center opacity-0 transition duration-200 group-hover:opacity-100 group-focus-within:opacity-100 z-30" aria-hidden="true">
                 <i class="fa-solid fa-clock text-orange-400 text-2xl mb-2"></i>
                 <span class="text-white text-xs sm:text-sm font-bold leading-snug">
                     මෙම චිත්‍රපටය තවම<br>අප්ලෝඩ් කර නැත
                 </span>
-            </div>
+            </span>
         @else
-            {{-- Original Play icon hover effect for regular movies --}}
+            {{-- Original Play icon and label badge: fades in on hover --}}
             <span class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-t from-black/80 via-black/40 to-black/20 p-2 text-center opacity-0 transition duration-200 group-hover:opacity-100 group-focus-within:opacity-100 z-30" aria-hidden="true">
                 <span class="flex h-11 w-11 scale-75 items-center justify-center rounded-full border-2 border-orange-400 bg-orange-500/80 text-white shadow-lg shadow-orange-500/40 transition duration-200 group-hover:scale-100 group-focus-within:scale-100">
                     <i class="fa-solid fa-play pl-0.5 text-base"></i>
@@ -84,14 +81,13 @@
     </p>
 </a>
 
-{{-- Quick trailer: Show this if a trailer exists --}}
+{{-- Quick trailer: a sibling of the link (a button inside a link is invalid HTML). Shown on hover or keyboard focus; touch users tap through to the page. --}}
 @if($hasTrailer)
     <div class="pointer-events-none absolute left-0 top-0 z-40 flex aspect-[2/3] w-full items-end justify-center p-2 {{ $incomplete ? 'pb-9' : '' }}">
         <button type="button" data-card-trailer data-src="{{ $movie->trailer_file_url }}" data-title="{{ $movie->title }}"
-                class="pointer-events-auto hidden translate-y-1 items-center gap-1.5 rounded-full bg-black/85 px-3 py-1.5 text-[11px] font-bold text-white opacity-0 ring-1 ring-white/25 backdrop-blur transition duration-200 hover:bg-orange-500 hover:text-white focus-visible:translate-y-0 focus-visible:opacity-100 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 [@media(hover:hover)]:inline-flex"
+                class="pointer-events-auto hidden translate-y-1 items-center gap-1.5 rounded-full bg-black/75 px-3 py-1.5 text-[11px] font-bold text-white opacity-0 ring-1 ring-white/25 backdrop-blur transition duration-200 hover:bg-orange-500 focus-visible:translate-y-0 focus-visible:opacity-100 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 [@media(hover:hover)]:inline-flex"
                 aria-label="Watch {{ $movie->title }} trailer" aria-haspopup="dialog">
-            <i class="fa-solid fa-video text-orange-300 group-hover/btn:text-white"></i> 
-            <span class="whitespace-nowrap">Trailer</span>
+            <i class="fa-solid fa-video text-orange-300 group-hover:text-white"></i> Trailer
         </button>
     </div>
 

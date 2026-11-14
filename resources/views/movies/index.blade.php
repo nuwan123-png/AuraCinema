@@ -34,7 +34,7 @@
                         @endif
                         <p class="mb-3 line-clamp-3 max-w-2xl text-xs leading-relaxed text-slate-300 sm:mb-6 sm:line-clamp-4 sm:text-sm">{{ $hero->description ?: 'No synopsis provided for this title.' }}</p>
                         <a href="{{ route('movies.show', $hero) }}" class="btn-aura !px-4 !py-2 !text-xs sm:!px-6 sm:!py-2.5 sm:!text-sm">
-                            <i class="fa-solid fa-play text-xs"></i> {{ $hero->episodes_count ? 'Episodes & details' : 'Play trailer & details' }}
+                            <i class="fa-solid fa-play text-xs"></i> {{ $hero->episodes_count ? 'Episodes & details' : 'Play & details' }}
                         </a>
                     </div>
                 </article>
@@ -61,9 +61,24 @@
     {{-- data-auto makes this row glide by itself. Add 'auto' => true to any other row to do the same. --}}
     @include('movies._row', ['title' => 'New on AuraCinema', 'items' => $latest, 'anchor' => 'new', 'auto' => true])
 @endif
+
+{{-- $withTrailers variable now holds incomplete movies (Watch the trailers section) --}}
 @if($withTrailers->isNotEmpty())
-    @include('movies._row', ['title' => 'Watch the trailers', 'items' => $withTrailers])
+    <section class="mb-10">
+        <div class="mb-4 flex items-center justify-between">
+            <h2 class="text-lg font-bold text-white sm:text-xl">
+                <i class="fa-solid fa-film text-orange-500"></i> Watch the Trailers <span class="text-sm font-normal text-gray-400">(ළඟදීම)</span>
+            </h2>
+        </div>
+        <div class="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 hide-scrollbar">
+            @foreach($withTrailers as $movie)
+                {{-- Passing isUpcoming flag to show the Sinhala message on hover --}}
+                @include('movies._card', ['movie' => $movie, 'isUpcoming' => true])
+            @endforeach
+        </div>
+    </section>
 @endif
+
 @if($fullMovies->isNotEmpty())
     @include('movies._row', ['title' => 'Full movies', 'items' => $fullMovies])
 @endif

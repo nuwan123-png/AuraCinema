@@ -20,7 +20,6 @@ class MovieController extends Controller
 
     public function __construct(private MediaOptimizer $media) {}
 
-    /** Search-as-you-type: a few matching titles as JSON for the dropdown under the search box. */
     public function liveSearch(Request $request)
     {
         $q = mb_substr(trim((string) $request->query('q', '')), 0, 80);
@@ -29,7 +28,7 @@ class MovieController extends Controller
         }
 
         $like = '%'.addcslashes($q, '%_\\').'%';
-        $op = DB::connection()->getDriverName() === 'pgsql' ? 'ilike' : 'like'; // Postgres LIKE is case-sensitive
+        $op = DB::connection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
 
         $query = Movie::query()->where(fn ($w) => $w->where('title', $op, $like)->orWhere('tags', $op, $like));
         $total = (clone $query)->count();
@@ -58,7 +57,6 @@ class MovieController extends Controller
         $language = (string) $request->query('language', '');
         $tag = Movie::normalizeTag((string) $request->query('tag', ''));
 
-        // Only accept values we actually offer (the navbar links), ignore anything else.
         $type = array_key_exists($type, config('auracinema.types')) ? $type : '';
         $genre = in_array($genre, config('auracinema.genres'), true) ? $genre : '';
         $language = in_array($language, config('auracinema.languages'), true) ? $language : '';
@@ -69,7 +67,7 @@ class MovieController extends Controller
 
             if ($q !== '') {
                 $like = '%'.addcslashes($q, '%_\\').'%';
-                $op = DB::connection()->getDriverName() === 'pgsql' ? 'ilike' : 'like'; // Postgres LIKE is case-sensitive
+                $op = DB::connection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
                 $query->where(fn ($w) => $w->where('title', $op, $like)->orWhere('tags', $op, $like));
             }
             if ($type !== '') {
@@ -79,7 +77,6 @@ class MovieController extends Controller
                 $query->where('genre', $genre);
             }
             if ($language !== '') {
-                // A movie counts for "Sinhala" if its Language is Sinhala OR it carries a "sinhala" keyword.
                 $langTag = '%,'.addcslashes(Movie::normalizeTag($language), '%_\\').',%';
                 $query->where(fn ($w) => $w->where('language', $language)->orWhere('tags', 'like', $langTag));
             }
@@ -90,18 +87,12 @@ class MovieController extends Controller
                 $query->where('tags', 'like', '%,'.addcslashes($tag, '%_\\').',%');
             }
 
-            // e.g. "Hindi · Romance · 2026 · Movies" - every active filter is named.
             $heading = $q !== ''
                 ? 'Results for “'.$q.'”'
                 : collect([
-                    $language,
-                    $genre,
-                    $year ?: null,
-                    $tag !== '' ? '#'.$tag : null,
+                    $language, $genre, $year ?: null, $tag !== '' ? '#'.$tag : null,
                     $type !== '' ? match ($type) {
-                        'movie' => 'Movies',
-                        'series' => 'Drama / Series',
-                        default => 'Anime',
+                        'movie' => 'Movies', 'series' => 'Drama / Series', default => 'Anime',
                     } : null,
                 ])->filter()->implode(' · ');
 
@@ -111,25 +102,18 @@ class MovieController extends Controller
             ]);
         }
 
-        // One query for the rows (cheap on a catalogue this size), one paginated query for the grid.
         $recent = Movie::withCount('episodes')->latest()->take(40)->get();
-
-        // ළඟදීම එන (අසම්පූර්ණ) චිත්‍රපට පමණක් පෙරා ගෙන "Watch the Trailers" පේළියට යැවීම
-        $upcomingMovies = $recent->filter(function($movie) {
-            return $movie->isIncomplete();
-        })->take(12)->values();
 
         return view('movies.index', [
             'heroes' => $recent->filter(fn ($m) => $m->image)->take(5)->values(),
-            'upcomingMovies' => $upcomingMovies,
             'latest' => $recent->take(20),
-            'withTrailers' => $recent->filter(fn ($m) => $m->trailer_url)->take(20),
+            // 'withTrailers' වෙනුවට දැන් යවන්නේ incomplete චිත්‍රපට පමණයි (ඒවා "Watch the trailers" පේළියේ දිස්වේවි)
+            'withTrailers' => $recent->filter(fn ($m) => $m->isIncomplete())->take(20)->values(),
             'fullMovies' => $recent->filter(fn ($m) => $m->stream_url)->take(20),
             'all' => Movie::withCount('episodes')->latest()->simplePaginate(24),
         ]);
     }
 
-    /** "Suggestion" in the navbar: a fresh random pick every visit. */
     public function suggestions()
     {
         return view('movies.browse', [
@@ -148,7 +132,7 @@ class MovieController extends Controller
         $validated = $this->validated($request);
         $data = $this->movieData($validated);
 
-        $created = []; // every file written below, so a failed save can remove them again
+        $created = [];
         $orphans = [];
         try {
             if ($request->hasFile('image')) {
@@ -165,12 +149,10 @@ class MovieController extends Controller
             $movie = DB::transaction(function () use ($data, $validated) {
                 $movie = Movie::create($data);
                 $this->syncEpisodes($movie, $validated['episodes'] ?? []);
-
                 return $movie;
             });
         } catch (\Throwable $e) {
             array_map([MediaStore::class, 'forget'], $created);
-
             throw $e;
         }
 
@@ -181,16 +163,13 @@ class MovieController extends Controller
         return redirect()->route('movies.show', $movie)->with('success', 'Movie added. The trailer is being compressed in the background.');
     }
 
-    /** Save the uploaded trailer under a readable name; it is compressed (and renamed once more) in the background. */
     private function storeTrailer(Request $request, array $validated): string
     {
         $ext = strtolower($request->file('trailer')->getClientOriginalExtension());
         $ext = in_array($ext, ['mp4', 'webm', 'mov', 'mkv'], true) ? $ext : 'mp4';
-
         return $request->file('trailer')->storeAs('trailers', MediaStore::baseName($validated['title'], $validated['year'] ?? null).'.'.$ext, 'public');
     }
 
-    /** Admin: every title that still has empty form fields, newest first. */
     public function incomplete()
     {
         $all = Movie::query()
@@ -200,21 +179,18 @@ class MovieController extends Controller
             ->get();
 
         $movies = $all->filter(fn (Movie $m) => $m->isIncomplete())->values();
-
         return view('movies.incomplete', ['movies' => $movies, 'total' => $all->count()]);
     }
 
     public function show(Movie $movie)
     {
         $movie->load('episodes');
-
         return view('movies.show', compact('movie'));
     }
 
     public function edit(Movie $movie)
     {
         $movie->load('episodes');
-
         return view('movies.edit', compact('movie'));
     }
 
@@ -225,12 +201,11 @@ class MovieController extends Controller
 
         $oldImage = $movie->image;
         $oldTrailer = $movie->trailer_url;
-
-        $created = []; // new files, removed again if the save fails
-        $orphans = []; // replaced/removed files, deleted only after the save succeeded
-
+        $created = [];
+        $orphans = [];
         $newImage = null;
         $newTrailer = null;
+
         try {
             if ($request->hasFile('image')) {
                 $newImage = $this->media->storePoster($request->file('image'), MediaStore::baseName($validated['title'], $validated['year'] ?? null));
@@ -250,19 +225,12 @@ class MovieController extends Controller
                 $this->syncEpisodes($movie, $validated['episodes'] ?? []);
             });
         } catch (\Throwable $e) {
-            // Saving failed: the movie still points at the OLD files, so throw the new uploads away instead.
             array_map([MediaStore::class, 'forget'], $created);
-
             throw $e;
         }
 
-        // Saved: only now is it safe to delete the replaced files (from the server and from R2).
-        if ($newImage) {
-            $orphans[] = $oldImage;
-        }
-        if ($newTrailer) {
-            $orphans[] = $oldTrailer;
-        }
+        if ($newImage) { $orphans[] = $oldImage; }
+        if ($newTrailer) { $orphans[] = $oldTrailer; }
         array_map([MediaStore::class, 'forget'], array_filter($orphans));
 
         if ($newTrailer) {
@@ -281,7 +249,6 @@ class MovieController extends Controller
         );
         $movie->delete();
 
-        // Row first, files second: a failed delete can never leave a movie pointing at missing files.
         foreach (array_filter($files) as $path) {
             MediaStore::forget($path);
         }
@@ -289,12 +256,6 @@ class MovieController extends Controller
         return redirect()->route('movies.index')->with('success', 'Movie deleted.');
     }
 
-    /**
-     * Gallery = kept pictures + newly uploaded ones. Removed pictures go to $orphans (deleted after the save).
-     * New files are recorded in $created so a failed save can remove them again.
-     *
-     * @return list<string>
-     */
     private function buildGallery(Request $request, array $validated, ?Movie $movie, array &$created, array &$orphans): array
     {
         $current = array_values(array_filter((array) ($movie?->gallery ?: []), 'is_string'));
@@ -316,12 +277,6 @@ class MovieController extends Controller
         return $keep;
     }
 
-    /**
-     * Cast members from the form rows. A row keeps its old photo unless a new one is uploaded;
-     * photos that are no longer used go to $orphans.
-     *
-     * @return list<array{name:string,role:string,photo:?string}>
-     */
     private function buildCast(Request $request, array $validated, ?Movie $movie, array &$created, array &$orphans): array
     {
         $currentPhotos = collect($movie?->cast_members ?: [])->pluck('photo')->filter()->values()->all();
@@ -351,10 +306,6 @@ class MovieController extends Controller
         return $members;
     }
 
-    /**
-     * Validate the form. Episode rows the admin left empty are dropped first, and episodes are only
-     * kept when the "has episodes" box is ticked.
-     */
     private function validated(Request $request): array
     {
         $hasEpisodes = $request->boolean('has_episodes');
@@ -373,22 +324,17 @@ class MovieController extends Controller
             : [];
         $request->merge(['episodes' => $rows]);
 
-        // Cast rows the admin left completely empty are dropped. Keys are kept on purpose:
-        // the uploaded photos are matched to their row by that key.
         $castRows = collect($request->input('cast', []))
             ->filter(fn ($row, $key) => is_array($row) && (filled($row['name'] ?? null) || filled($row['role'] ?? null)
                 || filled($row['existing_photo'] ?? null) || $request->hasFile("cast.$key.photo")))
             ->all();
         $request->merge(['cast' => $castRows]);
 
-        // "Watch now": accept a link or a pasted <iframe> snippet. Normalise it to a safe player URL,
-        // or leave it as-is (non-empty) so the validation rule below rejects it with a clear message.
         $embed = trim((string) $request->input('embed_url', ''));
         if ($embed !== '') {
             $request->merge(['embed_url' => EmbedUrl::normalize($embed) ?? $embed]);
         }
         
-        // Clean download links (normalize streamtape embed URL to video URL if necessary)
         foreach (['download_480p', 'download_720p', 'download_1080p'] as $field) {
             $dlLink = trim((string) $request->input($field, ''));
             if ($dlLink !== '') {
@@ -400,7 +346,6 @@ class MovieController extends Controller
 
         if ($hasEpisodes) {
             $numbers = collect($validated['episodes'] ?? [])->pluck('number');
-
             if ($numbers->isEmpty()) {
                 throw ValidationException::withMessages(['episodes' => 'Add at least one episode link, or untick "This title has episodes".']);
             }
@@ -412,7 +357,6 @@ class MovieController extends Controller
         return $validated;
     }
 
-    /** Columns of the movies table from validated input. */
     private function movieData(array $validated, ?Movie $movie = null): array
     {
         $data = Arr::only($validated, [
@@ -423,7 +367,6 @@ class MovieController extends Controller
         $data['tags'] = Movie::normalizeTags($validated['tags'] ?? null);
         $data['type'] = $validated['type'] ?? $movie?->type ?? 'movie';
 
-        // A series uses per-episode links; a single "full movie" link would just be confusing next to them.
         if (! empty($validated['episodes'])) {
             $data['stream_url'] = null;
         }
@@ -431,7 +374,6 @@ class MovieController extends Controller
         return $data;
     }
 
-    /** Replace the episode list (small lists; one delete + one bulk insert). */
     private function syncEpisodes(Movie $movie, array $episodes): void
     {
         $movie->episodes()->delete();
@@ -463,11 +405,8 @@ class MovieController extends Controller
         return [
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:5000'],
-            // Posters are resized to 480px WebP on save, so the original only needs to be a sane size.
             'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:10240'],
-            // Same 30MB cap on create AND update (they used to differ: 30MB vs 100MB).
             'trailer' => ['nullable', 'mimes:mp4,mkv,webm,mov', 'max:30720'],
-            // http/https only: blocks javascript:, data:, ftp: links in the "Watch Full Movie" button.
             'stream_url' => ['nullable', 'url:http,https', 'max:500'],
             'embed_url' => ['nullable', 'string', 'max:500', function (string $attribute, mixed $value, \Closure $fail) {
                 if (EmbedUrl::normalize($value) === null) {
@@ -484,14 +423,10 @@ class MovieController extends Controller
             'episodes.*.url' => ['required', 'url:http,https', 'max:500'],
             'episodes.*.subtitle_url' => ['nullable', 'url:http,https', 'max:500'],
             'episodes.*.download_url' => ['nullable', 'url:http,https', 'max:500'],
-            
-            // Download Links Validation
             'download_480p' => ['nullable', 'url:http,https', 'max:500'],
             'download_720p' => ['nullable', 'url:http,https', 'max:500'],
             'download_1080p' => ['nullable', 'url:http,https', 'max:500'],
             'subtitle_url' => ['nullable', 'url:http,https', 'max:500'],
-
-            // Gallery pictures and cast (resized to WebP on save)
             'gallery_new' => ['nullable', 'array', 'max:'.self::MAX_GALLERY],
             'gallery_new.*' => ['image', 'mimes:jpeg,png,jpg,webp', 'max:10240'],
             'gallery_remove' => ['nullable', 'array'],
