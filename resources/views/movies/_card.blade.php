@@ -21,7 +21,9 @@
         @endif
 
         <div class="absolute left-1.5 top-1.5 flex flex-col items-start gap-1 z-30">
-            @if($movie->isNew())
+            @if($movie->is_completed)
+                <span class="rounded-full bg-sky-500 px-2 py-0.5 text-[9px] font-extrabold tracking-wide text-white shadow">COMPLETED</span>
+            @elseif($movie->isNew())
                 <span class="rounded-full bg-emerald-500 px-2 py-0.5 text-[9px] font-extrabold tracking-wide text-white shadow">NEW</span>
             @endif
             @if(($movie->episodes_count ?? 0) > 0)

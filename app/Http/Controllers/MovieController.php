@@ -364,6 +364,8 @@ class MovieController extends Controller
             'download_480p', 'download_720p', 'download_1080p' , 'subtitle_url'
         ]);
         
+        // "Completed" only makes sense for a title with episodes.
+        $data['is_completed'] = ! empty($validated['episodes']) && ! empty($validated['is_completed']);
         $data['tags'] = Movie::normalizeTags($validated['tags'] ?? null);
         $data['type'] = $validated['type'] ?? $movie?->type ?? 'movie';
 
@@ -418,6 +420,7 @@ class MovieController extends Controller
             'year' => ['nullable', 'integer', 'between:1900,2100'],
             'language' => ['nullable', Rule::in(config('auracinema.languages'))],
             'tags' => ['nullable', 'string', 'max:300'],
+            'is_completed' => ['nullable', 'boolean'],
             'episodes' => ['nullable', 'array', 'max:500'],
             'episodes.*.number' => ['required', 'integer', 'between:1,9999'],
             'episodes.*.url' => ['required', 'url:http,https', 'max:500'],

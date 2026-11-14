@@ -29,11 +29,13 @@ class Movie extends Model
         'subtitle_url',
         'gallery',
         'cast_members',
+        'is_completed',
     ];
 
     protected $casts = [
         'gallery' => 'array',
         'cast_members' => 'array',
+        'is_completed' => 'boolean',
     ];
 
     /** Episodes of a series, in order (episode 1 first). */

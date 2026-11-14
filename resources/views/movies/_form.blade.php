@@ -157,6 +157,13 @@
             <button type="button" data-episode-bulk class="rounded-md bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20">rows at once</button>
         </div>
         <p class="text-xs text-slate-500">Empty rows are ignored. Episode numbers must be different from each other.</p>
+
+        {{-- Completed: when ticked, the poster shows a COMPLETED badge instead of NEW --}}
+        <input type="hidden" name="is_completed" value="0">
+        <label class="flex cursor-pointer items-center gap-2 rounded-md border border-sky-400/30 bg-sky-500/10 px-3 py-2 text-sm font-semibold text-sky-200">
+            <input type="checkbox" name="is_completed" value="1" @checked(old('is_completed', $movie?->is_completed ?? false)) class="h-4 w-4 accent-sky-500">
+            <i class="fa-solid fa-circle-check"></i> Completed (all episodes added)
+        </label>
     </div>
 </div>
 
