@@ -114,8 +114,14 @@ class MovieController extends Controller
         // One query for the rows (cheap on a catalogue this size), one paginated query for the grid.
         $recent = Movie::withCount('episodes')->latest()->take(40)->get();
 
+        // ළඟදීම එන (අසම්පූර්ණ) චිත්‍රපට පමණක් පෙරා ගෙන "Watch the Trailers" පේළියට යැවීම
+        $upcomingMovies = $recent->filter(function($movie) {
+            return $movie->isIncomplete();
+        })->take(12)->values();
+
         return view('movies.index', [
             'heroes' => $recent->filter(fn ($m) => $m->image)->take(5)->values(),
+            'upcomingMovies' => $upcomingMovies,
             'latest' => $recent->take(20),
             'withTrailers' => $recent->filter(fn ($m) => $m->trailer_url)->take(20),
             'fullMovies' => $recent->filter(fn ($m) => $m->stream_url)->take(20),
