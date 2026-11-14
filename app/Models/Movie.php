@@ -77,6 +77,11 @@ class Movie extends Model
             $missing[] = 'Keywords';
         }
 
+        // භාෂාව සිංහල දැයි පරීක්ෂා කිරීම (Language field එකෙන් හෝ Tags වලින්)
+        $isSinhala = strtolower($this->language) === 'sinhala' || 
+                     in_array('sinhala', $this->tag_list, true) || 
+                     in_array('sinhala dubbed', $this->tag_list, true);
+
         // Only Movie specific requirements
         if (! $hasEpisodes) {
             // Watch now Embed URL
@@ -94,17 +99,12 @@ class Movie extends Model
             }
             
             // Movie Subtitle Link (Ignore for Sinhala movies)
-            // Language is 'Sinhala' (case-insensitive)
-            $isSinhala = strtolower($this->language) === 'sinhala';
-            
             if (!$isSinhala && blank($this->subtitle_url)) {
                 $missing[] = 'Subtitle link';
             }
         } 
         // Series specific Subtitle requirements
         else {
-            $isSinhala = strtolower($this->language) === 'sinhala';
-            
             if (!$isSinhala) {
                 $without = $episodes->filter(fn ($e) => blank($e->subtitle_url))->pluck('number')->sort()->values();
                 if ($without->isNotEmpty()) {
@@ -117,7 +117,6 @@ class Movie extends Model
 
         return $this->missingFieldsCache = $missing;
     }
-
     public function isIncomplete(): bool
     {
         return $this->missingFields() !== [];
