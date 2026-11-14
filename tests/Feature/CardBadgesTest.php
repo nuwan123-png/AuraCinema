@@ -76,4 +76,14 @@ class CardBadgesTest extends TestCase
         ])->assertSessionHasNoErrors();
         $this->assertTrue(Movie::where('title', 'Show 2')->first()->is_completed);
     }
+
+    public function test_home_full_movies_row_lists_every_title_and_no_all_titles_section(): void
+    {
+        Movie::create(['title' => 'No Stream Movie']);
+        Movie::create(['title' => 'Streamed Movie', 'stream_url' => 'https://example.com/v']);
+
+        $this->get('/')->assertOk()->assertSee('Full movies')
+            ->assertSee('No Stream Movie')->assertSee('Streamed Movie')
+            ->assertDontSee('All titles');
+    }
 }

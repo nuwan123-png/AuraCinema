@@ -81,20 +81,8 @@
 
 @if($fullMovies->isNotEmpty())
     @include('movies._row', ['title' => 'Full movies', 'items' => $fullMovies])
+@else
+    <p class="py-16 text-center text-sm text-slate-400">No movies yet.</p>
 @endif
-
-<section id="all" class="mt-10">
-    <h2 class="section-title mb-4">All titles</h2>
-    @if($all->count())
-        <div class="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
-            @foreach($all as $movie)
-                @include('movies._card', ['movie' => $movie, 'class' => 'w-full'])
-            @endforeach
-        </div>
-        @include('movies._pager', ['paginator' => $all])
-    @else
-        <p class="py-16 text-center text-sm text-slate-400">No movies yet.</p>
-    @endif
-</section>
 
 @endsection

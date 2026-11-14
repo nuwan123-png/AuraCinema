@@ -109,8 +109,8 @@ class MovieController extends Controller
             'latest' => $recent->take(20),
             // 'withTrailers' වෙනුවට දැන් යවන්නේ incomplete චිත්‍රපට පමණයි (ඒවා "Watch the trailers" පේළියේ දිස්වේවි)
             'withTrailers' => $recent->filter(fn ($m) => $m->isIncomplete())->take(20)->values(),
-            'fullMovies' => $recent->filter(fn ($m) => $m->stream_url)->take(20),
-            'all' => Movie::withCount('episodes')->latest()->simplePaginate(24),
+            // "Full movies" lists every title, newest first, so a movie you add shows up here straight away.
+            'fullMovies' => Movie::withCount('episodes')->latest()->limit(200)->get(),
         ]);
     }
 
