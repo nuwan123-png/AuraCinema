@@ -62,12 +62,13 @@
         @endif
 
         {{-- Year and language: Always visible at the bottom (z-40 so it stays above the hover background) --}}
-        @if($movie->year || $movie->language)
+        @php([$cardYear, $cardLang] = [$movie->display_year, $movie->display_language])
+        @if($cardYear || $cardLang)
             {{-- Note: Removed the hover opacity transition (group-hover:opacity-0) so it stays visible --}}
             <div class="pointer-events-none absolute inset-x-0 {{ $incomplete ? 'bottom-8' : 'bottom-0' }} flex items-center gap-1.5 bg-gradient-to-t from-black/90 via-black/60 to-transparent px-2 pb-1.5 pt-8 text-[10px] font-bold text-white z-40">
-                @if($movie->year)<span>{{ $movie->year }}</span>@endif
-                @if($movie->year && $movie->language)<span class="text-white/40">&bull;</span>@endif
-                @if($movie->language)<span class="truncate uppercase tracking-wide text-orange-300">{{ $movie->language }}</span>@endif
+                @if($cardYear)<span>{{ $cardYear }}</span>@endif
+                @if($cardYear && $cardLang)<span class="text-white/40">&bull;</span>@endif
+                @if($cardLang)<span class="truncate uppercase tracking-wide text-orange-300">{{ $cardLang }}</span>@endif
             </div>
         @endif
 

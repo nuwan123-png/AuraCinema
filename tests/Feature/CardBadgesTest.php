@@ -34,4 +34,21 @@ class CardBadgesTest extends TestCase
         Movie::create(['title' => 'With Trailer', 'trailer_url' => 'trailers/x.mp4']);
         $this->get('/')->assertSee('data-card-trailer', false)->assertSee('data-card-trailer-dialog', false);
     }
+
+    public function test_year_and_language_fall_back_to_title_and_keywords(): void
+    {
+        $m = Movie::create(['title' => 'Happy Raj (2026)', 'tags' => ',telugu,romantic,']);
+
+        $this->assertSame(2026, $m->display_year);
+        $this->assertSame('Telugu', $m->display_language);
+        $this->get('/')->assertOk()->assertSee('Telugu')->assertSee('2026');
+    }
+
+    public function test_fields_win_over_fallbacks(): void
+    {
+        $m = Movie::create(['title' => 'X (1999)', 'year' => 2025, 'language' => 'Tamil', 'tags' => ',telugu,']);
+
+        $this->assertSame(2025, $m->display_year);
+        $this->assertSame('Tamil', $m->display_language);
+    }
 }

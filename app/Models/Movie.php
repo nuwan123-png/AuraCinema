@@ -127,6 +127,41 @@ class Movie extends Model
     }
 
     /** Keywords as a plain list, e.g. ['hindi', 'romantic']. Always clean & lowercase. */
+    /** Year for cards: the Year field, else "(2026)" in the title, else a year keyword. */
+    public function getDisplayYearAttribute(): ?int
+    {
+        if ($this->year) {
+            return (int) $this->year;
+        }
+        if (preg_match('/\((\d{4})\)/', (string) $this->title, $m)) {
+            return (int) $m[1];
+        }
+        foreach ($this->tag_list as $tag) {
+            if (preg_match('/^(19|20)\d{2}$/', $tag)) {
+                return (int) $tag;
+            }
+        }
+
+        return null;
+    }
+
+    /** Language for cards: the Language field, else the first language keyword (e.g. "telugu"). */
+    public function getDisplayLanguageAttribute(): ?string
+    {
+        if (filled($this->language)) {
+            return $this->language;
+        }
+        $known = collect(config('auracinema.languages'))->reject(fn ($l) => $l === 'Other')
+            ->mapWithKeys(fn ($l) => [mb_strtolower($l) => $l]);
+        foreach ($this->tag_list as $tag) {
+            if ($known->has($tag)) {
+                return $known[$tag];
+            }
+        }
+
+        return null;
+    }
+
     public function getTagListAttribute(): array
     {
         if (empty($this->tags)) {
