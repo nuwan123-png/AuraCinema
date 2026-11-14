@@ -47,7 +47,7 @@ class Movie extends Model
     /** Cached result of missingFields() (admin-only helper). */
     private ?array $missingFieldsCache = null;
 
-    /**
+   /**
      * Admin helper: names of the form fields that are still empty.
      * To stop flagging a field, just delete (or comment out) its line below.
      */
@@ -57,7 +57,6 @@ class Movie extends Model
             return $this->missingFieldsCache;
         }
 
-        // Plain movies loaded with withCount('episodes') = 0 need no extra query.
         $count = $this->attributes['episodes_count'] ?? null;
         $episodes = ($count !== null && (int) $count === 0) ? collect() : $this->episodes;
         $hasEpisodes = $episodes->isNotEmpty();
@@ -77,10 +76,9 @@ class Movie extends Model
             $missing[] = 'Keywords';
         }
 
-        // භාෂාව සිංහල දැයි පරීක්ෂා කිරීම (Language field එකෙන් හෝ Tags වලින්)
-        $isSinhala = strtolower($this->language) === 'sinhala' || 
-                     in_array('sinhala', $this->tag_list, true) || 
-                     in_array('sinhala dubbed', $this->tag_list, true);
+        // භාෂාව හෝ Tags වල කොතැනක හෝ "sinhala" යන වචනය ඇත්දැයි ඉතා නිවැරදිව සෙවීම
+        $isSinhala = stripos((string) $this->language, 'sinhala') !== false || 
+                     stripos((string) $this->tags, 'sinhala') !== false;
 
         // Only Movie specific requirements
         if (! $hasEpisodes) {
@@ -117,6 +115,8 @@ class Movie extends Model
 
         return $this->missingFieldsCache = $missing;
     }
+
+    
     public function isIncomplete(): bool
     {
         return $this->missingFields() !== [];
