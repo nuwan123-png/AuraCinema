@@ -22,4 +22,15 @@ class WhatsAppRequestTest extends TestCase
 
         $this->get('/movies')->assertSee('https://wa.me/94771234567?text=', false);
     }
+
+    public function test_report_error_button_opens_whatsapp_naming_this_movie(): void
+    {
+        $movie = \App\Models\Movie::create(['title' => 'OIC Gadafi (2026)']);
+        $text = rawurlencode('Hi AuraCinema, I have an error in "OIC Gadafi (2026)" movie: ');
+
+        $this->get(route('movies.show', $movie))->assertOk()
+            ->assertSee('Report error')
+            ->assertSee('https://wa.me/94788402670?text='.$text, false)
+            ->assertSee('මෙම චිත්‍රපටය පිලිබද ගැටලුවක් තිබේනම් කියන්න.');
+    }
 }

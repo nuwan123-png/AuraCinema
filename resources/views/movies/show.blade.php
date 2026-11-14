@@ -60,12 +60,23 @@
             <p class="mb-5 text-xs text-slate-400">Added {{ $movie->created_at->format('d M Y') }}</p>
             <p class="mb-6 max-w-3xl whitespace-pre-line text-sm leading-relaxed text-slate-300">{{ $movie->description ?: 'No synopsis provided.' }}</p>
 
-            <div class="flex flex-wrap items-center gap-3">
+            <div class="flex flex-wrap items-start gap-3">
                 @if($movie->trailer_url)
                     <button type="button" data-trailer-open class="btn-ghost" aria-haspopup="dialog">
                         <i class="fa-solid fa-video text-orange-400"></i> Trailer
                     </button>
                 @endif
+                {{-- Report error: opens WhatsApp with a ready message naming this movie --}}
+                @php
+                    $waText = 'Hi AuraCinema, I have an error in "'.$movie->title.'" movie: ';
+                    $waReport = 'https://wa.me/'.preg_replace('/\D/', '', (string) config('auracinema.whatsapp_number')).'?text='.rawurlencode($waText);
+                @endphp
+                <div class="max-w-[16rem]">
+                    <a href="{{ $waReport }}" target="_blank" rel="noopener" class="btn-ghost">
+                        <i class="fa-brands fa-whatsapp text-emerald-400"></i> Report error
+                    </a>
+                    <p class="mt-1.5 px-1 text-xs leading-snug text-slate-400">මෙම චිත්‍රපටය පිලිබද ගැටලුවක් තිබේනම් කියන්න.</p>
+                </div>
                 @if(request()->cookie('aura_admin'))
                     <a href="{{ route('movies.edit', $movie) }}" class="btn-aura">
                         <i class="fa-solid fa-pen-to-square"></i> Edit
