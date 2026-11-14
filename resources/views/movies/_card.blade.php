@@ -4,9 +4,11 @@
     $hasTrailer = filled($movie->trailer_url);
     $isUpcomingSection = isset($isUpcoming) && $isUpcoming;
 @endphp
+
 <div class="group relative {{ $class ?? 'w-36 shrink-0 snap-start sm:w-44' }}">
 <a href="{{ route('movies.show', $movie) }}" class="block">
     <div class="relative aspect-[2/3] w-full overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-white/10 transition duration-300 group-hover:z-10 group-hover:-translate-y-1 group-hover:scale-[1.04] group-hover:shadow-[0_14px_34px_-8px_rgba(249,115,22,0.45)] group-hover:ring-2 group-hover:ring-orange-400/70">
+        
         @if($movie->image)
             <img src="{{ $movie->poster_url }}" alt="{{ $movie->title }}" width="480" height="720"
                  loading="lazy" decoding="async" class="h-full w-full object-cover">
@@ -15,7 +17,7 @@
         @endif
 
         @if($movie->stream_url)
-            <span class="absolute right-1.5 top-1.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 px-2 py-0.5 text-[9px] font-extrabold tracking-wide text-white shadow">FULL</span>
+            <span class="absolute right-1.5 top-1.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 px-2 py-0.5 text-[9px] font-extrabold tracking-wide text-white shadow z-30">FULL</span>
         @endif
 
         <div class="absolute left-1.5 top-1.5 flex flex-col items-start gap-1 z-30">
@@ -27,25 +29,16 @@
             @endif
         </div>
 
-        {{-- Year and language: a small strip along the bottom; it fades out on hover to make room for the Trailer button --}}
-        @if($movie->year || $movie->language)
-            <div class="pointer-events-none absolute inset-x-0 {{ $incomplete ? 'bottom-8' : 'bottom-0' }} flex items-center gap-1.5 bg-gradient-to-t from-black/85 to-transparent px-2 pb-1.5 pt-6 text-[10px] font-bold text-white transition duration-200 group-hover:opacity-0 group-focus-within:opacity-0 z-20">
-                @if($movie->year)<span>{{ $movie->year }}</span>@endif
-                @if($movie->year && $movie->language)<span class="text-white/40">&bull;</span>@endif
-                @if($movie->language)<span class="truncate uppercase tracking-wide text-orange-300">{{ $movie->language }}</span>@endif
-            </div>
-        @endif
-
         {{-- Admin only: warns when some form fields are still empty --}}
         @if($incomplete)
             <span title="Missing: {{ implode(', ', $movie->missingFields()) }}"
-                  class="absolute inset-x-1.5 bottom-1.5 z-40 truncate rounded-md bg-rose-600/95 px-2 py-1 text-center text-[10px] font-extrabold uppercase tracking-wide text-white shadow">
+                  class="absolute inset-x-1.5 bottom-1.5 z-50 truncate rounded-md bg-rose-600/95 px-2 py-1 text-center text-[10px] font-extrabold uppercase tracking-wide text-white shadow">
                 <i class="fa-solid fa-triangle-exclamation"></i> Incomplete
             </span>
         @endif
 
+        {{-- Hover effect for Upcoming (Watch the trailers) section --}}
         @if($isUpcomingSection)
-            {{-- Hover effect for Upcoming (Watch the trailers) section --}}
             <span class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center bg-black/85 p-2 text-center opacity-0 transition duration-200 group-hover:opacity-100 group-focus-within:opacity-100 z-30" aria-hidden="true">
                 <i class="fa-solid fa-clock text-orange-400 text-2xl mb-2"></i>
                 <span class="text-white text-xs sm:text-sm font-bold leading-snug">
@@ -67,6 +60,16 @@
                 </span>
             </span>
         @endif
+
+        {{-- Year and language: Always visible at the bottom (z-40 so it stays above the hover background) --}}
+        @if($movie->year || $movie->language)
+            <div class="pointer-events-none absolute inset-x-0 {{ $incomplete ? 'bottom-8' : 'bottom-0' }} flex items-center gap-1.5 bg-gradient-to-t from-black/90 to-transparent px-2 pb-1.5 pt-8 text-[10px] font-bold text-white z-40">
+                @if($movie->year)<span>{{ $movie->year }}</span>@endif
+                @if($movie->year && $movie->language)<span class="text-white/40">&bull;</span>@endif
+                @if($movie->language)<span class="truncate uppercase tracking-wide text-orange-300">{{ $movie->language }}</span>@endif
+            </div>
+        @endif
+
     </div>
 
     {{-- Subtitle badge below card --}}
@@ -81,13 +84,14 @@
     </p>
 </a>
 
-{{-- Quick trailer: a sibling of the link (a button inside a link is invalid HTML). Shown on hover or keyboard focus; touch users tap through to the page. --}}
+{{-- Quick trailer: Show this if a trailer exists --}}
 @if($hasTrailer)
-    <div class="pointer-events-none absolute left-0 top-0 z-40 flex aspect-[2/3] w-full items-end justify-center p-2 {{ $incomplete ? 'pb-9' : '' }}">
+    <div class="pointer-events-none absolute left-0 top-0 z-50 flex aspect-[2/3] w-full items-end justify-center p-2 {{ $incomplete ? 'pb-9' : '' }}">
         <button type="button" data-card-trailer data-src="{{ $movie->trailer_file_url }}" data-title="{{ $movie->title }}"
-                class="pointer-events-auto hidden translate-y-1 items-center gap-1.5 rounded-full bg-black/75 px-3 py-1.5 text-[11px] font-bold text-white opacity-0 ring-1 ring-white/25 backdrop-blur transition duration-200 hover:bg-orange-500 focus-visible:translate-y-0 focus-visible:opacity-100 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 [@media(hover:hover)]:inline-flex"
+                class="pointer-events-auto hidden translate-y-1 items-center gap-1.5 rounded-full bg-black/85 px-3 py-1.5 text-[11px] font-bold text-white opacity-0 ring-1 ring-white/25 backdrop-blur transition duration-200 hover:bg-orange-500 hover:text-white focus-visible:translate-y-0 focus-visible:opacity-100 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 [@media(hover:hover)]:inline-flex"
                 aria-label="Watch {{ $movie->title }} trailer" aria-haspopup="dialog">
-            <i class="fa-solid fa-video text-orange-300 group-hover:text-white"></i> Trailer
+            <i class="fa-solid fa-video text-orange-300 group-hover/btn:text-white"></i> 
+            <span class="whitespace-nowrap">Trailer</span>
         </button>
     </div>
 
