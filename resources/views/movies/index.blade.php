@@ -2,6 +2,17 @@
 
 @section('title', 'AuraCinema')
 
+{{-- Tells Google the official site name, so results show "AuraCinema" instead of the web address. --}}
+@push('jsonld')
+    <script type="application/ld+json">{!! json_encode([
+        '@context' => 'https://schema.org',
+        '@type' => 'WebSite',
+        'name' => 'AuraCinema',
+        'alternateName' => ['Aura Cinema'],
+        'url' => rtrim((string) config('auracinema.site_url'), '/').'/',
+    ], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) !!}</script>
+@endpush
+
 @section('content')
 
 {{-- Animated hero carousel: up to 5 latest titles with a poster. Behaviour lives in resources/js/app.js. --}}
