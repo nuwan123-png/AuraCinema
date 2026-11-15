@@ -77,6 +77,17 @@
                     </a>
                     <p class="mt-1.5 px-1 text-xs leading-snug text-slate-400">මෙම චිත්‍රපටය පිලිබද ගැටලුවක් තිබේනම් කියන්න.</p>
                 </div>
+                {{-- Share: WhatsApp share link and a copy-link button; the link always uses the public https address --}}
+                @php
+                    $shareUrl = rtrim((string) config('auracinema.site_url'), '/').request()->getPathInfo();
+                    $waShare = 'https://wa.me/?text='.rawurlencode('Watch "'.$movie->title.'" on AuraCinema: '.$shareUrl);
+                @endphp
+                <a href="{{ $waShare }}" target="_blank" rel="noopener" class="btn-ghost">
+                    <i class="fa-solid fa-share-nodes text-orange-400"></i> Share
+                </a>
+                <button type="button" data-copy-link="{{ $shareUrl }}" class="btn-ghost">
+                    <i class="fa-regular fa-copy text-orange-400"></i> <span data-copy-label>Copy link</span>
+                </button>
                 @if(request()->cookie('aura_admin'))
                     <a href="{{ route('movies.edit', $movie) }}" class="btn-aura">
                         <i class="fa-solid fa-pen-to-square"></i> Edit

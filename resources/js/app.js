@@ -315,6 +315,34 @@ document.querySelectorAll('[data-trailer-dialog]').forEach((dialog) => {
     });
 })();
 
+// ---- Copy link button on the movie page ----
+document.querySelectorAll('[data-copy-link]').forEach((btn) => {
+    const label = btn.querySelector('[data-copy-label]');
+    const original = label?.textContent;
+
+    btn.addEventListener('click', async () => {
+        const url = btn.dataset.copyLink;
+        try {
+            await navigator.clipboard.writeText(url);
+        } catch {
+            // Older browsers: copy through a temporary field.
+            const field = document.createElement('textarea');
+            field.value = url;
+            field.setAttribute('readonly', '');
+            field.style.position = 'fixed';
+            field.style.opacity = '0';
+            document.body.append(field);
+            field.select();
+            document.execCommand('copy');
+            field.remove();
+        }
+        if (label) {
+            label.textContent = 'Copied!';
+            setTimeout(() => { label.textContent = original; }, 2000);
+        }
+    });
+});
+
 // ---- Live search: matching titles appear under the search box while you type ----
 document.querySelectorAll('[data-live-search]').forEach((form) => {
     const input = form.querySelector('input[name="q"]');

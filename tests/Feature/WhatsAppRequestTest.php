@@ -33,4 +33,15 @@ class WhatsAppRequestTest extends TestCase
             ->assertSee('https://wa.me/94788402670?text='.$text, false)
             ->assertSee('මෙම චිත්‍රපටය පිලිබද ගැටලුවක් තිබේනම් කියන්න.');
     }
+
+    public function test_share_buttons_use_the_public_https_address(): void
+    {
+        config(['auracinema.site_url' => 'https://auracinema.duckdns.org']);
+        $movie = \App\Models\Movie::create(['title' => 'Happy Raj (2026)']);
+        $url = 'https://auracinema.duckdns.org/movies/'.$movie->id;
+
+        $this->get(route('movies.show', $movie))->assertOk()
+            ->assertSee('https://wa.me/?text='.rawurlencode('Watch "Happy Raj (2026)" on AuraCinema: '.$url), false)
+            ->assertSee('data-copy-link="'.$url.'"', false);
+    }
 }
