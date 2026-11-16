@@ -30,7 +30,8 @@ class Movie extends Model
         'gallery',
         'cast_members',
         'is_completed',
-        'telegram_url'
+        'telegram_url',
+        'telegram_added_at'
     ];
 
     protected $casts = [

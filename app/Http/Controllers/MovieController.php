@@ -363,6 +363,13 @@ class MovieController extends Controller
             'title', 'description', 'stream_url', 'embed_url', 'genre', 'year', 'language',
             'download_480p', 'download_720p', 'download_1080p', 'telegram_url', 'subtitle_url'
         ]);
+
+        $newTgUrl = trim((string) ($validated['telegram_url'] ?? ''));
+        if ($newTgUrl === '') {
+            $data['telegram_added_at'] = null;
+        } elseif (! $movie || $movie->telegram_url !== $newTgUrl || ! $movie->telegram_added_at) {
+            $data['telegram_added_at'] = now();
+        }
         
         // "Completed" only makes sense for a title with episodes.
         $data['is_completed'] = ! empty($validated['episodes']) && ! empty($validated['is_completed']);

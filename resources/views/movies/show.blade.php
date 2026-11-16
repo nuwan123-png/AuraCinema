@@ -306,7 +306,15 @@
                             @endif
 
                             @if($movie->telegram_url)
-                                <a href="{{ $movie->telegram_url }}" target="_blank" rel="noopener" class="group flex items-center justify-between rounded-lg bg-black/40 p-3 ring-1 ring-white/5 transition hover:bg-black/60 hover:ring-sky-500/50">
+                                @php
+                                    $tgAddedAt = $movie->telegram_added_at ? \Illuminate\Support\Carbon::parse($movie->telegram_added_at) : $movie->created_at;
+                                    $isTgExpired = $tgAddedAt && $tgAddedAt->copy()->addWeeks(2)->isPast();
+                                @endphp
+                                <a href="{{ $isTgExpired ? '#downloads' : $movie->telegram_url }}"
+                                   @if(!$isTgExpired) target="_blank" rel="noopener" @endif
+                                   data-tg-download
+                                   data-tg-expired="{{ $isTgExpired ? '1' : '0' }}"
+                                   class="group flex items-center justify-between rounded-lg bg-black/40 p-3 ring-1 ring-white/5 transition hover:bg-black/60 hover:ring-sky-500/50">
                                     <div class="flex items-center gap-4">
                                         <div class="flex h-12 w-12 flex-col items-center justify-center rounded bg-sky-500/10 font-bold text-sky-400 transition group-hover:bg-sky-500/20">
                                             <i class="fa-brands fa-telegram text-xl"></i>
@@ -375,5 +383,23 @@
 
                 </div>
         </section>
+    @endif
+
+    @if($movie->telegram_url)
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const tgBtn = document.querySelector('[data-tg-download]');
+                if (!tgBtn) return;
+
+                tgBtn.addEventListener('click', (e) => {
+                    if (tgBtn.dataset.tgExpired === '1') {
+                        e.preventDefault();
+                        alert('Copyright ප්‍රශ්න නිසා delete වී ඇත. කරුනාකර request කරන්න.');
+                    } else {
+                        alert('Copyright ප්‍රශ්න නිසා සති දෙකකින් delete  වේ . ');
+                    }
+                });
+            });
+        </script>
     @endif
 @endsection
