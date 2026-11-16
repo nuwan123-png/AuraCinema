@@ -100,11 +100,6 @@ class Movie extends Model
             if (!$hasAnyDownloadLink) {
                 $missing[] = 'At least one download link (480p, 720p, or 1080p)';
             }
-            
-            // Movie Subtitle Link (Ignore for Sinhala movies)
-            if (!$isSinhala && blank($this->subtitle_url)) {
-                $missing[] = 'Subtitle link';
-            }
         } 
         // Series specific Subtitle requirements
         else {
