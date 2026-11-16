@@ -79,21 +79,11 @@
                     </div>
                 </details>
 
-                {{-- Type and Language Menus --}}
+                {{-- Type Links --}}
                 @foreach($globalNavTypes as $navKey => $navLabel)
-                    <div class="group relative">
-                        <a href="{{ route('movies.index', ['type' => $navKey]) }}" class="flex items-center gap-1 {{ $navLink($navType === $navKey) }}">
-                            {{ $navLabel }} <i class="fa-solid fa-chevron-down text-[9px]"></i>
-                        </a>
-                        <div class="invisible absolute left-0 top-full z-50 pt-2 opacity-0 transition duration-150 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
-                            <div class="glass-panel grid w-52 grid-cols-2 gap-1 p-2 text-xs normal-case">
-                                <a href="{{ route('movies.index', ['type' => $navKey]) }}" class="menu-item col-span-2 font-bold text-orange-400">All {{ $navLabel }}</a>
-                                @foreach($globalNavLanguages as $lang)
-                                    <a href="{{ route('movies.index', ['type' => $navKey, 'language' => $lang]) }}" class="menu-item {{ $navType === $navKey && request('language') === $lang ? 'text-orange-400' : '' }}">{{ $lang }}</a>
-                                @endforeach
-                            </div>
-                        </div>
-                    </div>
+                    <a href="{{ route('movies.index', ['type' => $navKey]) }}" class="{{ $navLink($navType === $navKey) }}">
+                        {{ $navLabel }}
+                    </a>
                 @endforeach
 
                 <a href="{{ route('suggestions') }}" class="{{ $navLink(request()->routeIs('suggestions')) }}">Suggestion</a>
