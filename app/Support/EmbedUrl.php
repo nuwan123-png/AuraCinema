@@ -33,11 +33,6 @@ class EmbedUrl
             if (preg_match('#^https?://(?:www\.)?streamtape\.(?:com|to|net)/(?:v|e)/([a-zA-Z0-9_-]+)#i', $input, $matches)) {
                 return 'https://streamtape.com/e/' . $matches[1];
             }
-
-            // Pixeldrain links -> embeddable player URL
-            if (preg_match('#^https?://(?:www\.)?pixeldrain\.com/(?:u|l|api/file)/([a-zA-Z0-9_-]+)#i', $input, $matches)) {
-                return 'https://pixeldrain.com/u/' . $matches[1] . '?embed';
-            }
         }
 
         $parts = parse_url($input);
