@@ -159,7 +159,7 @@ class MovieController extends Controller
             OptimizeTrailer::dispatchAfterResponse($movie->id, $data['trailer_url']);
         }
 
-        return redirect()->route('movies.show', $movie)->with('success', 'Movie added. The trailer is being compressed in the background.');
+        return redirect()->route('movies.show', $movie)->with('success', 'Movie added.');
     }
 
     private function storeTrailer(Request $request, array $validated): string
@@ -333,6 +333,11 @@ class MovieController extends Controller
         if ($embed !== '') {
             $request->merge(['embed_url' => EmbedUrl::normalize($embed) ?? $embed]);
         }
+
+        $trailerEmbed = trim((string) $request->input('trailer_embed_url', ''));
+        if ($trailerEmbed !== '') {
+            $request->merge(['trailer_embed_url' => EmbedUrl::normalize($trailerEmbed) ?? $trailerEmbed]);
+        }
         
         foreach (['download_480p', 'download_720p', 'download_1080p'] as $field) {
             $dlLink = trim((string) $request->input($field, ''));
@@ -359,7 +364,7 @@ class MovieController extends Controller
     private function movieData(array $validated, ?Movie $movie = null): array
     {
         $data = Arr::only($validated, [
-            'title', 'description', 'stream_url', 'embed_url', 'genre', 'year', 'language',
+            'title', 'description', 'stream_url', 'embed_url', 'trailer_embed_url', 'genre', 'year', 'language',
             'download_480p', 'download_720p', 'download_1080p', 'telegram_url', 'subtitle_url'
         ]);
 
@@ -415,6 +420,12 @@ class MovieController extends Controller
             'description' => ['nullable', 'string', 'max:5000'],
             'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:10240'],
             'trailer' => ['nullable', 'mimes:mp4,mkv,webm,mov', 'max:30720'],
+            'trailer_embed_url' => ['nullable', 'string', 'max:500', function (string $attribute, mixed $value, \Closure $fail) {
+                $normalized = EmbedUrl::normalize($value);
+                if ($normalized === null || ! str_contains($normalized, 'youtube')) {
+                    $fail('Trailer link must be a valid YouTube link.');
+                }
+            }],
             'stream_url' => ['nullable', 'url:http,https', 'max:500'],
             'embed_url' => ['nullable', 'string', 'max:500', function (string $attribute, mixed $value, \Closure $fail) {
                 if (EmbedUrl::normalize($value) === null) {

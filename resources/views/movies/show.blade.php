@@ -61,11 +61,16 @@
             <p class="mb-6 max-w-3xl whitespace-pre-line text-sm leading-relaxed text-slate-300">{{ $movie->description ?: 'No synopsis provided.' }}</p>
 
             <div class="flex flex-wrap items-start gap-3">
-                @if($movie->trailer_url)
+                @if($movie->trailer_embed_url)
+                    <button type="button" data-yt-trailer-open class="btn-ghost" aria-haspopup="dialog">
+                        <i class="fa-brands fa-youtube text-rose-500"></i> Trailer
+                    </button>
+                @elseif($movie->trailer_url)
                     <button type="button" data-trailer-open class="btn-ghost" aria-haspopup="dialog">
                         <i class="fa-solid fa-video text-orange-400"></i> Trailer
                     </button>
                 @endif
+
                 {{-- Report error: opens WhatsApp with a ready message naming this movie --}}
                 @php
                     $waText = 'Hi AuraCinema, I have an error in "'.$movie->title.'" movie: ';
@@ -77,6 +82,7 @@
                     </a>
                     <p class="mt-1.5 px-1 text-xs leading-snug text-slate-400">මෙම චිත්‍රපටය පිලිබද ගැටලුවක් තිබේනම් කියන්න.</p>
                 </div>
+
                 {{-- Share: WhatsApp share link and a copy-link button; the link always uses the public https address --}}
                 @php
                     $shareUrl = rtrim((string) config('auracinema.site_url'), '/').request()->getPathInfo();
@@ -193,8 +199,61 @@
         </section>
     @endif
 
-    @if($movie->trailer_url)
-        {{-- Trailer pop-up: opens from the Trailer button; the file is only requested when you open it. --}}
+    @if($movie->trailer_embed_url)
+        {{-- YouTube Trailer Pop-up --}}
+        <dialog data-yt-trailer-dialog aria-label="{{ $movie->title }} trailer"
+                class="fixed inset-0 m-auto w-[min(94vw,60rem)] overflow-hidden rounded-2xl border border-white/10 bg-black p-0 text-white shadow-2xl shadow-orange-500/10 backdrop:bg-black/80 backdrop:backdrop-blur-sm">
+            <div class="flex items-center justify-between gap-3 border-b border-white/10 bg-zinc-950 px-4 py-3">
+                <p class="flex min-w-0 items-center gap-2 text-sm font-bold"><i class="fa-brands fa-youtube text-rose-500"></i><span class="truncate">{{ $movie->title }} &middot; Trailer</span></p>
+                <button type="button" data-yt-trailer-close class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/10 transition hover:bg-orange-500" aria-label="Close trailer"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="aspect-video w-full bg-black">
+                <iframe data-yt-trailer-frame
+                        data-src="{{ $movie->trailer_embed_url }}?autoplay=1&rel=0"
+                        src=""
+                        title="{{ $movie->title }} Trailer"
+                        class="h-full w-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowfullscreen></iframe>
+            </div>
+        </dialog>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const openBtn = document.querySelector('[data-yt-trailer-open]');
+                const dialog = document.querySelector('[data-yt-trailer-dialog]');
+                const closeBtn = document.querySelector('[data-yt-trailer-close]');
+                const iframe = document.querySelector('[data-yt-trailer-frame]');
+
+                if (!openBtn || !dialog || !iframe) return;
+
+                openBtn.addEventListener('click', () => {
+                    iframe.src = iframe.dataset.src;
+                    if (typeof dialog.showModal === 'function') {
+                        dialog.showModal();
+                    } else {
+                        dialog.setAttribute('open', '');
+                    }
+                });
+
+                const closeTrailer = () => {
+                    iframe.src = '';
+                    if (typeof dialog.close === 'function') {
+                        dialog.close();
+                    } else {
+                        dialog.removeAttribute('open');
+                    }
+                };
+
+                closeBtn?.addEventListener('click', closeTrailer);
+                dialog.addEventListener('close', () => { iframe.src = ''; });
+                dialog.addEventListener('click', (e) => {
+                    if (e.target === dialog) closeTrailer();
+                });
+            });
+        </script>
+    @elseif($movie->trailer_url)
+        {{-- Legacy Uploaded MP4 Trailer Pop-up --}}
         <dialog data-trailer-dialog aria-label="{{ $movie->title }} trailer"
                 class="w-[min(94vw,60rem)] overflow-hidden rounded-2xl border border-white/10 bg-black p-0 text-white shadow-2xl shadow-orange-500/10">
             <div class="flex items-center justify-between gap-3 border-b border-white/10 bg-zinc-950 px-4 py-3">

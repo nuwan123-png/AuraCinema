@@ -77,11 +77,18 @@
 </div>
 
 <div>
-    <label for="trailer" class="mb-1.5 block text-xs font-semibold text-slate-300">Trailer (MP4 / WebM / MOV / MKV, max 30MB &mdash; compressed automatically)</label>
-    @if($movie?->trailer_url)
-        <p class="mb-2 text-xs text-sky-400"><i class="fa-solid fa-film"></i> A trailer is already uploaded. Choose a file only to replace it.</p>
-    @endif
-    <input id="trailer" type="file" name="trailer" accept="video/mp4,video/webm,video/quicktime,video/x-matroska" class="w-full rounded-md border border-white/10 bg-black/30 p-2 text-xs text-slate-400">
+    <label for="trailer_embed_url" class="mb-1.5 block text-xs font-semibold text-slate-300">
+        <i class="fa-brands fa-youtube text-rose-500"></i> YouTube Trailer Link
+    </label>
+    <input id="trailer_embed_url"
+           type="url"
+           name="trailer_embed_url"
+           maxlength="500"
+           value="{{ old('trailer_embed_url', $movie?->trailer_embed_url) }}"
+           placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
+           class="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">
+    <p class="mt-1 text-xs text-slate-500">Paste any YouTube trailer link. It will automatically play inside your site.</p>
+    @error('trailer_embed_url') <span class="text-xs text-rose-500">{{ $message }}</span> @enderror
 </div>
 
 {{-- Gallery: movie stills shown in a slider on the movie page --}}

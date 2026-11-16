@@ -32,7 +32,8 @@ class Movie extends Model
         'is_completed',
         'telegram_url',
         'telegram_added_at',
-        'watch_with_sub'
+        'watch_with_sub',
+        'trailer_embed_url'
     ];
 
     protected $casts = [
