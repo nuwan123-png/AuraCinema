@@ -361,7 +361,7 @@ class MovieController extends Controller
     {
         $data = Arr::only($validated, [
             'title', 'description', 'stream_url', 'embed_url', 'genre', 'year', 'language',
-            'download_480p', 'download_720p', 'download_1080p' , 'subtitle_url'
+            'download_480p', 'download_720p', 'download_1080p', 'telegram_url', 'subtitle_url'
         ]);
         
         // "Completed" only makes sense for a title with episodes.
@@ -429,6 +429,7 @@ class MovieController extends Controller
             'download_480p' => ['nullable', 'url:http,https', 'max:500'],
             'download_720p' => ['nullable', 'url:http,https', 'max:500'],
             'download_1080p' => ['nullable', 'url:http,https', 'max:500'],
+            'telegram_url' => ['nullable', 'url:http,https', 'max:500'],
             'subtitle_url' => ['nullable', 'url:http,https', 'max:500'],
             'gallery_new' => ['nullable', 'array', 'max:'.self::MAX_GALLERY],
             'gallery_new.*' => ['image', 'mimes:jpeg,png,jpg,webp', 'max:10240'],

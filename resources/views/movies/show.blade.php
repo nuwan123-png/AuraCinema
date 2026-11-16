@@ -232,12 +232,12 @@
     @endphp
 
     {{-- Download & Subtitles Section (shown even when there is no "Watch now" player) --}}
-    @if($movie->download_480p || $movie->download_720p || $movie->download_1080p || $movie->subtitle_url || $episodeSubs->isNotEmpty())
+    @if($movie->download_480p || $movie->download_720p || $movie->download_1080p || $movie->telegram_url || $movie->subtitle_url || $episodeSubs->isNotEmpty())
         <section class="mt-10" id="downloads">
                 <div class="mx-auto grid w-full max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
                     
                     {{-- 1. Select Quality Box (Left) --}}
-                    @if($movie->download_480p || $movie->download_720p || $movie->download_1080p)
+                    @if($movie->download_480p || $movie->download_720p || $movie->download_1080p || $movie->telegram_url)
                     <div class="rounded-xl border border-white/10 bg-white/5 p-5 shadow-lg">
                         <h3 class="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-200">
                             <i class="fa-solid fa-hard-drive text-orange-500"></i> Select Quality
@@ -300,6 +300,25 @@
                                         </div>
                                     </div>
                                     <div class="grid h-10 w-10 place-items-center rounded-full bg-white/5 text-slate-400 transition group-hover:bg-orange-500 group-hover:text-white">
+                                        <i class="fa-solid fa-download"></i>
+                                    </div>
+                                </a>
+                            @endif
+
+                            @if($movie->telegram_url)
+                                <a href="{{ $movie->telegram_url }}" target="_blank" rel="noopener" class="group flex items-center justify-between rounded-lg bg-black/40 p-3 ring-1 ring-white/5 transition hover:bg-black/60 hover:ring-sky-500/50">
+                                    <div class="flex items-center gap-4">
+                                        <div class="flex h-12 w-12 flex-col items-center justify-center rounded bg-sky-500/10 font-bold text-sky-400 transition group-hover:bg-sky-500/20">
+                                            <i class="fa-brands fa-telegram text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-sm font-bold text-slate-200 transition group-hover:text-white">Telegram Download</div>
+                                            <div class="mt-0.5 flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
+                                                <span class="rounded bg-sky-500/10 px-1.5 py-0.5 text-sky-400">TELEGRAM</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="grid h-10 w-10 place-items-center rounded-full bg-white/5 text-slate-400 transition group-hover:bg-sky-500 group-hover:text-white">
                                         <i class="fa-solid fa-download"></i>
                                     </div>
                                 </a>
