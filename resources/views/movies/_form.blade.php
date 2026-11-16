@@ -3,7 +3,13 @@
     $hasEpisodes = (string) old('has_episodes', ($movie && $movie->episodes->isNotEmpty()) ? '1' : '0') === '1';
     $episodeRows = old('episodes') !== null
         ? array_values((array) old('episodes'))
-        : ($movie ? $movie->episodes->map(fn ($e) => ['number' => $e->number, 'url' => $e->url, 'subtitle_url' => $e->subtitle_url, 'download_url' => $e->download_url])->all() : []);
+        : ($movie ? $movie->episodes->map(fn ($e) => [
+            'number' => $e->number,
+            'url' => $e->url,
+            'subtitle_url' => $e->subtitle_url,
+            'download_url' => $e->download_url,
+            'telegram_url' => $e->telegram_url,
+        ])->all() : []);
 
     $popularTags = ['romantic', 'family', 'dubbed', 'new release', 'top rated', 'classic'];
     $genreTags = ['action', 'adventure', 'animation', 'comedy', 'crime', 'documentary', 'drama', 'fantasy', 'horror', 'mystery', 'romance', 'sci-fi', 'thriller', 'war'];
@@ -87,8 +93,16 @@
            value="{{ old('trailer_embed_url', $movie?->trailer_embed_url) }}"
            placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
            class="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">
-    <p class="mt-1 text-xs text-slate-500">Paste any YouTube trailer link. It will automatically play inside your site.</p>
+    <p class="mt-1 text-xs text-slate-500">Paste any YouTube trailer link. It will play inside the Trailer popup.</p>
     @error('trailer_embed_url') <span class="text-xs text-rose-500">{{ $message }}</span> @enderror
+</div>
+
+<div>
+    <label for="trailer" class="mb-1.5 block text-xs font-semibold text-slate-300">Trailer File (MP4 / WebM / MOV / MKV, max 30MB &mdash; optional if YouTube link is added)</label>
+    @if($movie?->trailer_url)
+        <p class="mb-2 text-xs text-sky-400"><i class="fa-solid fa-film"></i> A trailer is already uploaded. Choose a file only to replace it.</p>
+    @endif
+    <input id="trailer" type="file" name="trailer" accept="video/mp4,video/webm,video/quicktime,video/x-matroska" class="w-full rounded-md border border-white/10 bg-black/30 p-2 text-xs text-slate-400">
 </div>
 
 {{-- Gallery: movie stills shown in a slider on the movie page --}}
@@ -157,17 +171,31 @@
         <input type="checkbox" id="has_episodes" name="has_episodes" value="1" data-episodes-toggle @checked($hasEpisodes) class="h-4 w-4 accent-orange-500">
         This title has episodes
     </label>
-    <p class="mt-1 text-xs text-slate-500">Tick this for a series or anime, then add a Streamtape embed link for each episode.</p>
+    <p class="mt-1 text-xs text-slate-500">Tick this for a series or anime, then add a Streamtape embed link, download link, and Telegram link for each episode.</p>
 
     <div data-episodes-panel id="episodes_ui" class="{{ $hasEpisodes ? '' : 'hidden' }} mt-4 space-y-3">
         <div data-episode-list class="space-y-2">
             @foreach($episodeRows as $i => $row)
-                @include('movies._episode_row', ['i' => $i, 'number' => $row['number'] ?? '', 'url' => $row['url'] ?? '', 'subtitle' => $row['subtitle_url'] ?? '', 'download' => $row['download_url'] ?? ''])
+                @include('movies._episode_row', [
+                    'i' => $i,
+                    'number' => $row['number'] ?? '',
+                    'url' => $row['url'] ?? '',
+                    'subtitle' => $row['subtitle_url'] ?? '',
+                    'download' => $row['download_url'] ?? '',
+                    'telegram' => $row['telegram_url'] ?? '',
+                ])
             @endforeach
         </div>
 
         <template data-episode-template>
-            @include('movies._episode_row', ['i' => '__i__', 'number' => '', 'url' => '', 'subtitle' => '', 'download' => ''])
+            @include('movies._episode_row', [
+                'i' => '__i__',
+                'number' => '',
+                'url' => '',
+                'subtitle' => '',
+                'download' => '',
+                'telegram' => '',
+            ])
         </template>
 
         <div class="flex flex-wrap items-center gap-2">

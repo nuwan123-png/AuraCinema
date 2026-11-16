@@ -185,13 +185,31 @@
                             <i class="fa-solid fa-play text-xs text-orange-400"></i> Ep {{ $episode->number }}
                         </button>
                         
-                        {{-- 2. Download Button (Only shows if link exists) --}}
+                        {{-- 2. Direct Download Button (Only shows if link exists) --}}
                         @if(!empty($episode->download_url))
                             <a href="{{ str_replace('/e/', '/v/', $episode->download_url) }}" 
                                target="_blank" 
                                class="mt-2 flex w-full items-center justify-center gap-1.5 rounded bg-blue-600/20 py-1.5 text-xs font-medium text-blue-400 transition hover:bg-blue-600 hover:text-white">
                                 <i class="fa-solid fa-download"></i> Download
                             </a>
+                        @endif
+
+                        {{-- 3. Telegram Download Button (Only shows if telegram_url exists) --}}
+                        @if(!empty($episode->telegram_url))
+                            @php
+                                $epAddedAt = $episode->created_at ?? $movie->created_at;
+                                $isEpTgExpired = $epAddedAt && $epAddedAt->copy()->addWeeks(2)->isPast();
+                                $epWaText = 'Hi AuraCinema, please re-upload "'.$movie->title.' - Episode '.$episode->number.'": ';
+                                $epWaUrl = 'https://wa.me/'.preg_replace('/\D/', '', (string) config('auracinema.whatsapp_number')).'?text='.rawurlencode($epWaText);
+                            @endphp
+                            <button type="button"
+                                    data-tg-download
+                                    data-tg-title="{{ $movie->title }} - Ep {{ $episode->number }}"
+                                    data-tg-target="{{ $isEpTgExpired ? $epWaUrl : $episode->telegram_url }}"
+                                    data-tg-expired="{{ $isEpTgExpired ? '1' : '0' }}"
+                                    class="mt-1.5 flex w-full items-center justify-center gap-1.5 rounded bg-sky-500/20 py-1.5 text-xs font-medium text-sky-400 transition hover:bg-sky-500 hover:text-white">
+                                <i class="fa-brands fa-telegram"></i> Telegram
+                            </button>
                         @endif
                     </div>
                 @endforeach
@@ -373,6 +391,7 @@
                                 @endphp
                                 <button type="button"
                                         data-tg-download
+                                        data-tg-title="{{ $movie->title }}"
                                         data-tg-target="{{ $isTgExpired ? $waRequestUrl : $movie->telegram_url }}"
                                         data-tg-expired="{{ $isTgExpired ? '1' : '0' }}"
                                         class="group flex w-full items-center justify-between rounded-lg bg-black/40 p-3 text-left ring-1 ring-white/5 transition hover:bg-black/60 hover:ring-sky-500/50">
@@ -455,7 +474,11 @@
         </section>
     @endif
 
-    @if($movie->telegram_url)
+    @php
+        $hasAnyTelegram = $movie->telegram_url || $movie->episodes->contains(fn ($e) => filled($e->telegram_url));
+    @endphp
+
+    @if($hasAnyTelegram)
         <dialog data-tg-modal aria-label="{{ $movie->title }} Telegram notice"
                 class="fixed inset-0 m-auto w-[min(92vw,24rem)] overflow-hidden rounded-3xl border border-white/15 bg-zinc-950 p-0 text-white shadow-2xl shadow-black/80 backdrop:bg-black/80 backdrop:backdrop-blur-sm">
             <div class="relative aspect-[3/4] w-full overflow-hidden bg-zinc-900">
@@ -481,13 +504,13 @@
                     <span class="mb-1.5 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-sky-400">
                         <i class="fa-brands fa-telegram"></i> AuraCinema Notice
                     </span>
-                    <h3 class="mb-2 line-clamp-1 text-xl font-extrabold uppercase tracking-tight text-white">
+                    <h3 data-tg-modal-title class="mb-2 line-clamp-1 text-xl font-extrabold uppercase tracking-tight text-white">
                         {{ $movie->title }}
                     </h3>
                     <p data-tg-msg class="mb-5 text-base font-bold leading-snug text-amber-300 drop-shadow">
                         Copyright ප්‍රශ්න නිසා සති දෙකකින් delete වේ .
                     </p>
-                    <a href="{{ $movie->telegram_url }}" target="_blank" rel="noopener" data-tg-ok
+                    <a href="#" target="_blank" rel="noopener" data-tg-ok
                        class="w-full rounded-full bg-white py-3 text-sm font-extrabold uppercase tracking-wider text-black shadow-lg transition hover:bg-orange-500 hover:text-white">
                         OK
                     </a>
@@ -497,26 +520,32 @@
 
         <script>
             document.addEventListener('DOMContentLoaded', () => {
-                const tgBtn = document.querySelector('[data-tg-download]');
+                const tgBtns = document.querySelectorAll('[data-tg-download]');
                 const tgModal = document.querySelector('[data-tg-modal]');
                 const tgClose = document.querySelector('[data-tg-close]');
+                const tgTitle = document.querySelector('[data-tg-modal-title]');
                 const tgMsg = document.querySelector('[data-tg-msg]');
                 const tgOk = document.querySelector('[data-tg-ok]');
 
-                if (!tgBtn || !tgModal) return;
+                if (!tgBtns.length || !tgModal) return;
 
-                tgBtn.addEventListener('click', () => {
-                    const isExpired = tgBtn.dataset.tgExpired === '1';
-                    tgOk.href = tgBtn.dataset.tgTarget;
-                    tgMsg.textContent = isExpired
-                        ? 'Copyright ප්‍රශ්න නිසා delete වී ඇත. කරුනාකර request කරන්න.'
-                        : 'Copyright ප්‍රශ්න නිසා සති දෙකකින් delete  වේ . ';
+                tgBtns.forEach((tgBtn) => {
+                    tgBtn.addEventListener('click', () => {
+                        const isExpired = tgBtn.dataset.tgExpired === '1';
+                        tgOk.href = tgBtn.dataset.tgTarget;
+                        if (tgTitle && tgBtn.dataset.tgTitle) {
+                            tgTitle.textContent = tgBtn.dataset.tgTitle;
+                        }
+                        tgMsg.textContent = isExpired
+                            ? 'Copyright ප්‍රශ්න නිසා delete වී ඇත. කරුනාකර request කරන්න.'
+                            : 'Copyright ප්‍රශ්න නිසා සති දෙකකින් delete වේ .';
 
-                    if (typeof tgModal.showModal === 'function') {
-                        tgModal.showModal();
-                    } else {
-                        tgModal.setAttribute('open', '');
-                    }
+                        if (typeof tgModal.showModal === 'function') {
+                            tgModal.showModal();
+                        } else {
+                            tgModal.setAttribute('open', '');
+                        }
+                    });
                 });
 
                 const closeModal = () => {

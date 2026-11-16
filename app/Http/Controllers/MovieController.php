@@ -404,6 +404,7 @@ class MovieController extends Controller
                     'url' => $row['url'],
                     'subtitle_url' => filled($row['subtitle_url'] ?? null) ? $row['subtitle_url'] : null,
                     'download_url' => filled($row['download_url'] ?? null) ? $row['download_url'] : null,
+                    'telegram_url' => filled($row['telegram_url'] ?? null) ? $row['telegram_url'] : null,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ])
@@ -444,6 +445,7 @@ class MovieController extends Controller
             'episodes.*.url' => ['required', 'url:http,https', 'max:500'],
             'episodes.*.subtitle_url' => ['nullable', 'url:http,https', 'max:500'],
             'episodes.*.download_url' => ['nullable', 'url:http,https', 'max:500'],
+            'episodes.*.telegram_url' => ['nullable', 'url:http,https', 'max:500'],
             'download_480p' => ['nullable', 'url:http,https', 'max:500'],
             'download_720p' => ['nullable', 'url:http,https', 'max:500'],
             'download_1080p' => ['nullable', 'url:http,https', 'max:500'],

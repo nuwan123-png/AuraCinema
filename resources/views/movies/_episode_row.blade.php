@@ -1,28 +1,61 @@
-{{-- One episode: number + Telegram/Streamtape link + optional subtitle link. $i is the array index (the JS passes "__i__" for rows it adds). --}}
-<div data-episode-row class="rounded-md border border-white/5 bg-black/20 p-2">
-    <div class="flex items-center gap-2">
-        <input type="number" min="1" max="9999" name="episodes[{{ $i }}][number]" value="{{ $number }}" data-episode-number aria-label="Episode number"
-               class="w-20 shrink-0 rounded-md border border-white/10 bg-black/30 px-2 py-2 text-sm text-white focus:border-orange-400/60 focus:outline-none">
-        
-        <input type="url" maxlength="500" name="episodes[{{ $i }}][url]" value="{{ $url }}" placeholder="https://streamtape.com/... (episode link)" aria-label="Link for this episode"
-               class="min-w-0 flex-1 rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white focus:border-orange-400/60 focus:outline-none">
-        
-        <button type="button" data-episode-remove aria-label="Remove this episode" class="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-white/5 text-slate-400 hover:bg-rose-500/20 hover:text-rose-300">
-            <i class="fa-solid fa-xmark"></i>
+<div data-episode-row class="grid grid-cols-1 gap-2 rounded-md border border-white/10 bg-black/30 p-2.5 sm:grid-cols-12 sm:items-center">
+    <div class="sm:col-span-1">
+        <input type="number"
+               name="episodes[{{ $i }}][number]"
+               value="{{ $number ?? '' }}"
+               min="1"
+               max="9999"
+               placeholder="Ep"
+               aria-label="Episode number"
+               class="w-full rounded border border-white/10 bg-zinc-900 px-2.5 py-2 text-xs text-white focus:border-orange-400/60 focus:outline-none">
+    </div>
+
+    <div class="sm:col-span-3">
+        <input type="url"
+               name="episodes[{{ $i }}][url]"
+               value="{{ $url ?? '' }}"
+               maxlength="500"
+               placeholder="Streamtape Embed URL (https://...)"
+               aria-label="Episode stream URL"
+               class="w-full rounded border border-white/10 bg-zinc-900 px-2.5 py-2 text-xs text-white focus:border-orange-400/60 focus:outline-none">
+    </div>
+
+    <div class="sm:col-span-3">
+        <input type="url"
+               name="episodes[{{ $i }}][download_url]"
+               value="{{ $download ?? '' }}"
+               maxlength="500"
+               placeholder="Direct Download URL (https://...)"
+               aria-label="Episode download URL"
+               class="w-full rounded border border-white/10 bg-zinc-900 px-2.5 py-2 text-xs text-white focus:border-orange-400/60 focus:outline-none">
+    </div>
+
+    <div class="sm:col-span-2">
+        <input type="url"
+               name="episodes[{{ $i }}][telegram_url]"
+               value="{{ $telegram ?? '' }}"
+               maxlength="500"
+               placeholder="Telegram Link (https://t.me/...)"
+               aria-label="Episode Telegram URL"
+               class="w-full rounded border border-white/10 bg-zinc-900 px-2.5 py-2 text-xs text-white focus:border-sky-400/60 focus:outline-none">
+    </div>
+
+    <div class="sm:col-span-2">
+        <input type="url"
+               name="episodes[{{ $i }}][subtitle_url]"
+               value="{{ $subtitle ?? '' }}"
+               maxlength="500"
+               placeholder="Subtitle URL (https://...)"
+               aria-label="Episode subtitle URL"
+               class="w-full rounded border border-white/10 bg-zinc-900 px-2.5 py-2 text-xs text-white focus:border-orange-400/60 focus:outline-none">
+    </div>
+
+    <div class="flex justify-end sm:col-span-1">
+        <button type="button"
+                data-episode-remove
+                aria-label="Remove episode row"
+                class="grid h-8 w-8 place-items-center rounded bg-rose-500/15 text-xs text-rose-400 transition hover:bg-rose-500 hover:text-white">
+            <i class="fa-solid fa-trash"></i>
         </button>
-    </div>
-    
-    <div class="mt-2 flex items-center gap-2">
-        <span class="grid w-20 shrink-0 place-items-center text-orange-400" title="Subtitle"><i class="fa-regular fa-closed-captioning"></i></span>
-        <input type="url" maxlength="500" name="episodes[{{ $i }}][subtitle_url]" value="{{ $subtitle ?? '' }}" placeholder="https://... (Sinhala subtitle .srt link - optional)" aria-label="Subtitle link for this episode"
-               class="min-w-0 flex-1 rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white focus:border-orange-400/60 focus:outline-none">
-        <span class="w-9 shrink-0"></span>
-    </div>
-    
-    <div class="mt-2 flex items-center gap-2">
-        <span class="grid w-20 shrink-0 place-items-center text-blue-400" title="Download"><i class="fa-solid fa-download"></i></span>
-        <input type="url" maxlength="500" name="episodes[{{ $i }}][download_url]" value="{{ $download ?? '' }}" placeholder="https://... (Download link - optional)" aria-label="Download link for this episode"
-               class="min-w-0 flex-1 rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white focus:border-orange-400/60 focus:outline-none">
-        <span class="w-9 shrink-0"></span>
     </div>
 </div>
