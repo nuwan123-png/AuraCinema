@@ -312,12 +312,11 @@
                                     $waRequestText = 'Hi AuraCinema, please re-upload "'.$movie->title.'" movie: ';
                                     $waRequestUrl = 'https://wa.me/'.preg_replace('/\D/', '', (string) config('auracinema.whatsapp_number')).'?text='.rawurlencode($waRequestText);
                                 @endphp
-                                <a href="{{ $isTgExpired ? $waRequestUrl : $movie->telegram_url }}"
-                                   target="_blank"
-                                   rel="noopener"
-                                   data-tg-download
-                                   data-tg-expired="{{ $isTgExpired ? '1' : '0' }}"
-                                   class="group flex items-center justify-between rounded-lg bg-black/40 p-3 ring-1 ring-white/5 transition hover:bg-black/60 hover:ring-sky-500/50">
+                                <button type="button"
+                                        data-tg-download
+                                        data-tg-target="{{ $isTgExpired ? $waRequestUrl : $movie->telegram_url }}"
+                                        data-tg-expired="{{ $isTgExpired ? '1' : '0' }}"
+                                        class="group flex w-full items-center justify-between rounded-lg bg-black/40 p-3 text-left ring-1 ring-white/5 transition hover:bg-black/60 hover:ring-sky-500/50">
                                     <div class="flex items-center gap-4">
                                         <div class="flex h-12 w-12 flex-col items-center justify-center rounded bg-sky-500/10 font-bold text-sky-400 transition group-hover:bg-sky-500/20">
                                             <i class="fa-brands fa-telegram text-xl"></i>
@@ -332,7 +331,7 @@
                                     <div class="grid h-10 w-10 place-items-center rounded-full bg-white/5 text-slate-400 transition group-hover:bg-sky-500 group-hover:text-white">
                                         <i class="fa-solid fa-download"></i>
                                     </div>
-                                </a>
+                                </button>
                             @endif
                         </div>
                     </div>
@@ -389,17 +388,81 @@
     @endif
 
     @if($movie->telegram_url)
+        <dialog data-tg-modal aria-label="{{ $movie->title }} Telegram notice"
+                class="w-[min(92vw,24rem)] overflow-hidden rounded-3xl border border-white/15 bg-zinc-950 p-0 text-white shadow-2xl shadow-black/80 backdrop:bg-black/80 backdrop:backdrop-blur-sm">
+            <div class="relative aspect-[3/4] w-full overflow-hidden bg-zinc-900">
+                @if($movie->image)
+                    <img src="{{ $movie->poster_url }}" alt="{{ $movie->title }}" class="h-full w-full object-cover">
+                @else
+                    <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-sky-900/40 to-zinc-950 text-4xl font-extrabold text-white/20">
+                        <i class="fa-brands fa-telegram"></i>
+                    </div>
+                @endif
+
+                {{-- Top Accent Bar & Close Button --}}
+                <div class="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-sky-400 via-cyan-400 to-orange-500"></div>
+                <button type="button" data-tg-close aria-label="Close"
+                        class="absolute right-3.5 top-4 z-10 grid h-9 w-9 place-items-center rounded-full bg-black/65 text-white ring-1 ring-white/20 backdrop-blur-md transition hover:bg-orange-500">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+
+                {{-- Bottom Dark Gradient Overlay & Content --}}
+                <div class="absolute inset-0 bg-gradient-to-t from-black via-black/85 to-transparent"></div>
+
+                <div class="absolute inset-x-0 bottom-0 flex flex-col items-center p-6 text-center">
+                    <span class="mb-1.5 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-sky-400">
+                        <i class="fa-brands fa-telegram"></i> AuraCinema Notice
+                    </span>
+                    <h3 class="mb-2 line-clamp-1 text-xl font-extrabold uppercase tracking-tight text-white">
+                        {{ $movie->title }}
+                    </h3>
+                    <p data-tg-msg class="mb-5 text-base font-bold leading-snug text-amber-300 drop-shadow">
+                        Copyright ප්‍රශ්න නිසා සති දෙකකින් delete වේ .
+                    </p>
+                    <a href="{{ $movie->telegram_url }}" target="_blank" rel="noopener" data-tg-ok
+                       class="w-full rounded-full bg-white py-3 text-sm font-extrabold uppercase tracking-wider text-black shadow-lg transition hover:bg-orange-500 hover:text-white">
+                        OK
+                    </a>
+                </div>
+            </div>
+        </dialog>
+
         <script>
             document.addEventListener('DOMContentLoaded', () => {
                 const tgBtn = document.querySelector('[data-tg-download]');
-                if (!tgBtn) return;
+                const tgModal = document.querySelector('[data-tg-modal]');
+                const tgClose = document.querySelector('[data-tg-close]');
+                const tgMsg = document.querySelector('[data-tg-msg]');
+                const tgOk = document.querySelector('[data-tg-ok]');
+
+                if (!tgBtn || !tgModal) return;
 
                 tgBtn.addEventListener('click', () => {
-                    if (tgBtn.dataset.tgExpired === '1') {
-                        alert('Copyright ප්‍රශ්න නිසා delete වී ඇත. කරුනාකර request කරන්න.');
+                    const isExpired = tgBtn.dataset.tgExpired === '1';
+                    tgOk.href = tgBtn.dataset.tgTarget;
+                    tgMsg.textContent = isExpired
+                        ? 'Copyright ප්‍රශ්න නිසා delete වී ඇත. කරුනාකර request කරන්න.'
+                        : 'Copyright ප්‍රශ්න නිසා සති දෙකකින් delete  වේ . ';
+
+                    if (typeof tgModal.showModal === 'function') {
+                        tgModal.showModal();
                     } else {
-                        alert('Copyright ප්‍රශ්න නිසා සති දෙකකින් delete  වේ . ');
+                        tgModal.setAttribute('open', '');
                     }
+                });
+
+                const closeModal = () => {
+                    if (typeof tgModal.close === 'function') {
+                        tgModal.close();
+                    } else {
+                        tgModal.removeAttribute('open');
+                    }
+                };
+
+                tgClose?.addEventListener('click', closeModal);
+                tgOk?.addEventListener('click', () => setTimeout(closeModal, 150));
+                tgModal.addEventListener('click', (e) => {
+                    if (e.target === tgModal) closeModal();
                 });
             });
         </script>
