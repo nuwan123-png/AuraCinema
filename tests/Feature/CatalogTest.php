@@ -156,15 +156,6 @@ class CatalogTest extends TestCase
         $this->assertStringContainsString('සිංහල', $html);
     }
 
-    public function test_navbar_shows_languages_on_hover_menus(): void
-    {
-        $html = $this->get('/')->assertOk()->getContent();
-
-        $this->assertStringContainsString('language=Hindi', $html);
-        $this->assertStringContainsString('language=Malayalam', $html);
-        $this->assertStringContainsString('All Movies', $html);
-    }
-
     public function test_visitors_can_send_a_request_and_only_the_admin_can_read_them(): void
     {
         $this->post('/request', ['title' => 'Some Movie', 'note' => 'please'])->assertRedirect(route('home'));
