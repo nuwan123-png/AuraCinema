@@ -309,9 +309,12 @@
                                 @php
                                     $tgAddedAt = $movie->telegram_added_at ? \Illuminate\Support\Carbon::parse($movie->telegram_added_at) : $movie->created_at;
                                     $isTgExpired = $tgAddedAt && $tgAddedAt->copy()->addWeeks(2)->isPast();
+                                    $waRequestText = 'Hi AuraCinema, please re-upload "'.$movie->title.'" movie: ';
+                                    $waRequestUrl = 'https://wa.me/'.preg_replace('/\D/', '', (string) config('auracinema.whatsapp_number')).'?text='.rawurlencode($waRequestText);
                                 @endphp
-                                <a href="{{ $isTgExpired ? '#downloads' : $movie->telegram_url }}"
-                                   @if(!$isTgExpired) target="_blank" rel="noopener" @endif
+                                <a href="{{ $isTgExpired ? $waRequestUrl : $movie->telegram_url }}"
+                                   target="_blank"
+                                   rel="noopener"
                                    data-tg-download
                                    data-tg-expired="{{ $isTgExpired ? '1' : '0' }}"
                                    class="group flex items-center justify-between rounded-lg bg-black/40 p-3 ring-1 ring-white/5 transition hover:bg-black/60 hover:ring-sky-500/50">
@@ -391,9 +394,8 @@
                 const tgBtn = document.querySelector('[data-tg-download]');
                 if (!tgBtn) return;
 
-                tgBtn.addEventListener('click', (e) => {
+                tgBtn.addEventListener('click', () => {
                     if (tgBtn.dataset.tgExpired === '1') {
-                        e.preventDefault();
                         alert('Copyright ප්‍රශ්න නිසා delete වී ඇත. කරුනාකර request කරන්න.');
                     } else {
                         alert('Copyright ප්‍රශ්න නිසා සති දෙකකින් delete  වේ . ');
