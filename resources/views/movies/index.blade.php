@@ -43,7 +43,7 @@
                         @else
                             <p class="mb-2 line-clamp-2 text-lg font-extrabold leading-tight tracking-tight sm:mb-3 sm:text-3xl md:text-4xl">{{ $hero->title }}</p>
                         @endif
-                        <p class="mb-3 line-clamp-3 max-w-2xl text-xs leading-relaxed text-slate-300 sm:mb-6 sm:line-clamp-4 sm:text-sm">{{ $hero->description ?: 'No synopsis provided for this title.' }}</p>
+                        <p class="mb-3 line-clamp-3 max-w-2xl whitespace-pre-line text-xs leading-relaxed text-slate-300 sm:mb-6 sm:line-clamp-5 sm:text-sm">{{ $hero->description ?: 'No synopsis provided for this title.' }}</p>
                         <a href="{{ route('movies.show', $hero) }}" class="btn-aura !px-4 !py-2 !text-xs sm:!px-6 sm:!py-2.5 sm:!text-sm">
                             <i class="fa-solid fa-play text-xs"></i> {{ $hero->episodes_count ? 'Episodes & details' : 'Play & details' }}
                         </a>
