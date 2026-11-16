@@ -74,7 +74,7 @@ class Movie extends Model
         if (blank($this->image)) {
             $missing[] = 'Poster';
         }
-        if (blank($this->trailer_url)) {
+        if (blank($this->trailer_url) && blank($this->trailer_embed_url)) {
             $missing[] = 'Trailer';
         }
         if (blank($this->tags)) {
