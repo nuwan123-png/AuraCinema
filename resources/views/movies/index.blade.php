@@ -73,6 +73,29 @@
     @include('movies._row', ['title' => 'New on AuraCinema', 'items' => $latest, 'anchor' => 'new', 'auto' => true])
 @endif
 
+{{-- Watch with sub Section (Admin Only + Add button + Same _row slider style) --}}
+@if($watchWithSub->isNotEmpty() || request()->cookie('aura_admin'))
+    <div id="watch-with-sub-section" class="scroll-mt-24">
+        @if($watchWithSub->isNotEmpty())
+            @include('movies._row', [
+                'title' => 'Watch with sub',
+                'items' => $watchWithSub,
+                'anchor' => 'watch-with-sub',
+                'adminAddUrl' => request()->cookie('aura_admin') ? route('movies.create', ['watch_with_sub' => 1]) : null,
+            ])
+        @else
+            <section class="mb-10">
+                <div class="mb-4 flex items-center gap-3">
+                    <span class="h-5 w-1 rounded-full bg-orange-500"></span>
+                    <h2 class="text-lg font-bold text-white sm:text-xl">Watch with sub</h2>
+                    <a href="{{ route('movies.create', ['watch_with_sub' => 1]) }}" class="btn-aura !px-3 !py-1 !text-xs">+ Add</a>
+                </div>
+                <p class="text-xs text-slate-500">No "Watch with sub" movies added yet. Click "+ Add" to add one.</p>
+            </section>
+        @endif
+    </div>
+@endif
+
 {{-- $withTrailers variable now holds incomplete movies (Watch the trailers section) --}}
 @if($withTrailers->isNotEmpty())
     <section class="mb-10">

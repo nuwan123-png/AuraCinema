@@ -107,9 +107,8 @@ class MovieController extends Controller
         return view('movies.index', [
             'heroes' => $recent->filter(fn ($m) => $m->image)->take(5)->values(),
             'latest' => $recent->take(20),
-            // 'withTrailers' වෙනුවට දැන් යවන්නේ incomplete චිත්‍රපට පමණයි (ඒවා "Watch the trailers" පේළියේ දිස්වේවි)
+            'watchWithSub' => Movie::withCount('episodes')->where('watch_with_sub', true)->latest()->take(30)->get(),
             'withTrailers' => $recent->filter(fn ($m) => $m->isIncomplete())->take(20)->values(),
-            // "Full movies" lists every title, newest first, so a movie you add shows up here straight away.
             'fullMovies' => Movie::withCount('episodes')->latest()->limit(200)->get(),
         ]);
     }
@@ -371,8 +370,8 @@ class MovieController extends Controller
             $data['telegram_added_at'] = now();
         }
         
-        // "Completed" only makes sense for a title with episodes.
         $data['is_completed'] = ! empty($validated['episodes']) && ! empty($validated['is_completed']);
+        $data['watch_with_sub'] = ! empty($validated['watch_with_sub']);
         $data['tags'] = Movie::normalizeTags($validated['tags'] ?? null);
         $data['type'] = $validated['type'] ?? $movie?->type ?? 'movie';
 
@@ -428,6 +427,7 @@ class MovieController extends Controller
             'language' => ['nullable', Rule::in(config('auracinema.languages'))],
             'tags' => ['nullable', 'string', 'max:300'],
             'is_completed' => ['nullable', 'boolean'],
+            'watch_with_sub' => ['nullable', 'boolean'],
             'episodes' => ['nullable', 'array', 'max:500'],
             'episodes.*.number' => ['required', 'integer', 'between:1,9999'],
             'episodes.*.url' => ['required', 'url:http,https', 'max:500'],

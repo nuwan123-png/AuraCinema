@@ -31,13 +31,15 @@ class Movie extends Model
         'cast_members',
         'is_completed',
         'telegram_url',
-        'telegram_added_at'
+        'telegram_added_at',
+        'watch_with_sub'
     ];
 
     protected $casts = [
         'gallery' => 'array',
         'cast_members' => 'array',
         'is_completed' => 'boolean',
+        'watch_with_sub' => 'boolean',
     ];
 
     /** Episodes of a series, in order (episode 1 first). */

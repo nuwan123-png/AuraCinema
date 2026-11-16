@@ -130,6 +130,19 @@
     @error('cast.*') <span class="block text-xs text-rose-500">{{ $message }}</span> @enderror
 </div>
 
+{{-- Watch with sub Checkbox --}}
+<div class="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3">
+    <input type="hidden" name="watch_with_sub" value="0">
+    <label class="flex cursor-pointer items-center gap-2 text-sm font-semibold text-emerald-200">
+        <input type="checkbox"
+               name="watch_with_sub"
+               value="1"
+               @checked(old('watch_with_sub', $movie?->watch_with_sub ?? request()->boolean('watch_with_sub')))
+               class="h-4 w-4 accent-emerald-500">
+        <i class="fa-solid fa-closed-captioning"></i> Watch with sub (Sub එක්කම online බලන්න පුළුවන් ලැයිස්තුවට දමන්න)
+    </label>
+</div>
+
 {{-- Episodes: tick the box to add Streamtape links for each episode (series / anime) --}}
 <div class="rounded-md border border-white/10 bg-black/20 p-3">
     <input type="hidden" name="has_episodes" value="0">
