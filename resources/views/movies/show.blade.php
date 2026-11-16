@@ -393,6 +393,15 @@
                                 </button>
                             @endif
                         </div>
+
+                        @if($movie->watch_with_sub)
+                            <div class="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/15 p-4 text-center shadow-lg">
+                                <p class="text-base font-extrabold leading-relaxed text-emerald-300 sm:text-lg">
+                                    <i class="fa-solid fa-closed-captioning mr-1.5"></i>
+                                    මේ චිත්‍රපටය සඳහා subtitle අවශ්‍ය නැහැ. Sub දාලා තියෙන්නේ, download කරලා බලන්න.
+                                </p>
+                            </div>
+                        @endif
                     </div>
                     @endif
 
