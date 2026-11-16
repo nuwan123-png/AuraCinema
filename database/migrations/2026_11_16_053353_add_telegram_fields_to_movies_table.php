@@ -9,15 +9,25 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('movies', function (Blueprint $table) {
-            $table->string('telegram_url', 500)->nullable()->after('download_1080p');
-            $table->timestamp('telegram_added_at')->nullable()->after('telegram_url');
+            if (! Schema::hasColumn('movies', 'telegram_url')) {
+                $table->string('telegram_url', 500)->nullable()->after('download_1080p');
+            }
+            if (! Schema::hasColumn('movies', 'telegram_added_at')) {
+                $table->timestamp('telegram_added_at')->nullable()->after('telegram_url');
+            }
         });
     }
 
     public function down(): void
     {
         Schema::table('movies', function (Blueprint $table) {
-            $table->dropColumn(['telegram_url', 'telegram_added_at']);
+            $columns = array_filter(
+                ['telegram_url', 'telegram_added_at'],
+                fn (string $col) => Schema::hasColumn('movies', $col)
+            );
+            if ($columns !== []) {
+                $table->dropColumn($columns);
+            }
         });
     }
 };
