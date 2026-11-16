@@ -389,7 +389,7 @@
 
     @if($movie->telegram_url)
         <dialog data-tg-modal aria-label="{{ $movie->title }} Telegram notice"
-                class="w-[min(92vw,24rem)] overflow-hidden rounded-3xl border border-white/15 bg-zinc-950 p-0 text-white shadow-2xl shadow-black/80 backdrop:bg-black/80 backdrop:backdrop-blur-sm">
+                class="fixed inset-0 m-auto w-[min(92vw,24rem)] overflow-hidden rounded-3xl border border-white/15 bg-zinc-950 p-0 text-white shadow-2xl shadow-black/80 backdrop:bg-black/80 backdrop:backdrop-blur-sm">
             <div class="relative aspect-[3/4] w-full overflow-hidden bg-zinc-900">
                 @if($movie->image)
                     <img src="{{ $movie->poster_url }}" alt="{{ $movie->title }}" class="h-full w-full object-cover">
