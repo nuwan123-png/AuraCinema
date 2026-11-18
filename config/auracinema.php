@@ -19,6 +19,9 @@ return [
     // WhatsApp number visitors chat with to request a movie (country code, digits only). Change it with WHATSAPP_NUMBER.
     'whatsapp_number' => env('WHATSAPP_NUMBER', '94788402670'),
 
+    // Time zone used for "today" in the visitor stats (the server itself runs in UTC).
+    'stats_timezone' => env('STATS_TIMEZONE', 'Asia/Colombo'),
+
     // What a title can be (the value is stored in movies.type).
     'types' => [
         'movie' => 'Movie',

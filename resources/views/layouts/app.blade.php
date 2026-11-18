@@ -58,6 +58,7 @@
                 <div class="hidden shrink-0 gap-2 sm:flex">
                     <a href="{{ route('movies.incomplete') }}" class="btn-ghost !px-4 !py-2">Incomplete</a>
                     <a href="{{ route('requests.index') }}" class="btn-ghost !px-4 !py-2">Requests</a>
+                    <a href="{{ route('admin.stats') }}" class="btn-ghost !px-4 !py-2">Stats</a>
                     <a href="{{ route('movies.create') }}" class="btn-aura !px-4 !py-2">+ Add movie</a>
                 </div>
             @endif
