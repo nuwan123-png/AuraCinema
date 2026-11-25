@@ -8,6 +8,7 @@ use App\Models\Movie;
 use App\Support\EmbedUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
@@ -41,7 +42,7 @@ Route::prefix('api/v1')
     ->withoutMiddleware([
         \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
         \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
-    ])    
+    ])
     ->group(function () {
         Route::post('/auth/login', function (Request $request) {
             $data = $request->validate([
@@ -49,13 +50,14 @@ Route::prefix('api/v1')
                 'password' => ['required', 'string'],
             ]);
 
-            $adminUser = (string) env('ADMIN_USERNAME', env('ADMIN_USER', 'nuwan'));
-            $adminPass = (string) env('ADMIN_PASSWORD', env('ADMIN_PASS', ''));
+            $adminUser = (string) config('auracinema.admin_user', env('ADMIN_USER', ''));
+            $adminPassHash = (string) config('auracinema.admin_password_hash', env('ADMIN_PASSWORD_HASH', ''));
 
             if (
-                $adminPass === '' ||
+                $adminUser === '' ||
+                $adminPassHash === '' ||
                 ! hash_equals($adminUser, trim($data['email'])) ||
-                ! hash_equals($adminPass, $data['password'])
+                ! Hash::check($data['password'], $adminPassHash)
             ) {
                 return response()->json(['message' => 'Invalid username or password'], 401);
             }
