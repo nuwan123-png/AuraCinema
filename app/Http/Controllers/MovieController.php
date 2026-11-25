@@ -227,6 +227,85 @@ class MovieController extends Controller
         ]);
     }
 
+    //admin login
+    public function apiAdminIndex(Request $request)
+    {
+        $q = trim((string) $request->query('q', ''));
+        $query = Movie::query()->latest('id');
+
+        if ($q !== '') {
+            $like = '%'.addcslashes($q, '%_\\').'%';
+            $query->where(function ($w) use ($like) {
+                $w->where('title', 'like', $like)
+                    ->orWhere('tags', 'like', $like);
+            });
+        }
+
+        return response()->json([
+            'data' => $query->limit(100)->get([
+                'id', 'title', 'type', 'genre', 'year', 'language',
+                'tags', 'watch_with_sub', 'image',
+            ]),
+        ]);
+    }
+
+    public function apiAdminShow(Movie $movie)
+    {
+        return response()->json([
+            'id' => $movie->id,
+            'type' => $movie->type,
+            'title' => $movie->title,
+            'tags' => $movie->tags,
+            'description' => $movie->description,
+            'trailer_embed_url' => $movie->trailer_embed_url,
+            'watch_with_sub' => (bool) $movie->watch_with_sub,
+            'stream_url' => $movie->stream_url,
+            'embed_url' => $movie->embed_url,
+            'download_480p' => $movie->download_480p,
+            'download_720p' => $movie->download_720p,
+            'download_1080p' => $movie->download_1080p,
+            'telegram_url' => $movie->telegram_url,
+            'subtitle_url' => $movie->subtitle_url,
+            'image' => $movie->image,
+        ]);
+    }
+
+    public function apiAdminUpdate(Request $request, Movie $movie)
+    {
+        $data = $request->validate([
+            'type' => ['nullable', 'string'],
+            'title' => ['required', 'string', 'max:255'],
+            'tags' => ['nullable', 'string', 'max:500'],
+            'description' => ['nullable', 'string', 'max:5000'],
+            'trailer_embed_url' => ['nullable', 'string', 'max:500'],
+            'watch_with_sub' => ['nullable', 'boolean'],
+            'stream_url' => ['nullable', 'string', 'max:500'],
+            'embed_url' => ['nullable', 'string', 'max:500'],
+            'download_480p' => ['nullable', 'string', 'max:500'],
+            'download_720p' => ['nullable', 'string', 'max:500'],
+            'download_1080p' => ['nullable', 'string', 'max:500'],
+            'telegram_url' => ['nullable', 'string', 'max:500'],
+            'subtitle_url' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        if (array_key_exists('tags', $data)) {
+            $data['tags'] = Movie::normalizeTags($data['tags']);
+        }
+        if (array_key_exists('embed_url', $data) && filled($data['embed_url'])) {
+            $data['embed_url'] = EmbedUrl::normalize($data['embed_url']) ?? $data['embed_url'];
+        }
+        if (array_key_exists('trailer_embed_url', $data) && filled($data['trailer_embed_url'])) {
+            $data['trailer_embed_url'] = EmbedUrl::normalize($data['trailer_embed_url']) ?? $data['trailer_embed_url'];
+        }
+
+        $movie->update($data);
+
+        return response()->json([
+            'message' => 'Updated',
+            'movie' => $this->apiAdminShow($movie)->getData(true),
+        ]);
+    }
+
     public function edit(Movie $movie)
     {
         $movie->load('episodes');
