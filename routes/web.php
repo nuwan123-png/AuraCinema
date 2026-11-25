@@ -38,7 +38,10 @@ Route::get('/api/v1/movies/{movie}', [MovieController::class, 'apiShow'])->middl
 // Flutter Admin API endpoints in web.php
 Route::prefix('api/v1')
     ->middleware('throttle:60,1')
-    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
+    ->withoutMiddleware([
+        \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
+        \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
+    ])    
     ->group(function () {
         Route::post('/auth/login', function (Request $request) {
             $data = $request->validate([

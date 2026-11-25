@@ -17,6 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Behind CloudFront / a load balancer: trust X-Forwarded-* so isSecure() works.
         // Lock the EC2 security group to CloudFront only, otherwise these headers can be spoofed.
+        $middleware->validateCsrfTokens(except: [
+            'api/*',
+        ]);
         $middleware->trustProxies(at: '*');
         $middleware->alias(['admin' => AdminBasicAuth::class, 'track' => TrackVisit::class]);
 
