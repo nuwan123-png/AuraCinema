@@ -26,3 +26,4 @@ Route::middleware('track')->group(function () {
 });
 Route::get('/search/live', [MovieController::class, 'liveSearch'])->middleware('throttle:60,1')->name('search.live');
 Route::post('/request', [RequestController::class, 'store'])->middleware('throttle:5,1')->name('request.store');
+Route::get('/api/v1/movies/{movie}', [MovieController::class, 'apiShow'])->middleware('throttle:60,1');
