@@ -13,3 +13,4 @@ Route::get('/sitemap.xml', [SeoController::class, 'sitemap']);
 Route::get('/robots.txt', [SeoController::class, 'robots']);
 Route::get('/', [MovieController::class, 'index'])->name('home');
 Route::resource('movies', MovieController::class)->only(['index', 'show']);
+Route::get('/api/v1/movies/{movie}', [MovieController::class, 'apiShow'])->middleware('throttle:60,1');

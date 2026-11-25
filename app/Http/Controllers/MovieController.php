@@ -187,6 +187,46 @@ class MovieController extends Controller
         return view('movies.show', compact('movie'));
     }
 
+    //api eken data yawanna
+    public function apiShow(Movie $movie)
+    {
+        $movie->load(['episodes' => fn ($q) => $q->orderBy('number')]);
+
+        return response()->json([
+            'id' => $movie->id,
+            'title' => $movie->title,
+            'description' => $movie->description,
+            'image' => $movie->image,
+            'year' => $movie->year,
+            'type' => $movie->type,
+            'genre' => $movie->genre,
+            'language' => $movie->language,
+            'watch_with_sub' => (bool) $movie->watch_with_sub,
+            'is_completed' => (bool) $movie->is_completed,
+            'stream_url' => $movie->stream_url,
+            'embed_url' => $movie->embed_url,
+            'trailer_url' => $movie->trailer_url,
+            'trailer_embed_url' => $movie->trailer_embed_url,
+            'subtitle_url' => $movie->subtitle_url,
+            'downloads' => [
+                '480p' => $movie->download_480p,
+                '720p' => $movie->download_720p,
+                '1080p' => $movie->download_1080p,
+                'telegram' => $movie->telegram_url,
+            ],
+            'gallery' => $movie->gallery ?: [],
+            'cast_members' => $movie->cast_members ?: [],
+            'episodes' => $movie->episodes->map(fn ($ep) => [
+                'id' => $ep->id,
+                'number' => $ep->number,
+                'url' => $ep->url,
+                'subtitle_url' => $ep->subtitle_url,
+                'download_url' => $ep->download_url,
+                'telegram_url' => $ep->telegram_url,
+            ])->values(),
+        ]);
+    }
+
     public function edit(Movie $movie)
     {
         $movie->load('episodes');
