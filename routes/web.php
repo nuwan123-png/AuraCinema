@@ -7,7 +7,6 @@ use App\Http\Controllers\StatsController;
 use App\Models\Movie;
 use App\Support\EmbedUrl;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -42,50 +41,48 @@ Route::prefix('api/v1')
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
     ->group(function () {
         Route::post('/auth/login', function (Request $request) {
-            $credentials = $request->validate([
-                'email' => ['required', 'email'],
+            $data = $request->validate([
+                'email' => ['required', 'string'],
                 'password' => ['required', 'string'],
             ]);
 
-            if (! Auth::attempt($credentials)) {
-                return response()->json(['message' => 'Invalid email or password'], 401);
+            $adminUser = (string) env('ADMIN_USERNAME', env('ADMIN_USER', 'nuwan'));
+            $adminPass = (string) env('ADMIN_PASSWORD', env('ADMIN_PASS', ''));
+
+            if (
+                $adminPass === '' ||
+                ! hash_equals($adminUser, trim($data['email'])) ||
+                ! hash_equals($adminPass, $data['password'])
+            ) {
+                return response()->json(['message' => 'Invalid username or password'], 401);
             }
 
-            $user = $request->user();
             $token = Str::random(64);
-            Cache::put("auracinema_api_token:{$token}", $user->id, now()->addDays(14));
+            Cache::put("auracinema_api_token:{$token}", true, now()->addDays(14));
 
             return response()->json([
                 'token' => $token,
                 'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
+                    'name' => $adminUser,
                 ],
             ]);
         });
 
-        $checkAdminToken = function (Request $request) {
+        $checkAdminToken = function (Request $request): bool {
             $header = (string) $request->header('Authorization', '');
             $token = str_starts_with($header, 'Bearer ')
                 ? trim(substr($header, 7))
                 : '';
 
             if ($token === '') {
-                return null;
+                return false;
             }
 
-            $userId = Cache::get("auracinema_api_token:{$token}");
-            if (! $userId) {
-                return null;
-            }
-
-            return \App\Models\User::find($userId);
+            return (bool) Cache::get("auracinema_api_token:{$token}", false);
         };
 
         Route::get('/admin/movies', function (Request $request) use ($checkAdminToken) {
-            $user = $checkAdminToken($request);
-            if (! $user) {
+            if (! $checkAdminToken($request)) {
                 return response()->json(['message' => 'Unauthorized'], 401);
             }
 
@@ -116,8 +113,7 @@ Route::prefix('api/v1')
         });
 
         Route::get('/admin/movies/{movie}', function (Request $request, Movie $movie) use ($checkAdminToken) {
-            $user = $checkAdminToken($request);
-            if (! $user) {
+            if (! $checkAdminToken($request)) {
                 return response()->json(['message' => 'Unauthorized'], 401);
             }
 
@@ -141,8 +137,7 @@ Route::prefix('api/v1')
         });
 
         Route::put('/admin/movies/{movie}', function (Request $request, Movie $movie) use ($checkAdminToken) {
-            $user = $checkAdminToken($request);
-            if (! $user) {
+            if (! $checkAdminToken($request)) {
                 return response()->json(['message' => 'Unauthorized'], 401);
             }
 
