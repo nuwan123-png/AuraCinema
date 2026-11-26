@@ -731,49 +731,90 @@
     @endif
 
     @if($defaultPlayerSrc)
-        {{-- Subtitle Instruction Popup Modal ("Watch now" click කළ විට) --}}
+        {{-- Subtitle Instruction Popup Modal (Zoomed & Clear Step-by-Step Guide) --}}
         <dialog data-sub-guide-modal aria-label="Sinhala Subtitle Guide"
-                class="fixed inset-0 m-auto max-h-[90vh] w-[min(94vw,34rem)] overflow-y-auto rounded-3xl border border-white/15 bg-zinc-950 p-0 text-white shadow-2xl shadow-black/90 backdrop:bg-black/80 backdrop:backdrop-blur-sm">
-            <div class="relative p-4 sm:p-6">
+                class="fixed inset-0 m-auto max-h-[92vh] w-[min(94vw,42rem)] overflow-y-auto rounded-3xl border border-white/15 bg-[#101016] p-0 text-white shadow-2xl shadow-black/95 backdrop:bg-black/85 backdrop:backdrop-blur-md">
+            <div class="relative p-5 sm:p-7">
+                {{-- Top Gradient Accent --}}
                 <div class="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-orange-500 via-amber-400 to-emerald-400"></div>
 
+                {{-- Close Button --}}
                 <button type="button" data-sub-guide-close aria-label="Close"
-                        class="absolute right-3.5 top-3.5 z-10 grid h-8 w-8 place-items-center rounded-full bg-white/10 text-white transition hover:bg-orange-500">
+                        class="absolute right-4 top-4 z-10 grid h-9 w-9 place-items-center rounded-full bg-white/10 text-slate-200 ring-1 ring-white/15 transition hover:bg-orange-500 hover:text-white">
                     <i class="fa-solid fa-xmark text-sm"></i>
                 </button>
 
-                <div class="pr-8">
-                    <span class="inline-flex items-center gap-1.5 rounded-full border border-orange-500/30 bg-orange-500/15 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-orange-300">
-                        <i class="fa-solid fa-closed-captioning"></i> AuraCinema Subtitle උපදෙස්
-                    </span>
-                    <p class="mt-2.5 text-base font-extrabold leading-snug text-amber-300 sm:text-lg">
-                        මේ Settings (<i class="fa-solid fa-gear text-white"></i>) icon එක ඔබලා Captions &rarr; Singhalese දාගෙන බලන්න.
-                    </p>
-                </div>
-
-                <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div class="overflow-hidden rounded-xl border border-white/10 bg-zinc-900">
-                        <img src="{{ asset('images/sub-step-1.jpg') }}"
-                             alt="Step 1: Click Settings icon"
-                             class="aspect-video w-full object-cover">
-                        <div class="px-3 py-2 text-center text-xs font-bold text-slate-200">
-                            1. පහළ ඇති Settings (<i class="fa-solid fa-gear text-orange-400"></i>) icon එක ඔබන්න
-                        </div>
+                {{-- Header Section --}}
+                <div class="flex items-start gap-3.5 pr-10">
+                    <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-orange-500/25 to-amber-500/10 text-xl text-orange-400 ring-1 ring-orange-500/40">
+                        <i class="fa-solid fa-closed-captioning"></i>
                     </div>
-
-                    <div class="overflow-hidden rounded-xl border border-white/10 bg-zinc-900">
-                        <img src="{{ asset('images/sub-step-2.jpg') }}"
-                             alt="Step 2: Select Captions Singhalese"
-                             class="aspect-video w-full object-cover">
-                        <div class="px-3 py-2 text-center text-xs font-bold text-slate-200">
-                            2. Captions &rarr; <span class="text-emerald-400">Singhalese</span> තෝරන්න
-                        </div>
+                    <div>
+                        <span class="text-[11px] font-bold uppercase tracking-widest text-orange-400">
+                            AuraCinema Subtitle Guide
+                        </span>
+                        <h3 class="mt-0.5 text-lg font-extrabold leading-snug text-white sm:text-xl">
+                            සිංහල Subtitle දාගන්නේ කොහොමද?
+                        </h3>
+                        <p class="mt-1 text-xs font-medium leading-relaxed text-slate-300 sm:text-sm">
+                            Video player එකේ පහළ දකුණු කොනේ ඇති <span class="font-bold text-amber-300">Settings (<i class="fa-solid fa-gear text-white"></i>)</span> icon එක ඔබලා <span class="font-bold text-emerald-400">Captions &rarr; Singhalese</span> තෝරන්න.
+                        </p>
                     </div>
                 </div>
 
+                {{-- Zoomed Step Cards --}}
+                <div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    {{-- Step 1 --}}
+                    <div class="flex flex-col overflow-hidden rounded-2xl border border-orange-500/30 bg-zinc-900/90 shadow-lg">
+                        <div class="flex items-center gap-2.5 border-b border-white/10 bg-white/[0.03] px-3.5 py-2.5">
+                            <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-orange-500 text-xs font-extrabold text-white shadow">
+                                1
+                            </span>
+                            <span class="text-xs font-bold text-slate-100 sm:text-sm">
+                                <span class="text-orange-400">Settings (<i class="fa-solid fa-gear"></i>)</span> icon එක ඔබන්න
+                            </span>
+                        </div>
+                        <div class="relative aspect-[16/10] w-full overflow-hidden bg-black">
+                            <img src="{{ asset('images/sub-step-1.jpg') }}"
+                                 alt="Step 1: Click Settings gear icon"
+                                 class="h-full w-full origin-bottom-right scale-[1.75] object-cover">
+                            <span class="pointer-events-none absolute left-2.5 top-2.5 rounded-md bg-black/75 px-2 py-0.5 text-[10px] font-bold text-orange-300 ring-1 ring-orange-500/40 backdrop-blur-sm">
+                                පහළ දකුණු කොන
+                            </span>
+                        </div>
+                    </div>
+
+                    {{-- Step 2 --}}
+                    <div class="flex flex-col overflow-hidden rounded-2xl border border-emerald-500/30 bg-zinc-900/90 shadow-lg">
+                        <div class="flex items-center gap-2.5 border-b border-white/10 bg-white/[0.03] px-3.5 py-2.5">
+                            <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-500 text-xs font-extrabold text-zinc-950 shadow">
+                                2
+                            </span>
+                            <span class="text-xs font-bold text-slate-100 sm:text-sm">
+                                Captions &rarr; <span class="text-emerald-400">Singhalese</span> තෝරන්න
+                            </span>
+                        </div>
+                        <div class="relative aspect-[16/10] w-full overflow-hidden bg-black">
+                            <img src="{{ asset('images/sub-step-2.jpg') }}"
+                                 alt="Step 2: Select Captions Singhalese"
+                                 class="h-full w-full origin-bottom-right scale-[1.75] object-cover">
+                            <span class="pointer-events-none absolute left-2.5 top-2.5 rounded-md bg-black/75 px-2 py-0.5 text-[10px] font-bold text-emerald-300 ring-1 ring-emerald-500/40 backdrop-blur-sm">
+                                Singhalese ON කරන්න
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Helpful Note --}}
+                <div class="mt-4 flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-xs text-slate-300">
+                    <i class="fa-solid fa-circle-info shrink-0 text-amber-400"></i>
+                    <span>Full-screen කරලා බලද්දීත් මේ විදිහටම <strong>Settings (<i class="fa-solid fa-gear"></i>)</strong> icon එකෙන් සිංහල subtitle දාගන්න පුළුවන්.</span>
+                </div>
+
+                {{-- Action Button --}}
                 <button type="button" data-sub-guide-close
-                        class="mt-5 w-full rounded-full bg-orange-500 py-3 text-sm font-extrabold uppercase tracking-wider text-white shadow-lg shadow-orange-500/25 transition hover:bg-orange-400">
-                    හරි, තේරුණා (OK)
+                        class="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 py-3.5 text-sm font-extrabold tracking-wide text-white shadow-lg shadow-orange-500/25 transition hover:from-orange-400 hover:to-amber-400">
+                    <i class="fa-solid fa-check"></i> හරි, තේරුණා · දැන් බලමු
                 </button>
             </div>
         </dialog>
