@@ -97,7 +97,7 @@ Route::prefix('api/v1')
             }
 
             try {
-                $req = Http::timeout(3);
+                $req = Http::timeout(2);
                 if ($secret !== '') {
                     $req = $req->withHeaders(['X-Admin-Secret' => $secret]);
                 }
@@ -105,6 +105,34 @@ Route::prefix('api/v1')
             } catch (\Throwable $e) {
                 // Silent fallback if .NET API is restarting
             }
+        };
+
+        $storePosterImage = function (Request $request, ?string $imageUrl, ?string $oldImage = null): ?string {
+            $newPath = null;
+
+            if ($request->hasFile('image')) {
+                $newPath = $request->file('image')->store('posters', 'public');
+            } elseif (filled($imageUrl)) {
+                $rawUrl = trim((string) $imageUrl);
+                try {
+                    $imgRes = Http::timeout(10)->get($rawUrl);
+                    if ($imgRes->successful() && strlen($imgRes->body()) > 500) {
+                        $ext = pathinfo((string) parse_url($rawUrl, PHP_URL_PATH), PATHINFO_EXTENSION);
+                        $ext = in_array(strtolower($ext), ['jpg', 'jpeg', 'png', 'webp']) ? strtolower($ext) : 'jpg';
+                        $filename = 'posters/'.Str::random(24).'.'.$ext;
+                        Storage::disk('public')->put($filename, $imgRes->body());
+                        $newPath = $filename;
+                    }
+                } catch (\Throwable $e) {
+                    // Ignore poster download error
+                }
+            }
+
+            if ($newPath !== null && filled($oldImage) && ! str_starts_with($oldImage, 'http')) {
+                Storage::disk('public')->delete($oldImage);
+            }
+
+            return $newPath;
         };
 
         Route::get('/admin/movies', function (Request $request) use ($checkAdminToken) {
@@ -139,7 +167,7 @@ Route::prefix('api/v1')
         });
 
         // Create a new movie from Flutter Mobile Admin
-        Route::post('/admin/movies', function (Request $request) use ($checkAdminToken, $clearDotnetCache) {
+        Route::post('/admin/movies', function (Request $request) use ($checkAdminToken, $clearDotnetCache, $storePosterImage) {
             if (! $checkAdminToken($request)) {
                 return response()->json(['message' => 'Unauthorized'], 401);
             }
@@ -165,25 +193,7 @@ Route::prefix('api/v1')
                 'subtitle_url' => ['nullable', 'string', 'max:500'],
             ]);
 
-            $imagePath = null;
-            if ($request->hasFile('image')) {
-                $imagePath = $request->file('image')->store('posters', 'public');
-            } elseif (filled($data['image_url'] ?? null)) {
-                $rawUrl = trim((string) $data['image_url']);
-                try {
-                    $imgRes = Http::timeout(10)->get($rawUrl);
-                    if ($imgRes->successful() && strlen($imgRes->body()) > 500) {
-                        $ext = pathinfo((string) parse_url($rawUrl, PHP_URL_PATH), PATHINFO_EXTENSION);
-                        $ext = in_array(strtolower($ext), ['jpg', 'jpeg', 'png', 'webp']) ? strtolower($ext) : 'jpg';
-                        $filename = 'posters/'.Str::random(24).'.'.$ext;
-                        Storage::disk('public')->put($filename, $imgRes->body());
-                        $imagePath = $filename;
-                    }
-                } catch (\Throwable $e) {
-                    // Ignore poster download error
-                }
-            }
-
+            $imagePath = $storePosterImage($request, $data['image_url'] ?? null, null);
             unset($data['image_url'], $data['image']);
 
             $data['type'] = filled($data['type'] ?? null) ? trim($data['type']) : 'movie';
@@ -191,7 +201,7 @@ Route::prefix('api/v1')
             $data['genre'] = filled($data['genre'] ?? null) ? trim($data['genre']) : null;
             $data['year'] = filled($data['year'] ?? null) ? trim($data['year']) : null;
             $data['tags'] = Movie::normalizeTags($data['tags'] ?? '');
-            $data['watch_with_sub'] = (bool) ($data['watch_with_sub'] ?? false);
+            $data['watch_with_sub'] = filter_var($data['watch_with_sub'] ?? false, FILTER_VALIDATE_BOOLEAN);
             $data['image'] = $imagePath;
 
             if (filled($data['embed_url'] ?? null)) {
@@ -206,7 +216,6 @@ Route::prefix('api/v1')
 
             $movie = Movie::create($data);
 
-            // Instantly clear .NET API cache so mobile app updates immediately
             $clearDotnetCache();
 
             return response()->json([
@@ -218,6 +227,13 @@ Route::prefix('api/v1')
         Route::get('/admin/movies/{movie}', function (Request $request, Movie $movie) use ($checkAdminToken) {
             if (! $checkAdminToken($request)) {
                 return response()->json(['message' => 'Unauthorized'], 401);
+            }
+
+            $posterUrl = null;
+            if (filled($movie->image)) {
+                $posterUrl = str_starts_with($movie->image, 'http')
+                    ? $movie->image
+                    : rtrim((string) config('auracinema.site_url', url('/')), '/').'/storage/'.ltrim($movie->image, '/');
             }
 
             return response()->json([
@@ -239,10 +255,11 @@ Route::prefix('api/v1')
                 'telegram_url' => $movie->telegram_url,
                 'subtitle_url' => $movie->subtitle_url,
                 'image' => $movie->image,
+                'poster_url' => $posterUrl,
             ]);
         });
 
-        Route::put('/admin/movies/{movie}', function (Request $request, Movie $movie) use ($checkAdminToken, $clearDotnetCache) {
+        Route::match(['put', 'post'], '/admin/movies/{movie}', function (Request $request, Movie $movie) use ($checkAdminToken, $clearDotnetCache, $storePosterImage) {
             if (! $checkAdminToken($request)) {
                 return response()->json(['message' => 'Unauthorized'], 401);
             }
@@ -251,6 +268,8 @@ Route::prefix('api/v1')
                 'type' => ['nullable', 'string'],
                 'language' => ['nullable', 'string', 'max:100'],
                 'title' => ['required', 'string', 'max:255'],
+                'image_url' => ['nullable', 'string', 'max:1000'],
+                'image' => ['nullable', 'image', 'max:5120'],
                 'tags' => ['nullable', 'string', 'max:500'],
                 'description' => ['nullable', 'string', 'max:5000'],
                 'trailer_embed_url' => ['nullable', 'string', 'max:500'],
@@ -264,11 +283,20 @@ Route::prefix('api/v1')
                 'subtitle_url' => ['nullable', 'string', 'max:500'],
             ]);
 
+            $newPoster = $storePosterImage($request, $data['image_url'] ?? null, $movie->image);
+            unset($data['image_url'], $data['image']);
+            if ($newPoster !== null) {
+                $data['image'] = $newPoster;
+            }
+
             if (array_key_exists('language', $data)) {
                 $data['language'] = filled($data['language']) ? trim($data['language']) : null;
             }
             if (array_key_exists('tags', $data)) {
                 $data['tags'] = Movie::normalizeTags($data['tags']);
+            }
+            if (array_key_exists('watch_with_sub', $data)) {
+                $data['watch_with_sub'] = filter_var($data['watch_with_sub'], FILTER_VALIDATE_BOOLEAN);
             }
             if (array_key_exists('embed_url', $data) && filled($data['embed_url'])) {
                 $data['embed_url'] = EmbedUrl::normalize($data['embed_url']) ?? $data['embed_url'];
@@ -279,7 +307,6 @@ Route::prefix('api/v1')
 
             $movie->update($data);
 
-            // Instantly clear .NET API cache so mobile app updates immediately
             $clearDotnetCache();
 
             return response()->json([
@@ -287,6 +314,7 @@ Route::prefix('api/v1')
                 'id' => $movie->id,
                 'language' => $movie->language,
                 'tags' => $movie->tags,
+                'image' => $movie->image,
             ]);
         });
     });
