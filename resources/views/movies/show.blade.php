@@ -34,7 +34,6 @@
 
     $safeFileBase = \Illuminate\Support\Str::slug($movie->title) ?: 'auracinema-movie';
 
-    // Collect all direct download options (including auto-fallback from stream_url / embed_url)
     $quickDownloads = [];
     if (filled($movie->download_1080p)) {
         $u = $toMobileDownloadUrl($movie->download_1080p);
@@ -79,7 +78,6 @@
             ];
         }
     }
-    // Auto-fallback: if no explicit download links were entered, convert Streamtape embed_url (/e/ -> /v/)
     if (empty($quickDownloads) && filled($movie->embed_url)) {
         $u = $toMobileDownloadUrl($movie->embed_url);
         $quickDownloads[] = [
@@ -148,11 +146,13 @@
             <p class="mb-6 max-w-3xl whitespace-pre-line text-sm leading-relaxed text-slate-300">{{ $movie->description ?: 'No synopsis provided.' }}</p>
 
             <div class="flex flex-wrap items-start gap-3">
-                {{-- Direct Mobile Download Button right next to the movie --}}
                 @if(!empty($quickDownloads))
                     @php $primaryDl = $quickDownloads[0]; @endphp
                     <a href="{{ $primaryDl['url'] }}"
-                       @if($primaryDl['direct']) download="{{ $primaryDl['filename'] }}" @else target="_blank" rel="noopener noreferrer" @endif
+                       data-dl-notice
+                       @if($primaryDl['direct']) data-dl-filename="{{ $primaryDl['filename'] }}" @endif
+                       target="_blank"
+                       rel="noopener noreferrer"
                        class="btn-aura shadow-lg shadow-orange-500/20">
                         <i class="fa-solid fa-download"></i> Download ({{ $primaryDl['badge'] }})
                     </a>
@@ -294,16 +294,19 @@
                             <i class="fa-solid fa-play text-xs text-orange-400"></i> Ep {{ $episode->number }}
                         </button>
                         
-                        {{-- 2. Direct Download Button (Auto-uses episode download_url or Streamtape URL) --}}
+                        {{-- 2. Direct Download Button --}}
                         @if(!empty($epDlUrl))
                             <a href="{{ $epDlUrl }}"
-                               @if($epIsDirect) download="{{ $safeFileBase }}-ep-{{ $episode->number }}.mp4" @else target="_blank" rel="noopener noreferrer" @endif
+                               data-dl-notice
+                               @if($epIsDirect) data-dl-filename="{{ $safeFileBase }}-ep-{{ $episode->number }}.mp4" @endif
+                               target="_blank"
+                               rel="noopener noreferrer"
                                class="mt-2 flex w-full items-center justify-center gap-1.5 rounded bg-blue-600/20 py-1.5 text-xs font-medium text-blue-400 transition hover:bg-blue-600 hover:text-white">
                                 <i class="fa-solid fa-download"></i> Download
                             </a>
                         @endif
 
-                        {{-- 3. Telegram Download Button (Only shows if telegram_url exists) --}}
+                        {{-- 3. Telegram Download Button --}}
                         @if(!empty($episode->telegram_url))
                             @php
                                 $epAddedAt = $episode->created_at ?? $movie->created_at;
@@ -400,7 +403,16 @@
 
     @if($defaultPlayerSrc)
         <section class="mt-10" id="watch">
-            <h2 class="mb-3 text-base font-bold" id="watch-title">Watch now</h2>
+            <div class="mx-auto mb-3 flex w-full max-w-4xl flex-wrap items-center justify-between gap-2">
+                <h2 class="text-base font-bold" id="watch-title">Watch now</h2>
+                <button type="button"
+                        data-adblock-toggle
+                        class="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold text-emerald-300 transition hover:bg-emerald-500/20">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span data-adblock-label>Ad &amp; Popup Blocker: ON</span>
+                </button>
+            </div>
+
             <div data-embed class="mx-auto w-full max-w-4xl">
                 <button type="button" data-embed-load data-embed-src="{{ $defaultPlayerSrc }}" data-embed-title="{{ $movie->title }}"
                         class="grid aspect-video w-full place-items-center rounded-lg bg-black ring-1 ring-white/10 transition hover:ring-orange-400/60"
@@ -410,68 +422,87 @@
                     </span>
                 </button>
             </div>
-
-            {{-- Direct Mobile Downloader Bar right under the video player --}}
-            @if(!empty($quickDownloads) || $movie->telegram_url || $movie->subtitle_url)
-                <div class="mx-auto mt-4 w-full max-w-4xl rounded-xl border border-orange-500/25 bg-gradient-to-r from-zinc-900/95 via-zinc-900/85 to-zinc-950/95 p-4 shadow-xl">
-                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                        <div class="flex items-center gap-2">
-                            <span class="grid h-7 w-7 place-items-center rounded-lg bg-orange-500/20 text-orange-400">
-                                <i class="fa-solid fa-mobile-screen-button text-xs"></i>
-                            </span>
-                            <div>
-                                <h3 class="text-xs font-extrabold uppercase tracking-wider text-white">Mobile Direct Downloader</h3>
-                                <p class="text-[11px] text-slate-400">පහළ button එක ඔබලා කෙළින්ම phone එකට download කරගන්න.</p>
-                            </div>
-                        </div>
-                        <span class="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400 ring-1 ring-emerald-500/30">
-                            DIRECT LINK
-                        </span>
-                    </div>
-
-                    <div class="flex flex-wrap gap-2.5">
-                        @foreach($quickDownloads as $dl)
-                            <a href="{{ $dl['url'] }}"
-                               @if($dl['direct']) download="{{ $dl['filename'] }}" @else target="_blank" rel="noopener noreferrer" @endif
-                               class="inline-flex flex-1 min-w-[140px] items-center justify-center gap-2 rounded-lg bg-orange-500 px-4 py-2.5 text-xs font-extrabold text-white shadow-md shadow-orange-500/20 transition hover:bg-orange-400 active:scale-[0.98]">
-                                <i class="fa-solid fa-download"></i>
-                                <span>{{ $dl['label'] }}</span>
-                            </a>
-                        @endforeach
-
-                        @if($movie->telegram_url)
-                            <button type="button"
-                                    data-tg-download
-                                    data-tg-title="{{ $movie->title }}"
-                                    data-tg-target="{{ $isTgExpired ? $waRequestUrl : $movie->telegram_url }}"
-                                    data-tg-expired="{{ $isTgExpired ? '1' : '0' }}"
-                                    class="inline-flex flex-1 min-w-[140px] items-center justify-center gap-2 rounded-lg bg-sky-500/20 px-4 py-2.5 text-xs font-bold text-sky-300 ring-1 ring-sky-500/40 transition hover:bg-sky-500 hover:text-white active:scale-[0.98]">
-                                <i class="fa-brands fa-telegram text-sm"></i>
-                                <span>Telegram</span>
-                            </button>
-                        @endif
-
-                        @if($movie->subtitle_url)
-                            <a href="{{ $movie->subtitle_url }}"
-                               download="{{ $safeFileBase }}-sinhala-sub.srt"
-                               target="_blank"
-                               rel="noopener noreferrer"
-                               class="inline-flex flex-1 min-w-[140px] items-center justify-center gap-2 rounded-lg bg-white/10 px-4 py-2.5 text-xs font-bold text-slate-200 ring-1 ring-white/15 transition hover:bg-white/20 hover:text-white active:scale-[0.98]">
-                                <i class="fa-regular fa-closed-captioning text-orange-400"></i>
-                                <span>Sinhala Sub</span>
-                            </a>
-                        @endif
-                    </div>
-                </div>
-            @endif
         </section>
+
+        {{-- Web Ad & Popup Blocker Script (blocks popup tabs & top redirects from Streamtape iframe) --}}
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                let adBlockOn = true;
+                const embedContainer = document.querySelector('#watch [data-embed]');
+                const toggleBtn = document.querySelector('[data-adblock-toggle]');
+                const toggleLabel = document.querySelector('[data-adblock-label]');
+
+                // Block popup windows triggered from parent page
+                const origOpen = window.open;
+                window.open = function (url, target, features) {
+                    if (adBlockOn && url && !String(url).includes('wa.me') && !String(url).includes('streamtape.com/v/')) {
+                        return null;
+                    }
+                    return origOpen ? origOpen.apply(window, arguments) : null;
+                };
+
+                const applySandbox = (iframe) => {
+                    if (!iframe || iframe.tagName !== 'IFRAME') return;
+                    if (adBlockOn) {
+                        if (iframe.dataset.sandboxApplied === '1') return;
+                        iframe.dataset.sandboxApplied = '1';
+                        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
+                        iframe.setAttribute('referrerpolicy', 'no-referrer');
+                        const currentSrc = iframe.getAttribute('src');
+                        if (currentSrc) {
+                            iframe.setAttribute('src', currentSrc);
+                        }
+                    } else {
+                        if (iframe.dataset.sandboxApplied !== '1') return;
+                        delete iframe.dataset.sandboxApplied;
+                        iframe.removeAttribute('sandbox');
+                        const currentSrc = iframe.getAttribute('src');
+                        if (currentSrc) {
+                            iframe.setAttribute('src', currentSrc);
+                        }
+                    }
+                };
+
+                if (embedContainer) {
+                    const observer = new MutationObserver((mutations) => {
+                        for (const m of mutations) {
+                            m.addedNodes.forEach((node) => {
+                                if (node.nodeType === 1) {
+                                    if (node.tagName === 'IFRAME') applySandbox(node);
+                                    node.querySelectorAll?.('iframe').forEach(applySandbox);
+                                }
+                            });
+                        }
+                    });
+                    observer.observe(embedContainer, { childList: true, subtree: true });
+                }
+
+                toggleBtn?.addEventListener('click', () => {
+                    adBlockOn = !adBlockOn;
+                    if (toggleLabel) {
+                        toggleLabel.textContent = adBlockOn
+                            ? 'Ad & Popup Blocker: ON'
+                            : 'Ad & Popup Blocker: OFF';
+                    }
+                    toggleBtn.classList.toggle('border-emerald-500/30', adBlockOn);
+                    toggleBtn.classList.toggle('bg-emerald-500/10', adBlockOn);
+                    toggleBtn.classList.toggle('text-emerald-300', adBlockOn);
+                    toggleBtn.classList.toggle('border-amber-500/30', !adBlockOn);
+                    toggleBtn.classList.toggle('bg-amber-500/10', !adBlockOn);
+                    toggleBtn.classList.toggle('text-amber-300', !adBlockOn);
+
+                    const activeIframe = embedContainer?.querySelector('iframe');
+                    if (activeIframe) applySandbox(activeIframe);
+                });
+            });
+        </script>
     @endif
 
     @php
         $episodeSubs = $movie->episodes->filter(fn ($e) => filled($e->subtitle_url));
     @endphp
 
-    {{-- Download & Subtitles Section (always shown if any download, embed fallback, telegram, or subtitle exists) --}}
+    {{-- Download & Subtitles Section --}}
     @if(!empty($quickDownloads) || $movie->telegram_url || $movie->subtitle_url || $episodeSubs->isNotEmpty())
         <section class="mt-10" id="downloads">
                 <div class="mx-auto grid w-full max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
@@ -486,7 +517,10 @@
                         <div class="space-y-3">
                             @foreach($quickDownloads as $dl)
                                 <a href="{{ $dl['url'] }}"
-                                   @if($dl['direct']) download="{{ $dl['filename'] }}" @else target="_blank" rel="noopener noreferrer" @endif
+                                   data-dl-notice
+                                   @if($dl['direct']) data-dl-filename="{{ $dl['filename'] }}" @endif
+                                   target="_blank"
+                                   rel="noopener noreferrer"
                                    class="group flex items-center justify-between rounded-lg bg-black/40 p-3 ring-1 ring-white/5 transition hover:bg-black/60 hover:ring-orange-500/50">
                                     <div class="flex items-center gap-4">
                                         <div class="flex h-12 w-12 flex-col items-center justify-center rounded bg-white/5 font-bold text-slate-300 transition group-hover:bg-orange-500/10 group-hover:text-orange-400">
@@ -496,7 +530,7 @@
                                         <div>
                                             <div class="text-sm font-bold text-slate-200 transition group-hover:text-white">{{ $dl['label'] }}</div>
                                             <div class="mt-0.5 flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
-                                                <span class="rounded bg-white/10 px-1.5 py-0.5 text-emerald-400">MOBILE READY</span>
+                                                <span class="rounded bg-white/10 px-1.5 py-0.5 text-emerald-400">DOWNLOAD</span>
                                             </div>
                                         </div>
                                     </div>
@@ -584,13 +618,85 @@
                             </div>
                         </div>
                     @else
-                        {{-- Subtitle එකක් නැති විට UI එක සමබර කිරීමට හිස් ඩිව් එකක් --}}
                         <div></div>
                     @endif
 
                 </div>
         </section>
     @endif
+
+    {{-- Download Notice Popup Modal ("Ads close කරලා download කරගන්න") --}}
+    <dialog data-dl-modal aria-label="Download notice"
+            class="fixed inset-0 m-auto w-[min(92vw,24rem)] overflow-hidden rounded-3xl border border-white/15 bg-zinc-950 p-0 text-white shadow-2xl shadow-black/80 backdrop:bg-black/80 backdrop:backdrop-blur-sm">
+        <div class="relative p-6 text-center">
+            <div class="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-orange-500 via-amber-400 to-emerald-400"></div>
+            <button type="button" data-dl-close aria-label="Close"
+                    class="absolute right-3.5 top-3.5 grid h-8 w-8 place-items-center rounded-full bg-white/10 text-white transition hover:bg-orange-500">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+
+            <div class="mx-auto mb-3 mt-1 grid h-14 w-14 place-items-center rounded-2xl bg-orange-500/15 text-2xl text-orange-400 ring-1 ring-orange-500/30">
+                <i class="fa-solid fa-download"></i>
+            </div>
+
+            <span class="mb-1 inline-block text-[11px] font-bold uppercase tracking-widest text-orange-400">
+                AuraCinema Notice
+            </span>
+
+            <p class="mb-5 mt-2 text-lg font-extrabold leading-snug text-amber-300">
+                Ads close කරලා download කරගන්න
+            </p>
+
+            <a href="#" target="_blank" rel="noopener noreferrer" data-dl-ok
+               class="block w-full rounded-full bg-orange-500 py-3 text-sm font-extrabold uppercase tracking-wider text-white shadow-lg shadow-orange-500/25 transition hover:bg-orange-400">
+                OK &middot; Download
+            </a>
+        </div>
+    </dialog>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const dlBtns = document.querySelectorAll('[data-dl-notice]');
+            const dlModal = document.querySelector('[data-dl-modal]');
+            const dlClose = document.querySelector('[data-dl-close]');
+            const dlOk = document.querySelector('[data-dl-ok]');
+
+            if (!dlBtns.length || !dlModal || !dlOk) return;
+
+            dlBtns.forEach((btn) => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    dlOk.href = btn.href;
+                    const fname = btn.dataset.dlFilename;
+                    if (fname) {
+                        dlOk.setAttribute('download', fname);
+                    } else {
+                        dlOk.removeAttribute('download');
+                    }
+
+                    if (typeof dlModal.showModal === 'function') {
+                        dlModal.showModal();
+                    } else {
+                        dlModal.setAttribute('open', '');
+                    }
+                });
+            });
+
+            const closeDlModal = () => {
+                if (typeof dlModal.close === 'function') {
+                    dlModal.close();
+                } else {
+                    dlModal.removeAttribute('open');
+                }
+            };
+
+            dlClose?.addEventListener('click', closeDlModal);
+            dlOk?.addEventListener('click', () => setTimeout(closeDlModal, 150));
+            dlModal.addEventListener('click', (e) => {
+                if (e.target === dlModal) closeDlModal();
+            });
+        });
+    </script>
 
     @php
         $hasAnyTelegram = $movie->telegram_url || $movie->episodes->contains(fn ($e) => filled($e->telegram_url));
