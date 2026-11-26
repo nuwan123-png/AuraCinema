@@ -91,7 +91,7 @@ Route::prefix('api/v1')
         };
 
         $clearDotnetCache = function (): void {
-            $baseUrl = rtrim((string) config('auracinema.dotnet_api_url', env('DOTNET_API_URL', 'http://127.0.0.1:5050')), '/');
+            $configured = rtrim((string) config('auracinema.dotnet_api_url', env('DOTNET_API_URL', '')), '/');
             $adminSecret = (string) config('auracinema.admin_secret', env('ADMIN_SECRET', 'AuraCinema_Admin_Master_999'));
             $apiKey = (string) config('auracinema.dotnet_api_key', env('DOTNET_API_KEY', 'AuraCinema_Secret_Key_2026'));
 
@@ -100,14 +100,24 @@ Route::prefix('api/v1')
                 'X-Admin-Secret' => $adminSecret,
             ];
 
-            foreach (["{$baseUrl}/admin/clear-cache", "{$baseUrl}/api/admin/clear-cache"] as $endpoint) {
+            $hosts = array_values(array_unique(array_filter([
+                $configured,
+                'http://172.17.0.1:5050',
+                'http://172.31.13.67:5050',
+                'http://127.0.0.1:5050',
+            ])));
+
+            foreach ($hosts as $baseUrl) {
                 try {
-                    $res = Http::timeout(2)->withHeaders($headers)->post($endpoint);
+                    $res = Http::timeout(2)
+                        ->withHeaders($headers)
+                        ->post("{$baseUrl}/api/v1/admin/clear-cache");
+
                     if ($res->successful()) {
                         break;
                     }
                 } catch (\Throwable $e) {
-                    // Continue to fallback endpoint
+                    // Try next reachable Docker/host IP
                 }
             }
         };
