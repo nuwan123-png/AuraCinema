@@ -54,20 +54,30 @@ class MovieController extends Controller
         $type = (string) $request->query('type', '');
         $genre = (string) $request->query('genre', '');
         $year = (int) $request->query('year', 0);
-        $language = (string) $request->query('language', '');
+        $rawLanguage = trim((string) $request->query('language', ''));
         $tag = Movie::normalizeTag((string) $request->query('tag', ''));
 
         $type = array_key_exists($type, config('auracinema.types')) ? $type : '';
         $genre = in_array($genre, config('auracinema.genres'), true) ? $genre : '';
-        $language = in_array($language, config('auracinema.languages'), true) ? $language : '';
+
+        $language = '';
+        if ($rawLanguage !== '') {
+            foreach (config('auracinema.languages', []) as $allowedLang) {
+                if (strcasecmp($rawLanguage, $allowedLang) === 0) {
+                    $language = $allowedLang;
+                    break;
+                }
+            }
+        }
+
         $year = ($year >= 1900 && $year <= 2100) ? $year : 0;
 
         if ($q !== '' || $type !== '' || $genre !== '' || $year !== 0 || $language !== '' || $tag !== '') {
             $query = Movie::query()->withCount('episodes');
+            $op = DB::connection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
 
             if ($q !== '') {
                 $like = '%'.addcslashes($q, '%_\\').'%';
-                $op = DB::connection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
                 $query->where(fn ($w) => $w->where('title', $op, $like)->orWhere('tags', $op, $like));
             }
             if ($type !== '') {
@@ -78,13 +88,13 @@ class MovieController extends Controller
             }
             if ($language !== '') {
                 $langTag = '%,'.addcslashes(Movie::normalizeTag($language), '%_\\').',%';
-                $query->where(fn ($w) => $w->where('language', $language)->orWhere('tags', 'like', $langTag));
+                $query->where(fn ($w) => $w->where('language', $op, $language)->orWhere('tags', $op, $langTag));
             }
             if ($year !== 0) {
                 $query->where('year', $year);
             }
             if ($tag !== '') {
-                $query->where('tags', 'like', '%,'.addcslashes($tag, '%_\\').',%');
+                $query->where('tags', $op, '%,'.addcslashes($tag, '%_\\').',%');
             }
 
             $heading = $q !== ''
@@ -187,7 +197,6 @@ class MovieController extends Controller
         return view('movies.show', compact('movie'));
     }
 
-    //api eken data yawanna
     public function apiShow(Movie $movie)
     {
         $movie->load(['episodes' => fn ($q) => $q->orderBy('number')]);
@@ -227,7 +236,6 @@ class MovieController extends Controller
         ]);
     }
 
-    //admin login
     public function apiAdminIndex(Request $request)
     {
         $q = trim((string) $request->query('q', ''));
@@ -457,7 +465,7 @@ class MovieController extends Controller
         if ($trailerEmbed !== '') {
             $request->merge(['trailer_embed_url' => EmbedUrl::normalize($trailerEmbed) ?? $trailerEmbed]);
         }
-        
+
         foreach (['download_480p', 'download_720p', 'download_1080p'] as $field) {
             $dlLink = trim((string) $request->input($field, ''));
             if ($dlLink !== '') {
@@ -493,7 +501,7 @@ class MovieController extends Controller
         } elseif (! $movie || $movie->telegram_url !== $newTgUrl || ! $movie->telegram_added_at) {
             $data['telegram_added_at'] = now();
         }
-        
+
         $data['is_completed'] = ! empty($validated['episodes']) && ! empty($validated['is_completed']);
         $data['watch_with_sub'] = ! empty($validated['watch_with_sub']);
         $data['tags'] = Movie::normalizeTags($validated['tags'] ?? null);
