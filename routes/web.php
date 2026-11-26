@@ -91,27 +91,23 @@ Route::prefix('api/v1')
         };
 
         $clearDotnetCache = function (): void {
-            $configured = rtrim((string) config('auracinema.dotnet_api_url', env('DOTNET_API_URL', 'http://127.0.0.1:5050')), '/');
-            $secret = (string) config('auracinema.admin_secret', env('ADMIN_SECRET', ''));
+            $baseUrl = rtrim((string) config('auracinema.dotnet_api_url', env('DOTNET_API_URL', 'http://127.0.0.1:5050')), '/');
+            $adminSecret = (string) config('auracinema.admin_secret', env('ADMIN_SECRET', 'AuraCinema_Admin_Master_999'));
+            $apiKey = (string) config('auracinema.dotnet_api_key', env('DOTNET_API_KEY', 'AuraCinema_Secret_Key_2026'));
 
-            $targets = array_values(array_unique(array_filter([
-                $configured,
-                'http://172.17.0.1:5050',
-                'http://host.docker.internal:5050',
-            ])));
+            $headers = [
+                'X-Api-Key' => $apiKey,
+                'X-Admin-Secret' => $adminSecret,
+            ];
 
-            foreach ($targets as $baseUrl) {
+            foreach (["{$baseUrl}/admin/clear-cache", "{$baseUrl}/api/admin/clear-cache"] as $endpoint) {
                 try {
-                    $req = Http::timeout(1);
-                    if ($secret !== '') {
-                        $req = $req->withHeaders(['X-Admin-Secret' => $secret]);
-                    }
-                    $res = $req->post("{$baseUrl}/admin/clear-cache");
+                    $res = Http::timeout(2)->withHeaders($headers)->post($endpoint);
                     if ($res->successful()) {
                         break;
                     }
                 } catch (\Throwable $e) {
-                    // Try next reachable Docker/host address
+                    // Continue to fallback endpoint
                 }
             }
         };
@@ -128,7 +124,6 @@ Route::prefix('api/v1')
             $baseName = MediaStore::baseName($title, $year);
 
             if ($request->hasFile('image')) {
-                // Optimizes to WebP and uploads directly to Cloudflare R2 via MediaStore::publish()
                 $newPath = $media->storePoster($request->file('image'), $baseName);
             } elseif (filled($imageUrl)) {
                 $rawUrl = trim((string) $imageUrl);
