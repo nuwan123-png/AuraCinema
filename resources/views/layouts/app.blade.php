@@ -27,8 +27,16 @@
     @stack('jsonld')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <meta name="monetag" content="1768f2520c4d77ba3111451c4fc37f08">
-    <script src="https://5gvci.com/act/files/tag.min.js?z=12357645" data-cfasync="false" async></script>
-</head>
+<script>
+        window.addEventListener('load', function () {
+            var s = document.createElement('script');
+            s.src = 'https://5gvci.com/act/files/tag.min.js?z=12357645';
+            s.setAttribute('data-cfasync', 'false');
+            s.async = true;
+            document.head.appendChild(s);
+        });
+    </script>
+    </head>
 
 
 <body class="flex min-h-screen flex-col font-sans text-slate-100 antialiased selection:bg-orange-500 selection:text-white">
