@@ -404,7 +404,13 @@
     @if($defaultPlayerSrc)
         <section class="mt-10" id="watch">
             <div class="mx-auto mb-3 w-full max-w-4xl">
-                <h2 class="text-base font-bold" id="watch-title">Watch now</h2>
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <h2 class="text-base font-bold" id="watch-title">Watch now</h2>
+                    <button type="button" data-sub-guide-open
+                            class="inline-flex items-center gap-1.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-300 transition hover:bg-orange-500 hover:text-white">
+                        <i class="fa-solid fa-closed-captioning"></i> Subtitle දාගන්න හැටි
+                    </button>
+                </div>
                 <p class="mt-1.5 text-xs font-semibold leading-relaxed text-emerald-400 sm:text-sm">
                     සිදුවන අපහසුතාවයට කනගාටුයි, ads ටිකක් යනවා close කරලා බලන්න, අපි ads ගොඩක් block කරලා තියෙන්නේ.
                 </p>
@@ -723,4 +729,98 @@
             });
         </script>
     @endif
+
+    {{-- Subtitle Instruction Popup Modal ("Watch now" click කළ විට) --}}
+    <dialog data-sub-guide-modal aria-label="Sinhala Subtitle Guide"
+            class="fixed inset-0 m-auto max-h-[90vh] w-[min(94vw,34rem)] overflow-y-auto rounded-3xl border border-white/15 bg-zinc-950 p-0 text-white shadow-2xl shadow-black/90 backdrop:bg-black/80 backdrop:backdrop-blur-sm">
+        <div class="relative p-4 sm:p-6">
+            <div class="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-orange-500 via-amber-400 to-emerald-400"></div>
+
+            <button type="button" data-sub-guide-close aria-label="Close"
+                    class="absolute right-3.5 top-3.5 z-10 grid h-8 w-8 place-items-center rounded-full bg-white/10 text-white transition hover:bg-orange-500">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+
+            <div class="pr-8">
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-orange-500/30 bg-orange-500/15 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-orange-300">
+                    <i class="fa-solid fa-closed-captioning"></i> AuraCinema Subtitle උපදෙස්
+                </span>
+                <p class="mt-2.5 text-base font-extrabold leading-snug text-amber-300 sm:text-lg">
+                    මේ Settings (<i class="fa-solid fa-gear text-white"></i>) icon එක ඔබලා Captions &rarr; Singhalese දාගෙන බලන්න.
+                </p>
+            </div>
+
+            <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div class="overflow-hidden rounded-xl border border-white/10 bg-zinc-900">
+                    <img src="{{ asset('images/sub-step-1.jpg') }}"
+                         alt="Step 1: Click Settings icon"
+                         class="aspect-video w-full object-cover">
+                    <div class="px-3 py-2 text-center text-xs font-bold text-slate-200">
+                        1. පහළ ඇති Settings (<i class="fa-solid fa-gear text-orange-400"></i>) icon එක ඔබන්න
+                    </div>
+                </div>
+
+                <div class="overflow-hidden rounded-xl border border-white/10 bg-zinc-900">
+                    <img src="{{ asset('images/sub-step-2.jpg') }}"
+                         alt="Step 2: Select Captions Singhalese"
+                         class="aspect-video w-full object-cover">
+                    <div class="px-3 py-2 text-center text-xs font-bold text-slate-200">
+                        2. Captions &rarr; <span class="text-emerald-400">Singhalese</span> තෝරන්න
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" data-sub-guide-close
+                    class="mt-5 w-full rounded-full bg-orange-500 py-3 text-sm font-extrabold uppercase tracking-wider text-white shadow-lg shadow-orange-500/25 transition hover:bg-orange-400">
+                හරි, තේරුණා (OK)
+            </button>
+        </div>
+    </dialog>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const subModal = document.querySelector('[data-sub-guide-modal]');
+            const closeBtns = document.querySelectorAll('[data-sub-guide-close]');
+            const manualOpenBtn = document.querySelector('[data-sub-guide-open]');
+            const watchBtn = document.querySelector('[data-embed-load]');
+            const episodeBtns = document.querySelectorAll('[data-episode-btn]');
+
+            if (!subModal) return;
+
+            let shownForEpisode = false;
+
+            const openSubGuide = () => {
+                if (typeof subModal.showModal === 'function') {
+                    if (!subModal.open) subModal.showModal();
+                } else {
+                    subModal.setAttribute('open', '');
+                }
+            };
+
+            const closeSubGuide = () => {
+                if (typeof subModal.close === 'function') {
+                    subModal.close();
+                } else {
+                    subModal.removeAttribute('open');
+                }
+            };
+
+            watchBtn?.addEventListener('click', openSubGuide);
+            manualOpenBtn?.addEventListener('click', openSubGuide);
+
+            episodeBtns.forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    if (!shownForEpisode) {
+                        shownForEpisode = true;
+                        openSubGuide();
+                    }
+                });
+            });
+
+            closeBtns.forEach((btn) => btn.addEventListener('click', closeSubGuide));
+            subModal.addEventListener('click', (e) => {
+                if (e.target === subModal) closeSubGuide();
+            });
+        });
+    </script>
 @endsection
