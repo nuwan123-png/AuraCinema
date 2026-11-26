@@ -33,6 +33,19 @@
     <input id="title" type="text" name="title" required maxlength="255" value="{{ old('title', $movie?->title) }}" class="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">
 </div>
 
+{{-- Language: saved to its own column so the mobile app / navbar language filter matches it directly
+     instead of guessing from the free-text Keywords field. --}}
+<div>
+    <label for="language" class="mb-1.5 block text-xs font-semibold text-slate-300">Language</label>
+    <select id="language" name="language" class="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white focus:border-orange-400/60 focus:outline-none">
+        <option value="">-- Select language --</option>
+        @foreach(config('auracinema.languages') as $lang)
+            <option value="{{ $lang }}" @selected(old('language', $movie?->language) === $lang)>{{ $lang }}</option>
+        @endforeach
+    </select>
+    @error('language') <span class="text-xs text-rose-500">{{ $message }}</span> @enderror
+</div>
+
 {{-- Keywords & Quick-add buttons --}}
 <div class="space-y-2">
     <label for="tags" class="block text-xs font-semibold text-slate-300">Keywords <span class="text-slate-500">(comma separated; each one becomes a clickable filter)</span></label>
