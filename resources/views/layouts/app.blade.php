@@ -92,7 +92,7 @@
                     </div>
                 </details>
 
-                {{-- Type Links (Movies, Drama / Series, Anime) --}}
+                {{-- Type Links --}}
                 @foreach($globalNavTypes as $navKey => $navLabel)
                     <a href="{{ route('movies.index', array_filter(['type' => $navKey, 'language' => request('language')])) }}" class="{{ $navLink($navType === $navKey) }}">
                         {{ $navLabel }}
@@ -121,25 +121,6 @@
                 <a href="{{ $waRequest }}" target="_blank" rel="noopener" class="{{ $navLink(false) }}"><i class="fa-brands fa-whatsapp text-emerald-400"></i> Request</a>
             </div>
         </nav>
-
-        {{-- Language Bar (Works inside All, Movies, Drama / Series, and Anime) --}}
-        @php($navLanguages = config('auracinema.languages', ['English', 'Sinhala', 'Korean', 'Japanese', 'Chinese', 'Hindi', 'Tamil', 'Malayalam', 'Telugu']))
-        @php($activeLang = (string) request('language', ''))
-        @php($baseLangParams = array_filter(['type' => request('type'), 'genre' => request('genre'), 'year' => request('year')]))
-        <div class="border-t border-white/5 bg-black/20">
-            <div class="mx-auto flex max-w-7xl items-center gap-2 overflow-x-auto px-4 py-2 text-xs font-medium text-slate-300 hide-scrollbar sm:px-6">
-                <a href="{{ route('movies.index', $baseLangParams) }}"
-                   class="shrink-0 rounded-full border px-3 py-1 transition {{ $activeLang === '' ? 'border-orange-500 bg-orange-500/20 text-orange-300' : 'border-white/10 bg-white/5 hover:border-white/25 hover:text-white' }}">
-                    All
-                </a>
-                @foreach($navLanguages as $lang)
-                    <a href="{{ route('movies.index', array_merge($baseLangParams, ['language' => $lang])) }}"
-                       class="shrink-0 rounded-full border px-3 py-1 transition {{ strcasecmp($activeLang, $lang) === 0 ? 'border-orange-500 bg-orange-500/20 text-orange-300' : 'border-white/10 bg-white/5 hover:border-white/25 hover:text-white' }}">
-                        {{ $lang }}
-                    </a>
-                @endforeach
-            </div>
-        </div>
     </header>
 
     <main class="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
