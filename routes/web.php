@@ -5,13 +5,15 @@ use App\Http\Controllers\RequestController;
 use App\Http\Controllers\SeoController;
 use App\Http\Controllers\StatsController;
 use App\Models\Movie;
+use App\Services\MediaOptimizer;
 use App\Support\EmbedUrl;
+use App\Support\MediaStore;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 // Admin routes FIRST so /movies/create is not swallowed by /movies/{movie}.
@@ -89,47 +91,69 @@ Route::prefix('api/v1')
         };
 
         $clearDotnetCache = function (): void {
-            $baseUrl = rtrim((string) config('auracinema.dotnet_api_url', env('DOTNET_API_URL', 'http://127.0.0.1:5050')), '/');
+            $configured = rtrim((string) config('auracinema.dotnet_api_url', env('DOTNET_API_URL', 'http://127.0.0.1:5050')), '/');
             $secret = (string) config('auracinema.admin_secret', env('ADMIN_SECRET', ''));
 
-            if ($baseUrl === '') {
-                return;
-            }
+            $targets = array_values(array_unique(array_filter([
+                $configured,
+                'http://172.17.0.1:5050',
+                'http://host.docker.internal:5050',
+            ])));
 
-            try {
-                $req = Http::timeout(2);
-                if ($secret !== '') {
-                    $req = $req->withHeaders(['X-Admin-Secret' => $secret]);
+            foreach ($targets as $baseUrl) {
+                try {
+                    $req = Http::timeout(1);
+                    if ($secret !== '') {
+                        $req = $req->withHeaders(['X-Admin-Secret' => $secret]);
+                    }
+                    $res = $req->post("{$baseUrl}/admin/clear-cache");
+                    if ($res->successful()) {
+                        break;
+                    }
+                } catch (\Throwable $e) {
+                    // Try next reachable Docker/host address
                 }
-                $req->post("{$baseUrl}/admin/clear-cache");
-            } catch (\Throwable $e) {
-                // Silent fallback if .NET API is restarting
             }
         };
 
-        $storePosterImage = function (Request $request, ?string $imageUrl, ?string $oldImage = null): ?string {
+        $storePosterToR2 = function (
+            Request $request,
+            MediaOptimizer $media,
+            string $title,
+            $year,
+            ?string $imageUrl,
+            ?string $oldImage = null
+        ): ?string {
             $newPath = null;
+            $baseName = MediaStore::baseName($title, $year);
 
             if ($request->hasFile('image')) {
-                $newPath = $request->file('image')->store('posters', 'public');
+                // Optimizes to WebP and uploads directly to Cloudflare R2 via MediaStore::publish()
+                $newPath = $media->storePoster($request->file('image'), $baseName);
             } elseif (filled($imageUrl)) {
                 $rawUrl = trim((string) $imageUrl);
                 try {
                     $imgRes = Http::timeout(10)->get($rawUrl);
                     if ($imgRes->successful() && strlen($imgRes->body()) > 500) {
-                        $ext = pathinfo((string) parse_url($rawUrl, PHP_URL_PATH), PATHINFO_EXTENSION);
-                        $ext = in_array(strtolower($ext), ['jpg', 'jpeg', 'png', 'webp']) ? strtolower($ext) : 'jpg';
-                        $filename = 'posters/'.Str::random(24).'.'.$ext;
-                        Storage::disk('public')->put($filename, $imgRes->body());
-                        $newPath = $filename;
+                        $tmpPath = tempnam(sys_get_temp_dir(), 'poster_');
+                        if ($tmpPath !== false) {
+                            file_put_contents($tmpPath, $imgRes->body());
+                            try {
+                                $mime = $imgRes->header('Content-Type') ?: 'image/jpeg';
+                                $uploaded = new UploadedFile($tmpPath, 'poster.jpg', $mime, null, true);
+                                $newPath = $media->storePoster($uploaded, $baseName);
+                            } finally {
+                                @unlink($tmpPath);
+                            }
+                        }
                     }
                 } catch (\Throwable $e) {
-                    // Ignore poster download error
+                    // Ignore remote poster fetch error
                 }
             }
 
-            if ($newPath !== null && filled($oldImage) && ! str_starts_with($oldImage, 'http')) {
-                Storage::disk('public')->delete($oldImage);
+            if ($newPath !== null && filled($oldImage)) {
+                MediaStore::forget($oldImage);
             }
 
             return $newPath;
@@ -141,7 +165,7 @@ Route::prefix('api/v1')
             }
 
             $q = trim((string) $request->query('q', ''));
-            $query = Movie::query()->with('episodes:id,movie_id,number,subtitle_url')->withCount('episodes')->latest('id');
+            $query = Movie::query()->latest('id');
 
             if ($q !== '') {
                 $like = '%'.addcslashes($q, '%_\\').'%';
@@ -151,45 +175,23 @@ Route::prefix('api/v1')
                 });
             }
 
-            $movies = $query->limit(100)->get([
-                'id',
-                'title',
-                'type',
-                'genre',
-                'year',
-                'language',
-                'tags',
-                'watch_with_sub',
-                'image',
-                'description',
-                'embed_url',
-                'download_480p',
-                'download_720p',
-                'download_1080p',
-                'subtitle_url',
-            ]);
-
             return response()->json([
-                'data' => $movies->map(function (Movie $m) {
-                    return [
-                        'id' => $m->id,
-                        'title' => $m->title,
-                        'type' => $m->type,
-                        'genre' => $m->genre,
-                        'year' => $m->year,
-                        'language' => $m->language,
-                        'tags' => $m->tags,
-                        'watch_with_sub' => (bool) $m->watch_with_sub,
-                        'image' => $m->image,
-                        // Admin-only data-quality helper: which required fields are still empty.
-                        'missing_fields' => $m->missingFields(),
-                    ];
-                }),
+                'data' => $query->limit(100)->get([
+                    'id',
+                    'title',
+                    'type',
+                    'genre',
+                    'year',
+                    'language',
+                    'tags',
+                    'watch_with_sub',
+                    'image',
+                ]),
             ]);
         });
 
         // Create a new movie from Flutter Mobile Admin
-        Route::post('/admin/movies', function (Request $request) use ($checkAdminToken, $clearDotnetCache, $storePosterImage) {
+        Route::post('/admin/movies', function (Request $request, MediaOptimizer $media) use ($checkAdminToken, $clearDotnetCache, $storePosterToR2) {
             if (! $checkAdminToken($request)) {
                 return response()->json(['message' => 'Unauthorized'], 401);
             }
@@ -201,7 +203,7 @@ Route::prefix('api/v1')
                 'year' => ['nullable', 'string', 'max:20'],
                 'title' => ['required', 'string', 'max:255'],
                 'image_url' => ['nullable', 'string', 'max:1000'],
-                'image' => ['nullable', 'image', 'max:5120'],
+                'image' => ['nullable', 'image', 'max:10240'],
                 'tags' => ['nullable', 'string', 'max:500'],
                 'description' => ['nullable', 'string', 'max:5000'],
                 'trailer_embed_url' => ['nullable', 'string', 'max:500'],
@@ -215,7 +217,14 @@ Route::prefix('api/v1')
                 'subtitle_url' => ['nullable', 'string', 'max:500'],
             ]);
 
-            $imagePath = $storePosterImage($request, $data['image_url'] ?? null, null);
+            $imagePath = $storePosterToR2(
+                $request,
+                $media,
+                $data['title'],
+                $data['year'] ?? null,
+                $data['image_url'] ?? null,
+                null
+            );
             unset($data['image_url'], $data['image']);
 
             $data['type'] = filled($data['type'] ?? null) ? trim($data['type']) : 'movie';
@@ -243,19 +252,14 @@ Route::prefix('api/v1')
             return response()->json([
                 'message' => 'Created',
                 'id' => $movie->id,
+                'image' => $movie->image,
+                'poster_url' => $movie->poster_url,
             ], 201);
         });
 
         Route::get('/admin/movies/{movie}', function (Request $request, Movie $movie) use ($checkAdminToken) {
             if (! $checkAdminToken($request)) {
                 return response()->json(['message' => 'Unauthorized'], 401);
-            }
-
-            $posterUrl = null;
-            if (filled($movie->image)) {
-                $posterUrl = str_starts_with($movie->image, 'http')
-                    ? $movie->image
-                    : rtrim((string) config('auracinema.site_url', url('/')), '/').'/storage/'.ltrim($movie->image, '/');
             }
 
             return response()->json([
@@ -277,13 +281,11 @@ Route::prefix('api/v1')
                 'telegram_url' => $movie->telegram_url,
                 'subtitle_url' => $movie->subtitle_url,
                 'image' => $movie->image,
-                'poster_url' => $posterUrl,
-                // Admin-only data-quality helper: which required fields are still empty.
-                'missing_fields' => $movie->missingFields(),
+                'poster_url' => $movie->poster_url,
             ]);
         });
 
-        Route::match(['put', 'post'], '/admin/movies/{movie}', function (Request $request, Movie $movie) use ($checkAdminToken, $clearDotnetCache, $storePosterImage) {
+        Route::match(['put', 'post'], '/admin/movies/{movie}', function (Request $request, Movie $movie, MediaOptimizer $media) use ($checkAdminToken, $clearDotnetCache, $storePosterToR2) {
             if (! $checkAdminToken($request)) {
                 return response()->json(['message' => 'Unauthorized'], 401);
             }
@@ -295,7 +297,7 @@ Route::prefix('api/v1')
                 'year' => ['nullable', 'string', 'max:20'],
                 'title' => ['required', 'string', 'max:255'],
                 'image_url' => ['nullable', 'string', 'max:1000'],
-                'image' => ['nullable', 'image', 'max:5120'],
+                'image' => ['nullable', 'image', 'max:10240'],
                 'tags' => ['nullable', 'string', 'max:500'],
                 'description' => ['nullable', 'string', 'max:5000'],
                 'trailer_embed_url' => ['nullable', 'string', 'max:500'],
@@ -309,7 +311,14 @@ Route::prefix('api/v1')
                 'subtitle_url' => ['nullable', 'string', 'max:500'],
             ]);
 
-            $newPoster = $storePosterImage($request, $data['image_url'] ?? null, $movie->image);
+            $newPoster = $storePosterToR2(
+                $request,
+                $media,
+                $data['title'],
+                $data['year'] ?? $movie->year,
+                $data['image_url'] ?? null,
+                $movie->image
+            );
             unset($data['image_url'], $data['image']);
             if ($newPoster !== null) {
                 $data['image'] = $newPoster;
@@ -347,6 +356,7 @@ Route::prefix('api/v1')
                 'language' => $movie->language,
                 'tags' => $movie->tags,
                 'image' => $movie->image,
+                'poster_url' => $movie->poster_url,
             ]);
         });
     });
