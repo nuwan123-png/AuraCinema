@@ -40,6 +40,36 @@ Route::get('/search/live', [MovieController::class, 'liveSearch'])->middleware('
 Route::post('/request', [RequestController::class, 'store'])->middleware('throttle:5,1')->name('request.store');
 Route::get('/api/v1/movies/{movie}', [MovieController::class, 'apiShow'])->middleware('throttle:60,1');
 
+// Public Incomplete / Upcoming Trailers endpoint for Mobile App
+Route::get('/api/v1/incomplete', function () {
+    $items = Movie::query()
+        ->withCount('episodes')
+        ->with('episodes:id,movie_id,number,subtitle_url')
+        ->latest('id')
+        ->take(60)
+        ->get()
+        ->filter(fn (Movie $m) => $m->isIncomplete())
+        ->take(20)
+        ->values()
+        ->map(fn (Movie $m) => [
+            'id' => $m->id,
+            'title' => $m->title,
+            'image' => $m->image,
+            'year' => $m->year,
+            'type' => $m->type,
+            'genre' => $m->genre,
+            'language' => $m->language,
+            'tags' => $m->tags,
+            'watch_with_sub' => (bool) $m->watch_with_sub,
+            'is_incomplete' => true,
+            'episodes_count' => (int) ($m->episodes_count ?? 0),
+            'trailer_embed_url' => $m->trailer_embed_url,
+            'trailer_url' => $m->trailer_url,
+        ]);
+
+    return response()->json(['data' => $items]);
+})->middleware('throttle:60,1');
+
 // Flutter Admin API endpoints in web.php
 Route::prefix('api/v1')
     ->middleware('throttle:60,1')
