@@ -424,15 +424,18 @@
 
     @php
         $episodeSubs = $movie->episodes->filter(fn ($e) => filled($e->subtitle_url));
+        $hasDownloadsBox = !empty($quickDownloads) || filled($movie->telegram_url);
+        $hasSubtitlesBox = filled($movie->subtitle_url) || $episodeSubs->isNotEmpty();
+        $hasBothBoxes = $hasDownloadsBox && $hasSubtitlesBox;
     @endphp
 
     {{-- Download & Subtitles Section --}}
-    @if(!empty($quickDownloads) || $movie->telegram_url || $movie->subtitle_url || $episodeSubs->isNotEmpty())
+    @if($hasDownloadsBox || $hasSubtitlesBox)
         <section class="mt-10" id="downloads">
-                <div class="mx-auto grid w-full max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
+                <div class="{{ $hasBothBoxes ? 'mx-auto grid w-full max-w-5xl grid-cols-1 gap-6 md:grid-cols-2' : 'mx-auto w-full max-w-xl' }}">
                     
-                    {{-- 1. Select Quality Box (Left) --}}
-                    @if(!empty($quickDownloads) || $movie->telegram_url)
+                    {{-- 1. Select Quality Box --}}
+                    @if($hasDownloadsBox)
                     <div class="rounded-xl border border-white/10 bg-white/5 p-5 shadow-lg">
                         <h3 class="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-200">
                             <i class="fa-solid fa-hard-drive text-orange-500"></i> Select Quality &amp; Download
@@ -500,8 +503,8 @@
                     </div>
                     @endif
 
-                    {{-- 2. Subtitles Box (Right) - Only shows if subtitle link is added --}}
-                    @if($movie->subtitle_url || $episodeSubs->isNotEmpty())
+                    {{-- 2. Subtitles Box - Only shows if subtitle link is added --}}
+                    @if($hasSubtitlesBox)
                         <div class="rounded-xl border border-white/10 bg-white/5 p-5 shadow-lg">
                             <h3 class="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-200">
                                 <i class="fa-regular fa-closed-captioning text-orange-500"></i> Subtitles
@@ -541,8 +544,6 @@
                                 @endif
                             </div>
                         </div>
-                    @else
-                        <div></div>
                     @endif
 
                 </div>
