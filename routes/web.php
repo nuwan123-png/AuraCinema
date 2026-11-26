@@ -364,4 +364,30 @@ Route::prefix('api/v1')
                 'poster_url' => $movie->poster_url,
             ]);
         });
+
+        // Delete a movie from Flutter Mobile Admin
+        Route::delete('/admin/movies/{movie}', function (Request $request, Movie $movie) use ($checkAdminToken, $clearDotnetCache) {
+            if (! $checkAdminToken($request)) {
+                return response()->json(['message' => 'Unauthorized'], 401);
+            }
+
+            $files = array_merge(
+                [$movie->image, $movie->trailer_url],
+                is_array($movie->gallery) ? $movie->gallery : [],
+                collect(is_array($movie->cast_members) ? $movie->cast_members : [])->pluck('photo')->all(),
+            );
+
+            $movie->episodes()->delete();
+            $movie->delete();
+
+            foreach (array_filter($files) as $path) {
+                MediaStore::forget($path);
+            }
+
+            $clearDotnetCache();
+
+            return response()->json([
+                'message' => 'Deleted',
+            ]);
+        });
     });
