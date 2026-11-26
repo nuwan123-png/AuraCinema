@@ -403,14 +403,11 @@
 
     @if($defaultPlayerSrc)
         <section class="mt-10" id="watch">
-            <div class="mx-auto mb-3 flex w-full max-w-4xl flex-wrap items-center justify-between gap-2">
+            <div class="mx-auto mb-3 w-full max-w-4xl">
                 <h2 class="text-base font-bold" id="watch-title">Watch now</h2>
-                <button type="button"
-                        data-adblock-toggle
-                        class="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold text-emerald-300 transition hover:bg-emerald-500/20">
-                    <i class="fa-solid fa-shield-halved"></i>
-                    <span data-adblock-label>Ad &amp; Popup Blocker: ON</span>
-                </button>
+                <p class="mt-1.5 text-xs font-semibold leading-relaxed text-emerald-400 sm:text-sm">
+                    සිදුවන අපහසුතාවයට කනගාටුයි, ads ටිකක් යනවා close කරලා බලන්න, අපි ads ගොඩක් block කරලා තියෙන්නේ.
+                </p>
             </div>
 
             <div data-embed class="mx-auto w-full max-w-4xl">
@@ -423,79 +420,6 @@
                 </button>
             </div>
         </section>
-
-        {{-- Web Ad & Popup Blocker Script (blocks popup tabs & top redirects from Streamtape iframe) --}}
-        <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                let adBlockOn = true;
-                const embedContainer = document.querySelector('#watch [data-embed]');
-                const toggleBtn = document.querySelector('[data-adblock-toggle]');
-                const toggleLabel = document.querySelector('[data-adblock-label]');
-
-                // Block popup windows triggered from parent page
-                const origOpen = window.open;
-                window.open = function (url, target, features) {
-                    if (adBlockOn && url && !String(url).includes('wa.me') && !String(url).includes('streamtape.com/v/')) {
-                        return null;
-                    }
-                    return origOpen ? origOpen.apply(window, arguments) : null;
-                };
-
-                const applySandbox = (iframe) => {
-                    if (!iframe || iframe.tagName !== 'IFRAME') return;
-                    if (adBlockOn) {
-                        if (iframe.dataset.sandboxApplied === '1') return;
-                        iframe.dataset.sandboxApplied = '1';
-                        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
-                        iframe.setAttribute('referrerpolicy', 'no-referrer');
-                        const currentSrc = iframe.getAttribute('src');
-                        if (currentSrc) {
-                            iframe.setAttribute('src', currentSrc);
-                        }
-                    } else {
-                        if (iframe.dataset.sandboxApplied !== '1') return;
-                        delete iframe.dataset.sandboxApplied;
-                        iframe.removeAttribute('sandbox');
-                        const currentSrc = iframe.getAttribute('src');
-                        if (currentSrc) {
-                            iframe.setAttribute('src', currentSrc);
-                        }
-                    }
-                };
-
-                if (embedContainer) {
-                    const observer = new MutationObserver((mutations) => {
-                        for (const m of mutations) {
-                            m.addedNodes.forEach((node) => {
-                                if (node.nodeType === 1) {
-                                    if (node.tagName === 'IFRAME') applySandbox(node);
-                                    node.querySelectorAll?.('iframe').forEach(applySandbox);
-                                }
-                            });
-                        }
-                    });
-                    observer.observe(embedContainer, { childList: true, subtree: true });
-                }
-
-                toggleBtn?.addEventListener('click', () => {
-                    adBlockOn = !adBlockOn;
-                    if (toggleLabel) {
-                        toggleLabel.textContent = adBlockOn
-                            ? 'Ad & Popup Blocker: ON'
-                            : 'Ad & Popup Blocker: OFF';
-                    }
-                    toggleBtn.classList.toggle('border-emerald-500/30', adBlockOn);
-                    toggleBtn.classList.toggle('bg-emerald-500/10', adBlockOn);
-                    toggleBtn.classList.toggle('text-emerald-300', adBlockOn);
-                    toggleBtn.classList.toggle('border-amber-500/30', !adBlockOn);
-                    toggleBtn.classList.toggle('bg-amber-500/10', !adBlockOn);
-                    toggleBtn.classList.toggle('text-amber-300', !adBlockOn);
-
-                    const activeIframe = embedContainer?.querySelector('iframe');
-                    if (activeIframe) applySandbox(activeIframe);
-                });
-            });
-        </script>
     @endif
 
     @php
