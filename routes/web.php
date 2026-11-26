@@ -9,7 +9,9 @@ use App\Support\EmbedUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 // Admin routes FIRST so /movies/create is not swallowed by /movies/{movie}.
@@ -86,6 +88,25 @@ Route::prefix('api/v1')
             return (bool) Cache::get("auracinema_api_token:{$token}", false);
         };
 
+        $clearDotnetCache = function (): void {
+            $baseUrl = rtrim((string) config('auracinema.dotnet_api_url', env('DOTNET_API_URL', 'http://127.0.0.1:5050')), '/');
+            $secret = (string) config('auracinema.admin_secret', env('ADMIN_SECRET', ''));
+
+            if ($baseUrl === '') {
+                return;
+            }
+
+            try {
+                $req = Http::timeout(3);
+                if ($secret !== '') {
+                    $req = $req->withHeaders(['X-Admin-Secret' => $secret]);
+                }
+                $req->post("{$baseUrl}/admin/clear-cache");
+            } catch (\Throwable $e) {
+                // Silent fallback if .NET API is restarting
+            }
+        };
+
         Route::get('/admin/movies', function (Request $request) use ($checkAdminToken) {
             if (! $checkAdminToken($request)) {
                 return response()->json(['message' => 'Unauthorized'], 401);
@@ -117,6 +138,83 @@ Route::prefix('api/v1')
             ]);
         });
 
+        // Create a new movie from Flutter Mobile Admin
+        Route::post('/admin/movies', function (Request $request) use ($checkAdminToken, $clearDotnetCache) {
+            if (! $checkAdminToken($request)) {
+                return response()->json(['message' => 'Unauthorized'], 401);
+            }
+
+            $data = $request->validate([
+                'type' => ['nullable', 'string', 'max:50'],
+                'language' => ['nullable', 'string', 'max:100'],
+                'genre' => ['nullable', 'string', 'max:100'],
+                'year' => ['nullable', 'string', 'max:20'],
+                'title' => ['required', 'string', 'max:255'],
+                'image_url' => ['nullable', 'string', 'max:1000'],
+                'image' => ['nullable', 'image', 'max:5120'],
+                'tags' => ['nullable', 'string', 'max:500'],
+                'description' => ['nullable', 'string', 'max:5000'],
+                'trailer_embed_url' => ['nullable', 'string', 'max:500'],
+                'watch_with_sub' => ['nullable', 'boolean'],
+                'stream_url' => ['nullable', 'string', 'max:500'],
+                'embed_url' => ['nullable', 'string', 'max:500'],
+                'download_480p' => ['nullable', 'string', 'max:500'],
+                'download_720p' => ['nullable', 'string', 'max:500'],
+                'download_1080p' => ['nullable', 'string', 'max:500'],
+                'telegram_url' => ['nullable', 'string', 'max:500'],
+                'subtitle_url' => ['nullable', 'string', 'max:500'],
+            ]);
+
+            $imagePath = null;
+            if ($request->hasFile('image')) {
+                $imagePath = $request->file('image')->store('posters', 'public');
+            } elseif (filled($data['image_url'] ?? null)) {
+                $rawUrl = trim((string) $data['image_url']);
+                try {
+                    $imgRes = Http::timeout(10)->get($rawUrl);
+                    if ($imgRes->successful() && strlen($imgRes->body()) > 500) {
+                        $ext = pathinfo((string) parse_url($rawUrl, PHP_URL_PATH), PATHINFO_EXTENSION);
+                        $ext = in_array(strtolower($ext), ['jpg', 'jpeg', 'png', 'webp']) ? strtolower($ext) : 'jpg';
+                        $filename = 'posters/'.Str::random(24).'.'.$ext;
+                        Storage::disk('public')->put($filename, $imgRes->body());
+                        $imagePath = $filename;
+                    }
+                } catch (\Throwable $e) {
+                    // Ignore poster download error
+                }
+            }
+
+            unset($data['image_url'], $data['image']);
+
+            $data['type'] = filled($data['type'] ?? null) ? trim($data['type']) : 'movie';
+            $data['language'] = filled($data['language'] ?? null) ? trim($data['language']) : null;
+            $data['genre'] = filled($data['genre'] ?? null) ? trim($data['genre']) : null;
+            $data['year'] = filled($data['year'] ?? null) ? trim($data['year']) : null;
+            $data['tags'] = Movie::normalizeTags($data['tags'] ?? '');
+            $data['watch_with_sub'] = (bool) ($data['watch_with_sub'] ?? false);
+            $data['image'] = $imagePath;
+
+            if (filled($data['embed_url'] ?? null)) {
+                $data['embed_url'] = EmbedUrl::normalize($data['embed_url']) ?? $data['embed_url'];
+            }
+            if (filled($data['trailer_embed_url'] ?? null)) {
+                $data['trailer_embed_url'] = EmbedUrl::normalize($data['trailer_embed_url']) ?? $data['trailer_embed_url'];
+            }
+            if (filled($data['telegram_url'] ?? null)) {
+                $data['telegram_added_at'] = now();
+            }
+
+            $movie = Movie::create($data);
+
+            // Instantly clear .NET API cache so mobile app updates immediately
+            $clearDotnetCache();
+
+            return response()->json([
+                'message' => 'Created',
+                'id' => $movie->id,
+            ], 201);
+        });
+
         Route::get('/admin/movies/{movie}', function (Request $request, Movie $movie) use ($checkAdminToken) {
             if (! $checkAdminToken($request)) {
                 return response()->json(['message' => 'Unauthorized'], 401);
@@ -126,6 +224,8 @@ Route::prefix('api/v1')
                 'id' => $movie->id,
                 'type' => $movie->type,
                 'language' => $movie->language,
+                'genre' => $movie->genre,
+                'year' => $movie->year,
                 'title' => $movie->title,
                 'tags' => $movie->tags,
                 'description' => $movie->description,
@@ -142,7 +242,7 @@ Route::prefix('api/v1')
             ]);
         });
 
-        Route::put('/admin/movies/{movie}', function (Request $request, Movie $movie) use ($checkAdminToken) {
+        Route::put('/admin/movies/{movie}', function (Request $request, Movie $movie) use ($checkAdminToken, $clearDotnetCache) {
             if (! $checkAdminToken($request)) {
                 return response()->json(['message' => 'Unauthorized'], 401);
             }
@@ -178,6 +278,9 @@ Route::prefix('api/v1')
             }
 
             $movie->update($data);
+
+            // Instantly clear .NET API cache so mobile app updates immediately
+            $clearDotnetCache();
 
             return response()->json([
                 'message' => 'Updated',
