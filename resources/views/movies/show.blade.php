@@ -10,6 +10,93 @@
     <script type="application/ld+json">{!! $movie->json_ld !!}</script>
 @endpush
 
+@php
+    $toMobileDownloadUrl = function (?string $rawUrl): ?string {
+        $url = trim((string) $rawUrl);
+        if ($url === '') {
+            return null;
+        }
+        return preg_replace(
+            '~(https?://(?:www\.)?(?:streamtape\.[a-z]+|stape\.[a-z]+|strcloud\.[a-z]+))/e/~i',
+            '$1/v/',
+            $url
+        ) ?? $url;
+    };
+
+    $isDirectFileUrl = function (?string $rawUrl): bool {
+        $path = strtolower((string) parse_url((string) $rawUrl, PHP_URL_PATH));
+        return str_ends_with($path, '.mp4')
+            || str_ends_with($path, '.mkv')
+            || str_ends_with($path, '.webm')
+            || str_ends_with($path, '.mov')
+            || str_contains(strtolower((string) $rawUrl), '.r2.dev/');
+    };
+
+    $safeFileBase = \Illuminate\Support\Str::slug($movie->title) ?: 'auracinema-movie';
+
+    // Collect all direct download options (including auto-fallback from stream_url / embed_url)
+    $quickDownloads = [];
+    if (filled($movie->download_1080p)) {
+        $u = $toMobileDownloadUrl($movie->download_1080p);
+        $quickDownloads[] = [
+            'label' => '1080p FHD',
+            'badge' => 'FHD',
+            'url' => $u,
+            'direct' => $isDirectFileUrl($u),
+            'filename' => $safeFileBase.'-1080p.mp4',
+        ];
+    }
+    if (filled($movie->download_720p)) {
+        $u = $toMobileDownloadUrl($movie->download_720p);
+        $quickDownloads[] = [
+            'label' => '720p HD',
+            'badge' => 'HD',
+            'url' => $u,
+            'direct' => $isDirectFileUrl($u),
+            'filename' => $safeFileBase.'-720p.mp4',
+        ];
+    }
+    if (filled($movie->download_480p)) {
+        $u = $toMobileDownloadUrl($movie->download_480p);
+        $quickDownloads[] = [
+            'label' => '480p SD',
+            'badge' => 'SD',
+            'url' => $u,
+            'direct' => $isDirectFileUrl($u),
+            'filename' => $safeFileBase.'-480p.mp4',
+        ];
+    }
+    if (filled($movie->stream_url)) {
+        $u = $toMobileDownloadUrl($movie->stream_url);
+        $alreadyAdded = collect($quickDownloads)->contains(fn ($d) => $d['url'] === $u);
+        if (! $alreadyAdded) {
+            $quickDownloads[] = [
+                'label' => 'Direct MP4',
+                'badge' => 'MP4',
+                'url' => $u,
+                'direct' => $isDirectFileUrl($u),
+                'filename' => $safeFileBase.'.mp4',
+            ];
+        }
+    }
+    // Auto-fallback: if no explicit download links were entered, convert Streamtape embed_url (/e/ -> /v/)
+    if (empty($quickDownloads) && filled($movie->embed_url)) {
+        $u = $toMobileDownloadUrl($movie->embed_url);
+        $quickDownloads[] = [
+            'label' => 'Download Movie',
+            'badge' => 'HD',
+            'url' => $u,
+            'direct' => $isDirectFileUrl($u),
+            'filename' => $safeFileBase.'.mp4',
+        ];
+    }
+
+    $tgAddedAt = $movie->telegram_added_at ? \Illuminate\Support\Carbon::parse($movie->telegram_added_at) : $movie->created_at;
+    $isTgExpired = $tgAddedAt && $tgAddedAt->copy()->addWeeks(2)->isPast();
+    $waRequestText = 'Hi AuraCinema, please re-upload "'.$movie->title.'" movie: ';
+    $waRequestUrl = 'https://wa.me/'.preg_replace('/\D/', '', (string) config('auracinema.whatsapp_number')).'?text='.rawurlencode($waRequestText);
+@endphp
+
 @section('content')
     @include('movies._incomplete_notice', ['movie' => $movie])
 
@@ -61,6 +148,25 @@
             <p class="mb-6 max-w-3xl whitespace-pre-line text-sm leading-relaxed text-slate-300">{{ $movie->description ?: 'No synopsis provided.' }}</p>
 
             <div class="flex flex-wrap items-start gap-3">
+                {{-- Direct Mobile Download Button right next to the movie --}}
+                @if(!empty($quickDownloads))
+                    @php $primaryDl = $quickDownloads[0]; @endphp
+                    <a href="{{ $primaryDl['url'] }}"
+                       @if($primaryDl['direct']) download="{{ $primaryDl['filename'] }}" @else target="_blank" rel="noopener noreferrer" @endif
+                       class="btn-aura shadow-lg shadow-orange-500/20">
+                        <i class="fa-solid fa-download"></i> Download ({{ $primaryDl['badge'] }})
+                    </a>
+                @elseif($movie->telegram_url)
+                    <button type="button"
+                            data-tg-download
+                            data-tg-title="{{ $movie->title }}"
+                            data-tg-target="{{ $isTgExpired ? $waRequestUrl : $movie->telegram_url }}"
+                            data-tg-expired="{{ $isTgExpired ? '1' : '0' }}"
+                            class="btn-aura">
+                        <i class="fa-brands fa-telegram"></i> Download
+                    </button>
+                @endif
+
                 @if($movie->trailer_embed_url)
                     <button type="button" data-yt-trailer-open class="btn-ghost" aria-haspopup="dialog">
                         <i class="fa-brands fa-youtube text-rose-500"></i> Trailer
@@ -95,8 +201,8 @@
                     <i class="fa-regular fa-copy text-orange-400"></i> <span data-copy-label>Copy link</span>
                 </button>
                 @if(request()->cookie('aura_admin'))
-                    <a href="{{ route('movies.edit', $movie) }}" class="btn-aura">
-                        <i class="fa-solid fa-pen-to-square"></i> Edit
+                    <a href="{{ route('movies.edit', $movie) }}" class="btn-ghost">
+                        <i class="fa-solid fa-pen-to-square text-orange-400"></i> Edit
                     </a>
                 @endif
             </div>
@@ -173,6 +279,9 @@
                 @foreach($movie->episodes as $episode)
                     @php
                         $epEmbed = \App\Support\EmbedUrl::normalize($episode->url) ?: $episode->url;
+                        $epRawDl = filled($episode->download_url) ? $episode->download_url : $episode->url;
+                        $epDlUrl = $toMobileDownloadUrl($epRawDl);
+                        $epIsDirect = $isDirectFileUrl($epDlUrl);
                     @endphp
                     <div class="flex flex-col rounded-md bg-white/5 p-2 ring-1 ring-white/10">
                         {{-- 1. Watch Button --}}
@@ -185,10 +294,10 @@
                             <i class="fa-solid fa-play text-xs text-orange-400"></i> Ep {{ $episode->number }}
                         </button>
                         
-                        {{-- 2. Direct Download Button (Only shows if link exists) --}}
-                        @if(!empty($episode->download_url))
-                            <a href="{{ str_replace('/e/', '/v/', $episode->download_url) }}" 
-                               target="_blank" 
+                        {{-- 2. Direct Download Button (Auto-uses episode download_url or Streamtape URL) --}}
+                        @if(!empty($epDlUrl))
+                            <a href="{{ $epDlUrl }}"
+                               @if($epIsDirect) download="{{ $safeFileBase }}-ep-{{ $episode->number }}.mp4" @else target="_blank" rel="noopener noreferrer" @endif
                                class="mt-2 flex w-full items-center justify-center gap-1.5 rounded bg-blue-600/20 py-1.5 text-xs font-medium text-blue-400 transition hover:bg-blue-600 hover:text-white">
                                 <i class="fa-solid fa-download"></i> Download
                             </a>
@@ -301,6 +410,60 @@
                     </span>
                 </button>
             </div>
+
+            {{-- Direct Mobile Downloader Bar right under the video player --}}
+            @if(!empty($quickDownloads) || $movie->telegram_url || $movie->subtitle_url)
+                <div class="mx-auto mt-4 w-full max-w-4xl rounded-xl border border-orange-500/25 bg-gradient-to-r from-zinc-900/95 via-zinc-900/85 to-zinc-950/95 p-4 shadow-xl">
+                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="grid h-7 w-7 place-items-center rounded-lg bg-orange-500/20 text-orange-400">
+                                <i class="fa-solid fa-mobile-screen-button text-xs"></i>
+                            </span>
+                            <div>
+                                <h3 class="text-xs font-extrabold uppercase tracking-wider text-white">Mobile Direct Downloader</h3>
+                                <p class="text-[11px] text-slate-400">පහළ button එක ඔබලා කෙළින්ම phone එකට download කරගන්න.</p>
+                            </div>
+                        </div>
+                        <span class="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400 ring-1 ring-emerald-500/30">
+                            DIRECT LINK
+                        </span>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2.5">
+                        @foreach($quickDownloads as $dl)
+                            <a href="{{ $dl['url'] }}"
+                               @if($dl['direct']) download="{{ $dl['filename'] }}" @else target="_blank" rel="noopener noreferrer" @endif
+                               class="inline-flex flex-1 min-w-[140px] items-center justify-center gap-2 rounded-lg bg-orange-500 px-4 py-2.5 text-xs font-extrabold text-white shadow-md shadow-orange-500/20 transition hover:bg-orange-400 active:scale-[0.98]">
+                                <i class="fa-solid fa-download"></i>
+                                <span>{{ $dl['label'] }}</span>
+                            </a>
+                        @endforeach
+
+                        @if($movie->telegram_url)
+                            <button type="button"
+                                    data-tg-download
+                                    data-tg-title="{{ $movie->title }}"
+                                    data-tg-target="{{ $isTgExpired ? $waRequestUrl : $movie->telegram_url }}"
+                                    data-tg-expired="{{ $isTgExpired ? '1' : '0' }}"
+                                    class="inline-flex flex-1 min-w-[140px] items-center justify-center gap-2 rounded-lg bg-sky-500/20 px-4 py-2.5 text-xs font-bold text-sky-300 ring-1 ring-sky-500/40 transition hover:bg-sky-500 hover:text-white active:scale-[0.98]">
+                                <i class="fa-brands fa-telegram text-sm"></i>
+                                <span>Telegram</span>
+                            </button>
+                        @endif
+
+                        @if($movie->subtitle_url)
+                            <a href="{{ $movie->subtitle_url }}"
+                               download="{{ $safeFileBase }}-sinhala-sub.srt"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="inline-flex flex-1 min-w-[140px] items-center justify-center gap-2 rounded-lg bg-white/10 px-4 py-2.5 text-xs font-bold text-slate-200 ring-1 ring-white/15 transition hover:bg-white/20 hover:text-white active:scale-[0.98]">
+                                <i class="fa-regular fa-closed-captioning text-orange-400"></i>
+                                <span>Sinhala Sub</span>
+                            </a>
+                        @endif
+                    </div>
+                </div>
+            @endif
         </section>
     @endif
 
@@ -308,30 +471,32 @@
         $episodeSubs = $movie->episodes->filter(fn ($e) => filled($e->subtitle_url));
     @endphp
 
-    {{-- Download & Subtitles Section (shown even when there is no "Watch now" player) --}}
-    @if($movie->download_480p || $movie->download_720p || $movie->download_1080p || $movie->telegram_url || $movie->subtitle_url || $episodeSubs->isNotEmpty())
+    {{-- Download & Subtitles Section (always shown if any download, embed fallback, telegram, or subtitle exists) --}}
+    @if(!empty($quickDownloads) || $movie->telegram_url || $movie->subtitle_url || $episodeSubs->isNotEmpty())
         <section class="mt-10" id="downloads">
                 <div class="mx-auto grid w-full max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
                     
                     {{-- 1. Select Quality Box (Left) --}}
-                    @if($movie->download_480p || $movie->download_720p || $movie->download_1080p || $movie->telegram_url)
+                    @if(!empty($quickDownloads) || $movie->telegram_url)
                     <div class="rounded-xl border border-white/10 bg-white/5 p-5 shadow-lg">
                         <h3 class="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-200">
-                            <i class="fa-solid fa-hard-drive text-orange-500"></i> Select Quality
+                            <i class="fa-solid fa-hard-drive text-orange-500"></i> Select Quality &amp; Download
                         </h3>
                         
                         <div class="space-y-3">
-                            @if($movie->download_720p)
-                                <a href="{{ str_replace('/e/', '/v/', $movie->download_720p) }}" target="_blank" class="group flex items-center justify-between rounded-lg bg-black/40 p-3 ring-1 ring-white/5 transition hover:bg-black/60 hover:ring-orange-500/50">
+                            @foreach($quickDownloads as $dl)
+                                <a href="{{ $dl['url'] }}"
+                                   @if($dl['direct']) download="{{ $dl['filename'] }}" @else target="_blank" rel="noopener noreferrer" @endif
+                                   class="group flex items-center justify-between rounded-lg bg-black/40 p-3 ring-1 ring-white/5 transition hover:bg-black/60 hover:ring-orange-500/50">
                                     <div class="flex items-center gap-4">
                                         <div class="flex h-12 w-12 flex-col items-center justify-center rounded bg-white/5 font-bold text-slate-300 transition group-hover:bg-orange-500/10 group-hover:text-orange-400">
-                                            <span class="text-[10px] leading-none text-slate-500">HD</span>
-                                            <span class="mt-0.5 text-sm">720p</span>
+                                            <span class="text-[10px] leading-none text-slate-500">{{ $dl['direct'] ? 'MP4' : 'WEB' }}</span>
+                                            <span class="mt-0.5 text-sm">{{ $dl['badge'] }}</span>
                                         </div>
                                         <div>
-                                            <div class="text-sm font-bold text-slate-200 transition group-hover:text-white">Direct Download</div>
+                                            <div class="text-sm font-bold text-slate-200 transition group-hover:text-white">{{ $dl['label'] }}</div>
                                             <div class="mt-0.5 flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
-                                                <span class="rounded bg-white/10 px-1.5 py-0.5">WEB</span>
+                                                <span class="rounded bg-white/10 px-1.5 py-0.5 text-emerald-400">MOBILE READY</span>
                                             </div>
                                         </div>
                                     </div>
@@ -339,56 +504,9 @@
                                         <i class="fa-solid fa-download"></i>
                                     </div>
                                 </a>
-                            @endif
-
-                            @if($movie->download_1080p)
-                                <a href="{{ str_replace('/e/', '/v/', $movie->download_1080p) }}" target="_blank" class="group flex items-center justify-between rounded-lg bg-black/40 p-3 ring-1 ring-white/5 transition hover:bg-black/60 hover:ring-orange-500/50">
-                                    <div class="flex items-center gap-4">
-                                        <div class="flex h-12 w-12 flex-col items-center justify-center rounded bg-white/5 font-bold text-slate-300 transition group-hover:bg-orange-500/10 group-hover:text-orange-400">
-                                            <span class="text-[10px] leading-none text-slate-500">FHD</span>
-                                            <span class="mt-0.5 text-sm">1080p</span>
-                                        </div>
-                                        <div>
-                                            <div class="text-sm font-bold text-slate-200 transition group-hover:text-white">Direct Download</div>
-                                            <div class="mt-0.5 flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
-                                                <span class="rounded bg-white/10 px-1.5 py-0.5 text-emerald-500/80">HQ</span>
-                                                <span class="rounded bg-orange-500/10 px-1.5 py-0.5 text-orange-400">10-BIT</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="grid h-10 w-10 place-items-center rounded-full bg-white/5 text-slate-400 transition group-hover:bg-orange-500 group-hover:text-white">
-                                        <i class="fa-solid fa-download"></i>
-                                    </div>
-                                </a>
-                            @endif
-
-                            @if($movie->download_480p)
-                                <a href="{{ str_replace('/e/', '/v/', $movie->download_480p) }}" target="_blank" class="group flex items-center justify-between rounded-lg bg-black/40 p-3 ring-1 ring-white/5 transition hover:bg-black/60 hover:ring-orange-500/50">
-                                    <div class="flex items-center gap-4">
-                                        <div class="flex h-12 w-12 flex-col items-center justify-center rounded bg-white/5 font-bold text-slate-300 transition group-hover:bg-orange-500/10 group-hover:text-orange-400">
-                                            <span class="text-[10px] leading-none text-slate-500">SD</span>
-                                            <span class="mt-0.5 text-sm">480p</span>
-                                        </div>
-                                        <div>
-                                            <div class="text-sm font-bold text-slate-200 transition group-hover:text-white">Direct Download</div>
-                                            <div class="mt-0.5 flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
-                                                <span class="rounded bg-white/10 px-1.5 py-0.5">WEB</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="grid h-10 w-10 place-items-center rounded-full bg-white/5 text-slate-400 transition group-hover:bg-orange-500 group-hover:text-white">
-                                        <i class="fa-solid fa-download"></i>
-                                    </div>
-                                </a>
-                            @endif
+                            @endforeach
 
                             @if($movie->telegram_url)
-                                @php
-                                    $tgAddedAt = $movie->telegram_added_at ? \Illuminate\Support\Carbon::parse($movie->telegram_added_at) : $movie->created_at;
-                                    $isTgExpired = $tgAddedAt && $tgAddedAt->copy()->addWeeks(2)->isPast();
-                                    $waRequestText = 'Hi AuraCinema, please re-upload "'.$movie->title.'" movie: ';
-                                    $waRequestUrl = 'https://wa.me/'.preg_replace('/\D/', '', (string) config('auracinema.whatsapp_number')).'?text='.rawurlencode($waRequestText);
-                                @endphp
                                 <button type="button"
                                         data-tg-download
                                         data-tg-title="{{ $movie->title }}"
@@ -433,7 +551,7 @@
                             
                             <div class="space-y-3">
                                 @if($movie->subtitle_url)
-                                <a href="{{ $movie->subtitle_url }}" target="_blank" class="group flex items-center justify-between rounded-lg bg-black/40 p-3 ring-1 ring-white/5 transition hover:bg-black/60 hover:ring-orange-500/50">
+                                <a href="{{ $movie->subtitle_url }}" download="{{ $safeFileBase }}-sinhala-sub.srt" target="_blank" rel="noopener noreferrer" class="group flex items-center justify-between rounded-lg bg-black/40 p-3 ring-1 ring-white/5 transition hover:bg-black/60 hover:ring-orange-500/50">
                                     <div class="flex items-center gap-4">
                                         <div class="grid h-12 w-12 place-items-center rounded bg-orange-500/10 text-xl text-orange-400 transition group-hover:bg-orange-500/20">
                                             <i class="fa-regular fa-file-lines"></i>
