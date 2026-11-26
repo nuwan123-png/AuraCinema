@@ -26,23 +26,16 @@
     @endif
     @stack('jsonld')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-<meta name="monetag" content="1768f2520c4d77ba3111451c4fc37f08">
     <script>
-        window.addEventListener('load', function () {
-            var s1 = document.createElement('script');
-            s1.src = 'https://5gvci.com/act/files/tag.min.js?z=12357645';
-            s1.setAttribute('data-cfasync', 'false');
-            s1.async = true;
-            document.head.appendChild(s1);
-
-            var s2 = document.createElement('script');
-            s2.dataset.zone = '12357780';
-            s2.src = 'https://nap5k.com/tag.min.js';
-            document.head.appendChild(s2);
+        ['https://streamtape.com', 'https://tapecontent.net'].forEach(function (url) {
+            var l = document.createElement('link');
+            l.rel = 'preconnect';
+            l.href = url;
+            l.crossOrigin = 'anonymous';
+            document.head.appendChild(l);
         });
     </script>
-    </head>
-
+</head>
 
 <body class="flex min-h-screen flex-col font-sans text-slate-100 antialiased selection:bg-orange-500 selection:text-white">
 
