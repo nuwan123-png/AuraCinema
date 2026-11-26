@@ -125,6 +125,7 @@ Route::prefix('api/v1')
             return response()->json([
                 'id' => $movie->id,
                 'type' => $movie->type,
+                'language' => $movie->language,
                 'title' => $movie->title,
                 'tags' => $movie->tags,
                 'description' => $movie->description,
@@ -148,6 +149,7 @@ Route::prefix('api/v1')
 
             $data = $request->validate([
                 'type' => ['nullable', 'string'],
+                'language' => ['nullable', 'string', 'max:100'],
                 'title' => ['required', 'string', 'max:255'],
                 'tags' => ['nullable', 'string', 'max:500'],
                 'description' => ['nullable', 'string', 'max:5000'],
@@ -162,6 +164,9 @@ Route::prefix('api/v1')
                 'subtitle_url' => ['nullable', 'string', 'max:500'],
             ]);
 
+            if (array_key_exists('language', $data)) {
+                $data['language'] = filled($data['language']) ? trim($data['language']) : null;
+            }
             if (array_key_exists('tags', $data)) {
                 $data['tags'] = Movie::normalizeTags($data['tags']);
             }
@@ -177,6 +182,7 @@ Route::prefix('api/v1')
             return response()->json([
                 'message' => 'Updated',
                 'id' => $movie->id,
+                'language' => $movie->language,
                 'tags' => $movie->tags,
             ]);
         });
