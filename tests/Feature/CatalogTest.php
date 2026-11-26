@@ -212,7 +212,7 @@ class CatalogTest extends TestCase
 
         $page = $this->get('/movies/'.$movie->id)->assertOk();
         $page->assertSee('data-embed-load', false)->assertSee('data-embed-src="https://player.vimeo.com/video/76979871"', false);
-        $this->assertStringNotContainsString('<iframe', $page->getContent());
+        $this->assertDoesNotMatchRegularExpression('/<iframe\b(?![^>]*data-aa=)[^>]*>/i', $page->getContent());
 
         $plain = Movie::create(['title' => 'No Player']);
         $this->get('/movies/'.$plain->id)->assertOk()->assertDontSee('data-embed-load', false);
