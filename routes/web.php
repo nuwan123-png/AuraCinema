@@ -141,7 +141,7 @@ Route::prefix('api/v1')
             }
 
             $q = trim((string) $request->query('q', ''));
-            $query = Movie::query()->latest('id');
+            $query = Movie::query()->with('episodes:id,movie_id,number,subtitle_url')->withCount('episodes')->latest('id');
 
             if ($q !== '') {
                 $like = '%'.addcslashes($q, '%_\\').'%';
@@ -151,18 +151,40 @@ Route::prefix('api/v1')
                 });
             }
 
+            $movies = $query->limit(100)->get([
+                'id',
+                'title',
+                'type',
+                'genre',
+                'year',
+                'language',
+                'tags',
+                'watch_with_sub',
+                'image',
+                'description',
+                'embed_url',
+                'download_480p',
+                'download_720p',
+                'download_1080p',
+                'subtitle_url',
+            ]);
+
             return response()->json([
-                'data' => $query->limit(100)->get([
-                    'id',
-                    'title',
-                    'type',
-                    'genre',
-                    'year',
-                    'language',
-                    'tags',
-                    'watch_with_sub',
-                    'image',
-                ]),
+                'data' => $movies->map(function (Movie $m) {
+                    return [
+                        'id' => $m->id,
+                        'title' => $m->title,
+                        'type' => $m->type,
+                        'genre' => $m->genre,
+                        'year' => $m->year,
+                        'language' => $m->language,
+                        'tags' => $m->tags,
+                        'watch_with_sub' => (bool) $m->watch_with_sub,
+                        'image' => $m->image,
+                        // Admin-only data-quality helper: which required fields are still empty.
+                        'missing_fields' => $m->missingFields(),
+                    ];
+                }),
             ]);
         });
 
@@ -256,6 +278,8 @@ Route::prefix('api/v1')
                 'subtitle_url' => $movie->subtitle_url,
                 'image' => $movie->image,
                 'poster_url' => $posterUrl,
+                // Admin-only data-quality helper: which required fields are still empty.
+                'missing_fields' => $movie->missingFields(),
             ]);
         });
 
@@ -267,6 +291,8 @@ Route::prefix('api/v1')
             $data = $request->validate([
                 'type' => ['nullable', 'string'],
                 'language' => ['nullable', 'string', 'max:100'],
+                'genre' => ['nullable', 'string', 'max:100'],
+                'year' => ['nullable', 'string', 'max:20'],
                 'title' => ['required', 'string', 'max:255'],
                 'image_url' => ['nullable', 'string', 'max:1000'],
                 'image' => ['nullable', 'image', 'max:5120'],
@@ -291,6 +317,12 @@ Route::prefix('api/v1')
 
             if (array_key_exists('language', $data)) {
                 $data['language'] = filled($data['language']) ? trim($data['language']) : null;
+            }
+            if (array_key_exists('genre', $data)) {
+                $data['genre'] = filled($data['genre']) ? trim($data['genre']) : null;
+            }
+            if (array_key_exists('year', $data)) {
+                $data['year'] = filled($data['year']) ? trim($data['year']) : null;
             }
             if (array_key_exists('tags', $data)) {
                 $data['tags'] = Movie::normalizeTags($data['tags']);
