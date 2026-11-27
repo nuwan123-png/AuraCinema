@@ -8,7 +8,6 @@ use Illuminate\Http\Request;
 
 class WatchHistoryController extends Controller
 {
-    // User balapu saha bageta balapu list eka gannawa
     public function index(Request $request)
     {
         $history = WatchHistory::where('user_id', $request->user()->id)
@@ -19,7 +18,6 @@ class WatchHistoryController extends Controller
         return response()->json(['data' => $history]);
     }
 
-    // Movie ekak play karaddi hari pause karaddi save/update karanawa
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -27,7 +25,7 @@ class WatchHistoryController extends Controller
             'episode_id'       => 'nullable|integer',
             'title'            => 'required|string|max:255',
             'poster_url'       => 'nullable|string',
-            'type'             => 'nullable|string|in:movie,series,anime',
+            'type'             => 'nullable|string|max:50',
             'position_seconds' => 'nullable|integer|min:0',
             'duration_seconds' => 'nullable|integer|min:0',
         ]);
@@ -47,7 +45,7 @@ class WatchHistoryController extends Controller
             ]
         );
 
-        $history->touch(); // List eke udatama ganna updated_at aluth karanawa
+        $history->touch();
 
         return response()->json(['data' => $history]);
     }
