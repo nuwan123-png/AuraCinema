@@ -153,49 +153,43 @@
         <p class="mt-2"><a href="{{ route('movies.create') }}" class="transition hover:text-orange-300">Admin</a></p>
     </footer>
 
-    <!-- AuraCinema Welcome Popup -->
-    <div id="auraWelcomePopup" class="fixed inset-0 z-[70] hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-        <div class="relative w-full max-w-md overflow-hidden rounded-2xl border border-orange-500/30 bg-[#121218] shadow-2xl">
-            <button type="button" onclick="closeAuraPopup()" aria-label="Close" class="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-slate-300 hover:bg-orange-500 hover:text-white transition">
+    <!-- Compact Floating Subtitle Notice (Bottom-Right, Non-Fullscreen) -->
+    <div id="auraWelcomePopup"
+         class="fixed inset-x-3 bottom-3 z-[70] hidden overflow-hidden rounded-2xl border border-orange-500/35 bg-[#12121a]/95 p-3.5 text-slate-200 shadow-2xl shadow-black/90 backdrop-blur-xl sm:inset-x-auto sm:bottom-5 sm:right-5 sm:w-[22.5rem]">
+        <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-orange-500 via-amber-400 to-emerald-400"></div>
+
+        <div class="flex items-start justify-between gap-2">
+            <div class="flex items-center gap-2">
+                <span class="h-2 w-2 rounded-full bg-orange-500 animate-pulse"></span>
+                <span class="text-[11px] font-extrabold uppercase tracking-wider text-orange-400">AuraCinema දැනුම්දීමයි</span>
+            </div>
+            <button type="button" onclick="closeAuraPopup()" aria-label="Close"
+                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs text-slate-300 transition hover:bg-orange-500 hover:text-white">
                 <i class="fa-solid fa-xmark"></i>
             </button>
+        </div>
 
-            <div class="relative h-44 w-full bg-zinc-900">
-                <img src="https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=800&q=80"
-                     alt="AuraCinema Notice"
-                     class="h-full w-full object-cover opacity-80">
-                <div class="absolute inset-0 bg-gradient-to-t from-[#121218] via-[#121218]/40 to-transparent"></div>
-                <div class="absolute bottom-3 left-4 flex items-center gap-2">
-                    <span class="h-2.5 w-2.5 rounded-full bg-orange-500 animate-pulse"></span>
-                    <span class="text-xs font-bold tracking-wider text-orange-400 uppercase">AuraCinema දැනුම්දීමයි</span>
-                </div>
+        <div class="mt-2.5 space-y-2 text-xs leading-relaxed">
+            <div class="flex items-start gap-2 rounded-xl border border-white/10 bg-white/[0.04] p-2.5">
+                <i class="fa-solid fa-closed-captioning mt-0.5 text-orange-400"></i>
+                <p>ඔයාලට <span class="font-bold text-amber-300">Watch now</span> කියන එකෙන් සිංහල subtitle එක්කම බලන්න පුළුවන්.</p>
             </div>
 
-            <div class="p-5 space-y-3 text-sm text-slate-200 leading-relaxed">
-                <div class="flex items-start gap-2.5 rounded-xl bg-white/5 p-3 border border-white/10">
-                    <span class="text-orange-400 mt-0.5"><i class="fa-solid fa-desktop"></i></span>
-                    <p>Desktop භාවිතයෙන් subtitles සහ movies download කිරීමේ පහසුකම ඇත.</p>
-                </div>
-
-                <div class="flex items-start gap-2.5 rounded-xl bg-white/5 p-3 border border-white/10">
-                    <span class="text-orange-400 mt-0.5"><i class="fa-solid fa-film"></i></span>
-                    <p>
-                        Online movies බලන්න පුළුවන්. Sub එක්කම online බලන්න පුලුවන් දැනට දාලා තියන ඒවා විතරයි.
-                        <span class="mt-1 inline-block rounded bg-orange-500/20 px-2 py-0.5 text-xs font-semibold text-orange-300 border border-orange-500/30">
-                            Online watch with sub
-                        </span>
-                    </p>
-                </div>
-
-                <div class="pt-2 flex flex-col sm:flex-row gap-2.5">
-                    <button type="button" onclick="goToWatchWithSub()" class="w-full rounded-xl bg-emerald-500 py-2.5 text-center text-xs sm:text-sm font-bold text-zinc-950 hover:bg-emerald-400 transition">
-                        <i class="fa-solid fa-closed-captioning mr-1"></i> Watch with sub
-                    </button>
-                    <button type="button" onclick="closeAuraPopup()" class="w-full rounded-xl bg-orange-500 py-2.5 text-center text-xs sm:text-sm font-bold text-white hover:bg-orange-400 transition">
-                        හරි, තේරුණා
-                    </button>
-                </div>
+            <div class="flex items-start gap-2 rounded-xl border border-white/10 bg-white/[0.04] p-2.5">
+                <i class="fa-solid fa-gear mt-0.5 text-emerald-400"></i>
+                <p>Watch now player එකේ <span class="font-bold text-white">Settings</span> වලට ගිහින් <span class="font-bold text-emerald-400">Captions &rarr; Singhalese</span> දාගන්න.</p>
             </div>
+        </div>
+
+        <div class="mt-3 flex items-center gap-2">
+            <button type="button" onclick="goToWatchWithSub()"
+                    class="flex-1 rounded-xl bg-emerald-500 py-2 text-center text-xs font-bold text-zinc-950 transition hover:bg-emerald-400">
+                <i class="fa-solid fa-closed-captioning mr-1"></i> Watch with sub
+            </button>
+            <button type="button" onclick="closeAuraPopup()"
+                    class="flex-1 rounded-xl bg-orange-500 py-2 text-center text-xs font-bold text-white transition hover:bg-orange-400">
+                හරි, තේරුණා
+            </button>
         </div>
     </div>
 
@@ -204,7 +198,6 @@
             const popup = document.getElementById('auraWelcomePopup');
             if (popup && !sessionStorage.getItem('aura_welcome_seen')) {
                 popup.classList.remove('hidden');
-                popup.classList.add('flex');
             }
         });
 
@@ -212,7 +205,6 @@
             const popup = document.getElementById('auraWelcomePopup');
             if (popup) {
                 popup.classList.add('hidden');
-                popup.classList.remove('flex');
                 sessionStorage.setItem('aura_welcome_seen', '1');
             }
         }
