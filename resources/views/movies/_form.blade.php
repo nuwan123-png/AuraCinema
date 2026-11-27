@@ -14,7 +14,7 @@
     $popularTags = ['romantic', 'family', 'dubbed', 'new release', 'top rated', 'classic'];
     $genreTags = ['action', 'adventure', 'animation', 'comedy', 'crime', 'documentary', 'drama', 'fantasy', 'horror', 'mystery', 'romance', 'sci-fi', 'thriller', 'war'];
     $languageTags = ['hindi', 'tamil', 'malayalam', 'telugu', 'kannada', 'english', 'sinhala', 'korean', 'japanese', 'chinese'];
-    $yearTags = ['2027', '2026', '2025', '2024', '2023', '2022', '2021', '2020'];
+    $yearTags = range((int) date('Y') + 1, 2000);
 @endphp
 
 {{-- Type decides which menu the title appears under (Movies / Drama / Series / Anime) --}}

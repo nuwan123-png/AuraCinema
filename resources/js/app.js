@@ -241,6 +241,38 @@ document.querySelectorAll('[data-embed-load]').forEach((button) => {
     });
 });
 
+// Fullscreen button: the embedded player's own fullscreen icon depends on the ad/host site
+// behaving itself, so this gives a reliable way to put the <iframe> element itself fullscreen
+// regardless of whether the player inside it cooperates.
+document.querySelectorAll('[data-fullscreen-btn]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+        const container = document.querySelector('[data-embed]');
+        let frame = container?.querySelector('iframe');
+
+        // Player not loaded yet (poster/play button still showing): load it first, then fullscreen.
+        if (!frame) {
+            const loadBtn = container?.querySelector('[data-embed-load]');
+            if (loadBtn) {
+                mountPlayer(container, loadBtn.dataset.embedSrc, loadBtn.dataset.embedTitle);
+                frame = container.querySelector('iframe');
+            }
+        }
+        if (!frame) return;
+
+        const request =
+            frame.requestFullscreen ||
+            frame.webkitRequestFullscreen ||
+            frame.mozRequestFullScreen ||
+            frame.msRequestFullscreen;
+        if (request) {
+            request.call(frame).catch(() => {
+                // Some mobile browsers reject requestFullscreen outside a direct user gesture
+                // chain (e.g. after the async mountPlayer() above) - nothing more we can do here.
+            });
+        }
+    });
+});
+
 // Click Episode button -> Load episode in Watch player
 document.querySelectorAll('[data-episode-btn]').forEach((btn) => {
     btn.addEventListener('click', () => {

@@ -406,10 +406,17 @@
             <div class="mx-auto mb-3 w-full max-w-4xl">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <h2 class="text-base font-bold" id="watch-title">Watch now</h2>
-                    <button type="button" data-sub-guide-open
-                            class="inline-flex items-center gap-1.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-300 transition hover:bg-orange-500 hover:text-white">
-                        <i class="fa-solid fa-closed-captioning"></i> Subtitle දාගන්න හැටි
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button type="button" data-fullscreen-btn
+                                class="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-200 transition hover:bg-white/15 hover:text-white"
+                                aria-label="Open the player in fullscreen">
+                            <i class="fa-solid fa-expand"></i> Fullscreen
+                        </button>
+                        <button type="button" data-sub-guide-open
+                                class="inline-flex items-center gap-1.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-300 transition hover:bg-orange-500 hover:text-white">
+                            <i class="fa-solid fa-closed-captioning"></i> Subtitle දාගන්න හැටි
+                        </button>
+                    </div>
                 </div>
                 <p class="mt-1.5 text-xs font-semibold leading-relaxed text-emerald-400 sm:text-sm">
                     සිදුවන අපහසුතාවයට කනගාටුයි, ads ටිකක් යනවා close කරලා බලන්න, අපි ads ගොඩක් block කරලා තියෙන්නේ.
