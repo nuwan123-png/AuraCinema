@@ -785,9 +785,6 @@
                             <img src="{{ asset('images/sub-step-1.jpg') }}"
                                  alt="Step 1: Click Settings gear icon"
                                  class="h-full w-full origin-bottom-right scale-[1.75] object-cover">
-                            <span class="pointer-events-none absolute left-2.5 top-2.5 rounded-md bg-black/75 px-2 py-0.5 text-[10px] font-bold text-orange-300 ring-1 ring-orange-500/40 backdrop-blur-sm">
-                                පහළ දකුණු කොන
-                            </span>
                         </div>
                     </div>
 
@@ -805,9 +802,6 @@
                             <img src="{{ asset('images/sub-step-2.jpg') }}"
                                  alt="Step 2: Select Captions Singhalese"
                                  class="h-full w-full origin-bottom-right scale-[1.75] object-cover">
-                            <span class="pointer-events-none absolute left-2.5 top-2.5 rounded-md bg-black/75 px-2 py-0.5 text-[10px] font-bold text-emerald-300 ring-1 ring-emerald-500/40 backdrop-blur-sm">
-                                Singhalese ON කරන්න
-                            </span>
                         </div>
                     </div>
                 </div>
