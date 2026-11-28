@@ -32,6 +32,10 @@
             @endif
         </header>
 
+        @include('partials.navbar')
+
+@include('partials.continue-watching')
+
         <main class="container mx-auto px-4 lg:px-8 pb-12">
             
             <!-- (NEW) Watch the Trailers Section -->

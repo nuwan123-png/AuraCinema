@@ -4,6 +4,8 @@ use App\Http\Controllers\MovieController;
 use App\Http\Controllers\RequestController;
 use App\Http\Controllers\SeoController;
 use App\Http\Controllers\StatsController;
+use App\Http\Controllers\Web\WebUserAuthController;
+use App\Http\Controllers\Web\WebWatchHistoryController;
 use App\Models\Movie;
 use App\Services\MediaOptimizer;
 use App\Support\EmbedUrl;
@@ -34,6 +36,20 @@ Route::middleware('track')->group(function () {
     Route::get('/suggestions', [MovieController::class, 'suggestions'])->name('suggestions');
     Route::get('/request', [RequestController::class, 'create'])->name('request.create');
     Route::resource('movies', MovieController::class)->only(['index', 'show']);
+
+    
+});
+
+// Website User Login / Register / Profile
+Route::get('/user/auth', [WebUserAuthController::class, 'showAuthForm'])->name('user.auth');
+Route::post('/user/login', [WebUserAuthController::class, 'login'])->name('user.login');
+Route::post('/user/register', [WebUserAuthController::class, 'register'])->name('user.register');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/user/profile', [WebUserAuthController::class, 'profile'])->name('user.profile');
+    Route::post('/user/logout', [WebUserAuthController::class, 'logout'])->name('user.logout');
+    Route::post('/user/watch-history', [WebWatchHistoryController::class, 'store'])->name('user.history.store');
+    Route::delete('/user/watch-history/{id}', [WebWatchHistoryController::class, 'destroy'])->name('user.history.destroy');
 });
 
 Route::get('/search/live', [MovieController::class, 'liveSearch'])->middleware('throttle:60,1')->name('search.live');
