@@ -894,50 +894,37 @@
         </dialog>
 
         <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                const subModal = document.querySelector('[data-sub-guide-modal]');
-                const closeBtns = document.querySelectorAll('[data-sub-guide-close]');
-                const manualOpenBtn = document.querySelector('[data-sub-guide-open]');
-                const watchBtn = document.querySelector('[data-embed-load]');
-                const episodeBtns = document.querySelectorAll('[data-episode-btn]');
+    document.addEventListener('DOMContentLoaded', () => {
+        const subModal = document.querySelector('[data-sub-guide-modal]');
+        const closeBtns = document.querySelectorAll('[data-sub-guide-close]');
+        const manualOpenBtn = document.querySelector('[data-sub-guide-open]');
 
-                if (!subModal) return;
+        if (!subModal) return;
 
-                let shownForEpisode = false;
+        const openSubGuide = () => {
+            if (typeof subModal.showModal === 'function') {
+                if (!subModal.open) subModal.showModal();
+            } else {
+                subModal.setAttribute('open', '');
+            }
+        };
 
-                const openSubGuide = () => {
-                    if (typeof subModal.showModal === 'function') {
-                        if (!subModal.open) subModal.showModal();
-                    } else {
-                        subModal.setAttribute('open', '');
-                    }
-                };
+        const closeSubGuide = () => {
+            if (typeof subModal.close === 'function') {
+                subModal.close();
+            } else {
+                subModal.removeAttribute('open');
+            }
+        };
 
-                const closeSubGuide = () => {
-                    if (typeof subModal.close === 'function') {
-                        subModal.close();
-                    } else {
-                        subModal.removeAttribute('open');
-                    }
-                };
+        // "Subtitle දාගන්න හැටි" button එක එබුවම විතරක් open වේ
+        manualOpenBtn?.addEventListener('click', openSubGuide);
 
-                watchBtn?.addEventListener('click', openSubGuide);
-                manualOpenBtn?.addEventListener('click', openSubGuide);
-
-                episodeBtns.forEach((btn) => {
-                    btn.addEventListener('click', () => {
-                        if (!shownForEpisode) {
-                            shownForEpisode = true;
-                            openSubGuide();
-                        }
-                    });
-                });
-
-                closeBtns.forEach((btn) => btn.addEventListener('click', closeSubGuide));
-                subModal.addEventListener('click', (e) => {
-                    if (e.target === subModal) closeSubGuide();
-                });
-            });
-        </script>
+        closeBtns.forEach((btn) => btn.addEventListener('click', closeSubGuide));
+        subModal.addEventListener('click', (e) => {
+            if (e.target === subModal) closeSubGuide();
+        });
+    });
+</script>
     @endif
 @endsection
