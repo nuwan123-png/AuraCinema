@@ -543,7 +543,8 @@
                     </div>
                 </div>
                 <p class="mt-1.5 text-xs font-semibold leading-relaxed text-emerald-400 sm:text-sm">
-                    Popups සහ Adult Ads අවහිර කර ඇත (Ad Shield: ON). Video එක load නොවුණොත් පමණක් Ad Shield button එක OFF කරන්න.
+                    Play කරන්න කලින් අනිවාර්යයෙන් Ad Shield button එක OFF කරන්න.
+                    Ads ගියොත් close කරන්න.
                 </p>
             </div>
 
