@@ -105,109 +105,180 @@
         <span class="text-slate-200">{{ $movie->title }}</span>
     </nav>
 
-    <div class="relative isolate mb-10 flex flex-col gap-6 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-5 shadow-2xl shadow-black/40 sm:p-8 md:flex-row md:gap-10">
-        @if($movie->image)
-            <img src="{{ $movie->poster_url }}" alt="" aria-hidden="true" width="48" height="72" loading="lazy" decoding="async"
-                 class="pointer-events-none absolute inset-0 -z-10 h-full w-full scale-125 object-cover opacity-20 blur-3xl">
-        @endif
-        <div class="aspect-[2/3] w-44 shrink-0 self-center overflow-hidden rounded-xl bg-zinc-900 shadow-2xl shadow-black/60 ring-1 ring-white/15 md:self-start">
+    @php
+        // Turns the free-text description into: aligned detail rows, an optional cast line and a clean story.
+        $descLines = preg_split('/\R/u', (string) $movie->description) ?: [];
+        $detailRows = [];
+        $castLabel = null;
+        $castNames = [];
+        $storyParas = [];
+        $para = [];
+        $flushPara = function () use (&$para, &$storyParas) {
+            if ($para) { $storyParas[] = implode("\n", $para); $para = []; }
+        };
+        $isSymbolStart = fn (string $l) => preg_match('/^[^\p{L}\p{N}\s\-\(\"\'\[]{1,4}\s*\S/u', $l) === 1;
+        foreach ($descLines as $i => $raw) {
+            $line = trim($raw);
+            if ($line === '') { $flushPara(); continue; }
+            if ($isSymbolStart($line) && preg_match('/^(\X)\s*([^:\x{FF1A}]{1,45}?)\s*[:\x{FF1A}]\s*(.+)$/u', $line, $m)) {
+                $flushPara();
+                $detailRows[] = ['icon' => $m[1], 'label' => trim($m[2]), 'value' => trim($m[3])];
+                continue;
+            }
+            if ($isSymbolStart($line) && ! str_contains($line, ':')) {
+                $flushPara();
+                $next = trim((string) ($descLines[$i + 1] ?? ''));
+                if (str_starts_with($next, '-')) { $castLabel = trim(preg_replace('/^\X\s*/u', '', $line, 1)); continue; }
+                continue; // a heading line such as the title or "Story": the page already shows these
+            }
+            if (str_starts_with($line, '-') && $castLabel !== null && ! $para && ! $storyParas) {
+                $castNames[] = trim(ltrim($line, "- \t"));
+                continue;
+            }
+            $para[] = $line;
+        }
+        $flushPara();
+        $hasDetailPanel = $detailRows || $castNames;
+    @endphp
+
+    <div class="relative isolate mb-10 max-w-5xl overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] shadow-xl shadow-black/30">
+        {{-- Banner: a blurred copy of the poster --}}
+        <div class="relative h-32 overflow-hidden sm:h-40">
             @if($movie->image)
-                <img src="{{ $movie->poster_url }}" alt="{{ $movie->title }}" width="480" height="720" fetchpriority="high" decoding="async" class="h-full w-full object-cover">
-            @else
-                <div class="flex h-full w-full items-center justify-center px-3 text-center text-sm text-slate-500">No poster</div>
+                <img src="{{ $movie->poster_url }}" alt="" aria-hidden="true" width="48" height="72" loading="lazy" decoding="async"
+                     class="pointer-events-none absolute inset-0 h-full w-full scale-150 object-cover opacity-50 blur-2xl">
             @endif
+            <div class="absolute inset-0 bg-gradient-to-t from-zinc-950/90 to-transparent"></div>
         </div>
 
-        <div class="min-w-0 flex-1">
-            <h1 class="mb-3 text-3xl font-extrabold tracking-tight sm:text-4xl">{{ $movie->title }}</h1>
-            <p class="mb-2 flex flex-wrap items-center gap-2 text-xs">
-                <a href="{{ route('movies.index', ['type' => $movie->type]) }}" class="chip">{{ $movie->type_label }}</a>
-                @if($movie->genre)
-                    <a href="{{ route('movies.index', ['genre' => $movie->genre]) }}" class="chip">{{ $movie->genre }}</a>
-                @endif
-                @if($movie->language)
-                    <a href="{{ route('movies.index', ['language' => $movie->language]) }}" class="chip">{{ $movie->language }}</a>
-                @endif
-                @if($movie->year)
-                    <a href="{{ route('movies.index', ['year' => $movie->year]) }}" class="chip">{{ $movie->year }}</a>
-                @endif
-                
-                {{-- Tags සදහා දෝෂ රහිත නිවැරදි ලූපය --}}
-                @php
-                    $cleanTags = array_filter(array_map('trim', explode(',', (string) $movie->tags)));
-                @endphp
-                @foreach($cleanTags as $tag)
-                    <a href="{{ route('movies.index', ['tag' => mb_strtolower($tag)]) }}" class="chip-tag">#{{ $tag }}</a>
-                @endforeach
-
-                @if($movie->episodes->isNotEmpty())
-                    <span class="rounded-full bg-gradient-to-r from-orange-500 to-amber-500 px-3 py-1 text-xs font-bold text-white">{{ $movie->episodes->count() }} EPS</span>
-                @endif
-            </p>
-            <p class="mb-5 text-xs text-slate-400">Added {{ $movie->created_at->format('d M Y') }}</p>
-            <p class="mb-6 max-w-3xl whitespace-pre-line text-sm leading-relaxed text-slate-300">{{ $movie->description ?: 'No synopsis provided.' }}</p>
-
-            <div class="flex flex-wrap items-start gap-3">
-                @if(!empty($quickDownloads))
-                    @php $primaryDl = $quickDownloads[0]; @endphp
-                    <a href="{{ $primaryDl['url'] }}"
-                       data-dl-notice
-                       @if($primaryDl['direct']) data-dl-filename="{{ $primaryDl['filename'] }}" @endif
-                       target="_blank"
-                       rel="noopener noreferrer"
-                       class="btn-aura shadow-lg shadow-orange-500/20">
-                        <i class="fa-solid fa-download"></i> Download ({{ $primaryDl['badge'] }})
-                    </a>
-                @elseif($movie->telegram_url)
-                    <button type="button"
-                            data-tg-download
-                            data-tg-title="{{ $movie->title }}"
-                            data-tg-target="{{ $isTgExpired ? $waRequestUrl : $movie->telegram_url }}"
-                            data-tg-expired="{{ $isTgExpired ? '1' : '0' }}"
-                            class="btn-aura">
-                        <i class="fa-brands fa-telegram"></i> Download
-                    </button>
-                @endif
-
-                @if($movie->trailer_embed_url)
-                    <button type="button" data-yt-trailer-open class="btn-ghost" aria-haspopup="dialog">
-                        <i class="fa-brands fa-youtube text-rose-500"></i> Trailer
-                    </button>
-                @elseif($movie->trailer_url)
-                    <button type="button" data-trailer-open class="btn-ghost" aria-haspopup="dialog">
-                        <i class="fa-solid fa-video text-orange-400"></i> Trailer
-                    </button>
-                @endif
-
-                {{-- Report error: opens WhatsApp with a ready message naming this movie --}}
-                @php
-                    $waText = 'Hi AuraCinema, I have an error in "'.$movie->title.'" movie: ';
-                    $waReport = 'https://wa.me/'.preg_replace('/\D/', '', (string) config('auracinema.whatsapp_number')).'?text='.rawurlencode($waText);
-                @endphp
-                <div class="max-w-[16rem]">
-                    <a href="{{ $waReport }}" target="_blank" rel="noopener" class="btn-ghost">
-                        <i class="fa-brands fa-whatsapp text-emerald-400"></i> Report error
-                    </a>
-                    <p class="mt-1.5 px-1 text-xs leading-snug text-slate-400">මෙම චිත්‍රපටය පිලිබද ගැටලුවක් තිබේනම් කියන්න.</p>
-                </div>
-
-                {{-- Share: WhatsApp share link and a copy-link button; the link always uses the public https address --}}
-                @php
-                    $shareUrl = rtrim((string) config('auracinema.site_url'), '/').request()->getPathInfo();
-                    $waShare = 'https://wa.me/?text='.rawurlencode('Watch "'.$movie->title.'" on AuraCinema: '.$shareUrl);
-                @endphp
-                <a href="{{ $waShare }}" target="_blank" rel="noopener" class="btn-ghost">
-                    <i class="fa-solid fa-share-nodes text-orange-400"></i> Share
-                </a>
-                <button type="button" data-copy-link="{{ $shareUrl }}" class="btn-ghost">
-                    <i class="fa-regular fa-copy text-orange-400"></i> <span data-copy-label>Copy link</span>
-                </button>
-                @if(request()->cookie('aura_admin'))
-                    <a href="{{ route('movies.edit', $movie) }}" class="btn-ghost">
-                        <i class="fa-solid fa-pen-to-square text-orange-400"></i> Edit
-                    </a>
+        {{-- Poster overlapping the banner, title and chips next to it --}}
+        <div class="relative -mt-16 flex flex-col items-center gap-4 px-5 text-center sm:-mt-20 sm:flex-row sm:items-end sm:gap-5 sm:px-6 sm:text-left">
+            <div class="aspect-[2/3] w-28 shrink-0 overflow-hidden rounded-xl bg-zinc-900 shadow-2xl shadow-black/60 ring-2 ring-white/20 sm:w-36">
+                @if($movie->image)
+                    <img src="{{ $movie->poster_url }}" alt="{{ $movie->title }}" width="480" height="720" fetchpriority="high" decoding="async" class="h-full w-full object-cover">
+                @else
+                    <div class="flex h-full w-full items-center justify-center px-3 text-center text-sm text-slate-500">No poster</div>
                 @endif
             </div>
+
+            <div class="min-w-0 flex-1 pb-1">
+                <h1 class="mb-2 text-2xl font-extrabold tracking-tight sm:text-3xl">{{ $movie->title }}</h1>
+                <p class="flex flex-wrap items-center justify-center gap-1.5 text-xs sm:justify-start">
+                    <a href="{{ route('movies.index', ['type' => $movie->type]) }}" class="chip">{{ $movie->type_label }}</a>
+                    @if($movie->genre)
+                        <a href="{{ route('movies.index', ['genre' => $movie->genre]) }}" class="chip">{{ $movie->genre }}</a>
+                    @endif
+                    @if($movie->language)
+                        <a href="{{ route('movies.index', ['language' => $movie->language]) }}" class="chip">{{ $movie->language }}</a>
+                    @endif
+                    @if($movie->year)
+                        <a href="{{ route('movies.index', ['year' => $movie->year]) }}" class="chip">{{ $movie->year }}</a>
+                    @endif
+
+                    @php
+                        $cleanTags = array_filter(array_map('trim', explode(',', (string) $movie->tags)));
+                    @endphp
+                    @foreach($cleanTags as $tag)
+                        <a href="{{ route('movies.index', ['tag' => mb_strtolower($tag)]) }}" class="chip-tag">#{{ $tag }}</a>
+                    @endforeach
+
+                    @if($movie->episodes->isNotEmpty())
+                        <span class="rounded-full bg-gradient-to-r from-orange-500 to-orange-600 px-3 py-1 text-xs font-bold text-white">{{ $movie->episodes->count() }} EPS</span>
+                    @endif
+                </p>
+                <p class="mt-2 text-[11px] text-slate-500">Added {{ $movie->created_at->format('d M Y') }}</p>
+            </div>
+        </div>
+
+        {{-- Story + buttons on the left, aligned details on the right --}}
+        <div class="grid gap-6 p-5 sm:p-6 {{ $hasDetailPanel ? 'md:grid-cols-[minmax(0,1fr)_20rem]' : '' }}">
+            <div class="min-w-0">
+                <div class="mb-5 max-w-2xl space-y-3 text-[13px] leading-6 text-slate-300">
+                    @forelse($storyParas as $storyPara)
+                        <p class="whitespace-pre-line">{{ $storyPara }}</p>
+                    @empty
+                        <p>No synopsis provided.</p>
+                    @endforelse
+                </div>
+
+                <div class="flex flex-wrap items-start gap-2.5">
+                    @if(!empty($quickDownloads))
+                        @php $primaryDl = $quickDownloads[0]; @endphp
+                        <a href="{{ $primaryDl['url'] }}"
+                           data-dl-notice
+                           @if($primaryDl['direct']) data-dl-filename="{{ $primaryDl['filename'] }}" @endif
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="btn-aura !px-4 !py-2 !text-xs shadow-lg shadow-orange-500/20">
+                            <i class="fa-solid fa-download"></i> Download ({{ $primaryDl['badge'] }})
+                        </a>
+                    @elseif($movie->telegram_url)
+                        <button type="button"
+                                data-tg-download
+                                data-tg-title="{{ $movie->title }}"
+                                data-tg-target="{{ $isTgExpired ? $waRequestUrl : $movie->telegram_url }}"
+                                data-tg-expired="{{ $isTgExpired ? '1' : '0' }}"
+                                class="btn-aura !px-4 !py-2 !text-xs">
+                            <i class="fa-brands fa-telegram"></i> Download
+                        </button>
+                    @endif
+
+                    @if($movie->trailer_embed_url)
+                        <button type="button" data-yt-trailer-open class="btn-ghost !px-4 !py-2 !text-xs" aria-haspopup="dialog">
+                            <i class="fa-brands fa-youtube text-rose-500"></i> Trailer
+                        </button>
+                    @elseif($movie->trailer_url)
+                        <button type="button" data-trailer-open class="btn-ghost !px-4 !py-2 !text-xs" aria-haspopup="dialog">
+                            <i class="fa-solid fa-video text-orange-400"></i> Trailer
+                        </button>
+                    @endif
+
+                    {{-- Report error: opens WhatsApp with a ready message naming this movie --}}
+                    @php
+                        $waText = 'Hi AuraCinema, I have an error in "'.$movie->title.'" movie: ';
+                        $waReport = 'https://wa.me/'.preg_replace('/\D/', '', (string) config('auracinema.whatsapp_number')).'?text='.rawurlencode($waText);
+                    @endphp
+                    <a href="{{ $waReport }}" target="_blank" rel="noopener" class="btn-ghost !px-4 !py-2 !text-xs">
+                            <i class="fa-brands fa-whatsapp text-emerald-400"></i> Report error
+                        </a>
+
+                    {{-- Share: WhatsApp share link and a copy-link button; the link always uses the public https address --}}
+                    @php
+                        $shareUrl = rtrim((string) config('auracinema.site_url'), '/').request()->getPathInfo();
+                        $waShare = 'https://wa.me/?text='.rawurlencode('Watch "'.$movie->title.'" on AuraCinema: '.$shareUrl);
+                    @endphp
+                    <a href="{{ $waShare }}" target="_blank" rel="noopener" class="btn-ghost !px-4 !py-2 !text-xs">
+                        <i class="fa-solid fa-share-nodes text-orange-400"></i> Share
+                    </a>
+                    <button type="button" data-copy-link="{{ $shareUrl }}" class="btn-ghost !px-4 !py-2 !text-xs">
+                        <i class="fa-regular fa-copy text-orange-400"></i> <span data-copy-label>Copy link</span>
+                    </button>
+                    @if(request()->cookie('aura_admin'))
+                        <a href="{{ route('movies.edit', $movie) }}" class="btn-ghost !px-4 !py-2 !text-xs">
+                            <i class="fa-solid fa-pen-to-square text-orange-400"></i> Edit
+                        </a>
+                    @endif
+                </div>
+                <p class="mt-3 flex items-center gap-1.5 text-xs leading-snug text-slate-400"><i class="fa-brands fa-whatsapp text-emerald-400"></i> මෙම චිත්‍රපටය පිලිබද ගැටලුවක් තිබේනම් කියන්න.</p>
+            </div>
+
+            @if($hasDetailPanel)
+                <aside class="h-fit rounded-2xl border border-white/10 bg-black/20 p-3 sm:p-4" aria-label="Details">
+                    @foreach($detailRows as $row)
+                        <div class="grid grid-cols-[1.5rem_6.5rem_minmax(0,1fr)] items-baseline gap-x-2 py-1.5 {{ ! $loop->first ? 'border-t border-white/5' : '' }}">
+                            <span class="text-center text-sm">{{ $row['icon'] }}</span>
+                            <span class="text-xs text-slate-400">{{ $row['label'] }}</span>
+                            <span class="min-w-0 break-words text-sm font-medium text-slate-100">{{ $row['value'] }}</span>
+                        </div>
+                    @endforeach
+                    @if($castNames)
+                        <div class="{{ $detailRows ? 'mt-1 border-t border-white/5 pt-2.5' : '' }}">
+                            <p class="mb-1.5 text-xs font-bold uppercase tracking-wide text-orange-400">{{ $castLabel ?: 'Cast' }}</p>
+                            <p class="text-sm leading-6 text-slate-200">{{ implode(' · ', $castNames) }}</p>
+                        </div>
+                    @endif
+                </aside>
+            @endif
         </div>
     </div>
 
