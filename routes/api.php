@@ -8,6 +8,7 @@ Route::prefix('v1')->group(function () {
     // User Account Auth
     Route::post('/user/register', [UserAuthController::class, 'register']);
     Route::post('/user/login', [UserAuthController::class, 'login']);
+    Route::get('/app-update-status', [\App\Http\Controllers\Api\AppUpdateController::class, 'status']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/user/logout', [UserAuthController::class, 'logout']);

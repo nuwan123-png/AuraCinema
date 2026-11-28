@@ -157,6 +157,15 @@
                 <a href="{{ route('requests.index') }}" title="Requests" class="{{ $sbItem(request()->routeIs('requests.index')) }}"><i class="fa-solid fa-inbox w-5 text-center"></i><span data-sb-label>Requests</span></a>
                 <a href="{{ route('admin.stats') }}" title="Stats" class="{{ $sbItem(request()->routeIs('admin.stats')) }}"><i class="fa-solid fa-chart-line w-5 text-center"></i><span data-sb-label>Stats</span></a>
                 <a href="{{ route('movies.create') }}" title="Add movie" class="btn-aura mt-2 w-full !rounded-2xl !py-2.5"><i class="fa-solid fa-plus"></i><span data-sb-label>Add movie</span></a>
+                @php($isAppUpdating = \App\Models\AppSetting::getValue('app_update_active', '0') === '1')
+<form method="POST" action="{{ route('admin.app-update.toggle') }}" class="inline-flex">
+    @csrf
+    <button type="submit"
+            class="inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-bold transition {{ $isAppUpdating ? 'border-amber-400 bg-amber-500/20 text-amber-300 animate-pulse' : 'border-white/15 bg-white/5 text-slate-300 hover:border-sky-400' }}">
+        <i class="fa-solid fa-rotate text-[11px]"></i>
+        <span>App Update: {{ $isAppUpdating ? 'ON' : 'OFF' }}</span>
+    </button>
+</form>
             @endif
         </nav>
 

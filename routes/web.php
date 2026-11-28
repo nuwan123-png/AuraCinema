@@ -30,6 +30,8 @@ Route::middleware(['throttle:60,1', 'admin'])->group(function () {
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap']);
 Route::get('/robots.txt', [SeoController::class, 'robots']);
 
+Route::post('/admin/app-update/toggle', [\App\Http\Controllers\Api\AppUpdateController::class, 'toggleWeb'])->name('admin.app-update.toggle');
+
 // Public pages: counted by the visitor stats (see TrackVisit).
 Route::middleware('track')->group(function () {
     Route::get('/', [MovieController::class, 'index'])->name('home');
