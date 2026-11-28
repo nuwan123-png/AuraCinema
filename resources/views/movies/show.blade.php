@@ -213,7 +213,9 @@
 
                 <div class="flex flex-wrap items-start gap-2.5">
                     @if(!empty($quickDownloads))
-                        @php $primaryDl = $quickDownloads[0]; @endphp
+                        @php
+                            $primaryDl = $quickDownloads[0];
+                        @endphp
                         <a href="{{ $primaryDl['url'] }}"
                            data-dl-notice
                            @if($primaryDl['direct']) data-dl-filename="{{ $primaryDl['filename'] }}" @endif
@@ -244,27 +246,35 @@
                     @endif
 
                     {{-- Watchlist / Favorites Toggle (Synced with Mobile App) --}}
-                    @auth
-                        @php($inWebWatchlist = \App\Models\Watchlist::where('user_id', auth()->id())->where('movie_id', $movie->id)->exists())
-                        <form method="POST" action="{{ route('user.watchlist.toggle') }}" class="inline-block">
-                            @csrf
-                            <input type="hidden" name="movie_id" value="{{ $movie->id }}">
-                            <input type="hidden" name="title" value="{{ $movie->title }}">
-                            <input type="hidden" name="poster_url" value="{{ $movie->poster_url ?? '' }}">
-                            <input type="hidden" name="type" value="{{ $movie->type ?? 'movie' }}">
-                            <input type="hidden" name="year" value="{{ $movie->year ?? '' }}">
-                            <button type="submit"
-                                    class="btn-ghost !px-4 !py-2 !text-xs {{ $inWebWatchlist ? '!border-rose-500/50 !bg-rose-500/15 !text-rose-400' : '' }}">
-                                <i class="{{ $inWebWatchlist ? 'fa-solid' : 'fa-regular' }} fa-heart text-rose-400"></i>
-                                <span>{{ $inWebWatchlist ? 'In Watchlist' : 'Add to Watchlist' }}</span>
-                            </button>
-                        </form>
-                    @else
-                        <a href="{{ route('user.auth') }}" class="btn-ghost !px-4 !py-2 !text-xs">
-                            <i class="fa-regular fa-heart text-rose-400"></i>
-                            <span>Add to Watchlist</span>
-                        </a>
-                    @endauth
+                    @if(\Illuminate\Support\Facades\Route::has('user.watchlist.toggle'))
+                        @auth
+                            @php
+                                $inWebWatchlist = class_exists(\App\Models\Watchlist::class)
+                                    && \Illuminate\Support\Facades\Schema::hasTable('watchlists')
+                                    && \App\Models\Watchlist::where('user_id', auth()->id())->where('movie_id', $movie->id)->exists();
+                            @endphp
+                            <form method="POST" action="{{ route('user.watchlist.toggle') }}" class="inline-block">
+                                @csrf
+                                <input type="hidden" name="movie_id" value="{{ $movie->id }}">
+                                <input type="hidden" name="title" value="{{ $movie->title }}">
+                                <input type="hidden" name="poster_url" value="{{ $movie->poster_url ?? '' }}">
+                                <input type="hidden" name="type" value="{{ $movie->type ?? 'movie' }}">
+                                <input type="hidden" name="year" value="{{ $movie->year ?? '' }}">
+                                <button type="submit"
+                                        class="btn-ghost !px-4 !py-2 !text-xs {{ $inWebWatchlist ? '!border-rose-500/50 !bg-rose-500/15 !text-rose-400' : '' }}">
+                                    <i class="{{ $inWebWatchlist ? 'fa-solid' : 'fa-regular' }} fa-heart text-rose-400"></i>
+                                    <span>{{ $inWebWatchlist ? 'In Watchlist' : 'Add to Watchlist' }}</span>
+                                </button>
+                            </form>
+                        @else
+                            @if(\Illuminate\Support\Facades\Route::has('user.auth'))
+                                <a href="{{ route('user.auth') }}" class="btn-ghost !px-4 !py-2 !text-xs">
+                                    <i class="fa-regular fa-heart text-rose-400"></i>
+                                    <span>Add to Watchlist</span>
+                                </a>
+                            @endif
+                        @endauth
+                    @endif
 
                     {{-- Report error: opens WhatsApp with a ready message naming this movie --}}
                     @php
@@ -401,7 +411,7 @@
                                 class="flex w-full items-center justify-center gap-1.5 rounded bg-black/40 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-orange-500 hover:text-white">
                             <i class="fa-solid fa-play text-xs text-orange-400"></i> Ep {{ $episode->number }}
                         </button>
-                        
+
                         {{-- 2. Direct Download Button --}}
                         @if(!empty($epDlUrl))
                             <a href="{{ $epDlUrl }}"
@@ -569,15 +579,15 @@
     {{-- Download & Subtitles Section --}}
     @if($hasDownloadsBox || $hasSubtitlesBox)
         <section class="mt-10" id="downloads">
-                <div class="{{ $hasBothBoxes ? 'mx-auto grid w-full max-w-5xl grid-cols-1 gap-6 md:grid-cols-2' : 'mx-auto w-full max-w-xl' }}">
-                    
-                    {{-- 1. Select Quality Box --}}
-                    @if($hasDownloadsBox)
+            <div class="{{ $hasBothBoxes ? 'mx-auto grid w-full max-w-5xl grid-cols-1 gap-6 md:grid-cols-2' : 'mx-auto w-full max-w-xl' }}">
+
+                {{-- 1. Select Quality Box --}}
+                @if($hasDownloadsBox)
                     <div class="rounded-xl border border-white/10 bg-white/5 p-5 shadow-lg">
                         <h3 class="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-200">
                             <i class="fa-solid fa-hard-drive text-orange-500"></i> Select Quality &amp; Download
                         </h3>
-                        
+
                         <div class="space-y-3">
                             @foreach($quickDownloads as $dl)
                                 <a href="{{ $dl['url'] }}"
@@ -638,17 +648,17 @@
                             </div>
                         @endif
                     </div>
-                    @endif
+                @endif
 
-                    {{-- 2. Subtitles Box - Only shows if subtitle link is added --}}
-                    @if($hasSubtitlesBox)
-                        <div class="rounded-xl border border-white/10 bg-white/5 p-5 shadow-lg">
-                            <h3 class="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-200">
-                                <i class="fa-regular fa-closed-captioning text-orange-500"></i> Subtitles
-                            </h3>
-                            
-                            <div class="space-y-3">
-                                @if($movie->subtitle_url)
+                {{-- 2. Subtitles Box - Only shows if subtitle link is added --}}
+                @if($hasSubtitlesBox)
+                    <div class="rounded-xl border border-white/10 bg-white/5 p-5 shadow-lg">
+                        <h3 class="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-200">
+                            <i class="fa-regular fa-closed-captioning text-orange-500"></i> Subtitles
+                        </h3>
+
+                        <div class="space-y-3">
+                            @if($movie->subtitle_url)
                                 <a href="{{ $movie->subtitle_url }}" download="{{ $safeFileBase }}-sinhala-sub.srt" target="_blank" rel="noopener noreferrer" class="group flex items-center justify-between rounded-lg bg-black/40 p-3 ring-1 ring-white/5 transition hover:bg-black/60 hover:ring-orange-500/50">
                                     <div class="flex items-center gap-4">
                                         <div class="grid h-12 w-12 place-items-center rounded bg-orange-500/10 text-xl text-orange-400 transition group-hover:bg-orange-500/20">
@@ -663,27 +673,27 @@
                                         <i class="fa-solid fa-download"></i>
                                     </div>
                                 </a>
-                                @endif
+                            @endif
 
-                                {{-- Per-episode subtitles (series) --}}
-                                @if($episodeSubs->isNotEmpty())
-                                    <div>
-                                        <div class="mb-2 text-[10px] font-semibold uppercase text-slate-500">Episode subtitles</div>
-                                        <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                                            @foreach($episodeSubs as $episode)
-                                                <a href="{{ $episode->subtitle_url }}" target="_blank" rel="noopener"
-                                                   class="group flex items-center justify-center gap-1.5 rounded-md bg-black/40 py-2.5 text-xs font-semibold text-slate-200 ring-1 ring-white/5 transition hover:bg-orange-500 hover:text-white">
-                                                    <i class="fa-solid fa-download text-[10px] text-orange-400 group-hover:text-white"></i> Ep {{ $episode->number }}
-                                                </a>
-                                            @endforeach
-                                        </div>
+                            {{-- Per-episode subtitles (series) --}}
+                            @if($episodeSubs->isNotEmpty())
+                                <div>
+                                    <div class="mb-2 text-[10px] font-semibold uppercase text-slate-500">Episode subtitles</div>
+                                    <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                                        @foreach($episodeSubs as $episode)
+                                            <a href="{{ $episode->subtitle_url }}" target="_blank" rel="noopener"
+                                               class="group flex items-center justify-center gap-1.5 rounded-md bg-black/40 py-2.5 text-xs font-semibold text-slate-200 ring-1 ring-white/5 transition hover:bg-orange-500 hover:text-white">
+                                                <i class="fa-solid fa-download text-[10px] text-orange-400 group-hover:text-white"></i> Ep {{ $episode->number }}
+                                            </a>
+                                        @endforeach
                                     </div>
-                                @endif
-                            </div>
+                                </div>
+                            @endif
                         </div>
-                    @endif
+                    </div>
+                @endif
 
-                </div>
+            </div>
         </section>
     @endif
 
@@ -961,7 +971,6 @@
                             'allow-scripts allow-same-origin allow-forms allow-presentation'
                         );
                     }
-                    // Sandbox flags force-apply wima sandaha src eka eka parak reload karai
                     if (cleanSrc && (!hadSandbox || rawSrc !== cleanSrc) && iframe.dataset.shieldReloaded !== cleanSrc) {
                         iframe.dataset.shieldReloaded = cleanSrc;
                         iframe.setAttribute('src', cleanSrc);
@@ -1059,7 +1068,7 @@
                 }
 
                 // 3. Continue Watching Two-Way Sync (Website -> Mobile App)
-                @auth
+                @if(auth()->check() && \Illuminate\Support\Facades\Route::has('user.history.store'))
                 const historyEndpoint = "{{ route('user.history.store') }}";
                 const csrfToken = "{{ csrf_token() }}";
                 const baseTitle = @json($movie->title);
@@ -1105,7 +1114,7 @@
                         }).catch(() => {});
                     }
                 }, 15000);
-                @endauth
+                @endif
             });
         </script>
     @endif
