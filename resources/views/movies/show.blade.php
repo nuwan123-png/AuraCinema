@@ -23,6 +23,18 @@
         ) ?? $url;
     };
 
+    $toEmbedStreamtapeUrl = function (?string $rawUrl): ?string {
+        $url = trim((string) $rawUrl);
+        if ($url === '') {
+            return null;
+        }
+        return preg_replace(
+            '~(https?://(?:www\.)?(?:streamtape\.[a-z]+|stape\.[a-z]+|strcloud\.[a-z]+))/v/~i',
+            '$1/e/',
+            $url
+        ) ?? $url;
+    };
+
     $isDirectFileUrl = function (?string $rawUrl): bool {
         $path = strtolower((string) parse_url((string) $rawUrl, PHP_URL_PATH));
         return str_ends_with($path, '.mp4')
@@ -98,8 +110,6 @@
 @section('content')
     @include('movies._incomplete_notice', ['movie' => $movie])
 
-{{-- The old in-page navbar was removed: the left sidebar in the layout replaces it. --}}
-
     <nav class="mb-5 text-xs text-slate-400" aria-label="Breadcrumb">
         <a href="{{ route('home') }}" class="hover:text-white">Home</a> <span class="mx-1">/</span>
         <span class="text-slate-200">{{ $movie->title }}</span>
@@ -129,7 +139,7 @@
                 $flushPara();
                 $next = trim((string) ($descLines[$i + 1] ?? ''));
                 if (str_starts_with($next, '-')) { $castLabel = trim(preg_replace('/^\X\s*/u', '', $line, 1)); continue; }
-                continue; // a heading line such as the title or "Story": the page already shows these
+                continue;
             }
             if (str_starts_with($line, '-') && $castLabel !== null && ! $para && ! $storyParas) {
                 $castNames[] = trim(ltrim($line, "- \t"));
@@ -233,14 +243,37 @@
                         </button>
                     @endif
 
+                    {{-- Watchlist / Favorites Toggle (Synced with Mobile App) --}}
+                    @auth
+                        @php($inWebWatchlist = \App\Models\Watchlist::where('user_id', auth()->id())->where('movie_id', $movie->id)->exists())
+                        <form method="POST" action="{{ route('user.watchlist.toggle') }}" class="inline-block">
+                            @csrf
+                            <input type="hidden" name="movie_id" value="{{ $movie->id }}">
+                            <input type="hidden" name="title" value="{{ $movie->title }}">
+                            <input type="hidden" name="poster_url" value="{{ $movie->poster_url ?? '' }}">
+                            <input type="hidden" name="type" value="{{ $movie->type ?? 'movie' }}">
+                            <input type="hidden" name="year" value="{{ $movie->year ?? '' }}">
+                            <button type="submit"
+                                    class="btn-ghost !px-4 !py-2 !text-xs {{ $inWebWatchlist ? '!border-rose-500/50 !bg-rose-500/15 !text-rose-400' : '' }}">
+                                <i class="{{ $inWebWatchlist ? 'fa-solid' : 'fa-regular' }} fa-heart text-rose-400"></i>
+                                <span>{{ $inWebWatchlist ? 'In Watchlist' : 'Add to Watchlist' }}</span>
+                            </button>
+                        </form>
+                    @else
+                        <a href="{{ route('user.auth') }}" class="btn-ghost !px-4 !py-2 !text-xs">
+                            <i class="fa-regular fa-heart text-rose-400"></i>
+                            <span>Add to Watchlist</span>
+                        </a>
+                    @endauth
+
                     {{-- Report error: opens WhatsApp with a ready message naming this movie --}}
                     @php
                         $waText = 'Hi AuraCinema, I have an error in "'.$movie->title.'" movie: ';
                         $waReport = 'https://wa.me/'.preg_replace('/\D/', '', (string) config('auracinema.whatsapp_number')).'?text='.rawurlencode($waText);
                     @endphp
                     <a href="{{ $waReport }}" target="_blank" rel="noopener" class="btn-ghost !px-4 !py-2 !text-xs">
-                            <i class="fa-brands fa-whatsapp text-emerald-400"></i> Report error
-                        </a>
+                        <i class="fa-brands fa-whatsapp text-emerald-400"></i> Report error
+                    </a>
 
                     {{-- Share: WhatsApp share link and a copy-link button; the link always uses the public https address --}}
                     @php
@@ -351,7 +384,8 @@
             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 @foreach($movie->episodes as $episode)
                     @php
-                        $epEmbed = \App\Support\EmbedUrl::normalize($episode->url) ?: $episode->url;
+                        $epEmbedRaw = \App\Support\EmbedUrl::normalize($episode->url) ?: $episode->url;
+                        $epEmbed = $toEmbedStreamtapeUrl($epEmbedRaw);
                         $epRawDl = filled($episode->download_url) ? $episode->download_url : $episode->url;
                         $epDlUrl = $toMobileDownloadUrl($epRawDl);
                         $epIsDirect = $isDirectFileUrl($epDlUrl);
@@ -360,6 +394,7 @@
                         {{-- 1. Watch Button --}}
                         <button type="button"
                                 data-episode-btn
+                                data-episode="{{ $episode->number }}"
                                 data-embed-src="{{ $epEmbed }}"
                                 data-embed-title="{{ $movie->title }} - Episode {{ $episode->number }}"
                                 aria-label="Watch episode {{ $episode->number }}"
@@ -471,7 +506,8 @@
 
     @php
         $firstEpisode = $movie->episodes->first();
-        $defaultPlayerSrc = $movie->embed_url ?: ($firstEpisode ? (\App\Support\EmbedUrl::normalize($firstEpisode->url) ?: $firstEpisode->url) : null);
+        $rawDefaultSrc = $movie->embed_url ?: ($firstEpisode ? (\App\Support\EmbedUrl::normalize($firstEpisode->url) ?: $firstEpisode->url) : null);
+        $defaultPlayerSrc = $toEmbedStreamtapeUrl($rawDefaultSrc);
     @endphp
 
     @if($defaultPlayerSrc)
@@ -479,7 +515,12 @@
             <div class="mx-auto mb-3 w-full max-w-4xl">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <h2 class="text-base font-bold" id="watch-title">Watch now</h2>
-                    <div class="flex items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" id="auraAdShieldBtn" onclick="toggleAuraAdShield()"
+                                class="inline-flex items-center gap-1.5 rounded-full border border-sky-400/40 bg-sky-500/15 px-3 py-1 text-xs font-bold text-sky-300 transition hover:bg-sky-500 hover:text-white">
+                            <i class="fa-solid fa-shield-halved"></i>
+                            <span id="auraAdShieldText">Ad Shield: ON</span>
+                        </button>
                         <button type="button" data-fullscreen-btn
                                 class="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-200 transition hover:bg-white/15 hover:text-white"
                                 aria-label="Open the player in fullscreen">
@@ -492,7 +533,7 @@
                     </div>
                 </div>
                 <p class="mt-1.5 text-xs font-semibold leading-relaxed text-emerald-400 sm:text-sm">
-                    සිදුවන අපහසුතාවයට කනගාටුයි, ads ටිකක් යනවා close කරලා බලන්න, අපි ads ගොඩක් block කරලා තියෙන්නේ.
+                    Popups සහ Adult Ads අවහිර කර ඇත (Ad Shield: ON). Video එක load නොවුණොත් පමණක් Ad Shield button එක OFF කරන්න.
                 </p>
             </div>
 
@@ -894,37 +935,178 @@
         </dialog>
 
         <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const subModal = document.querySelector('[data-sub-guide-modal]');
-        const closeBtns = document.querySelectorAll('[data-sub-guide-close]');
-        const manualOpenBtn = document.querySelector('[data-sub-guide-open]');
+            let auraShieldEnabled = true;
 
-        if (!subModal) return;
-
-        const openSubGuide = () => {
-            if (typeof subModal.showModal === 'function') {
-                if (!subModal.open) subModal.showModal();
-            } else {
-                subModal.setAttribute('open', '');
+            function sanitizeStreamtapeEmbedUrl(url) {
+                if (!url) return url;
+                return url.replace(
+                    /(https?:\/\/(?:www\.)?(?:streamtape\.[a-z]+|stape\.[a-z]+|strcloud\.[a-z]+))\/v\//i,
+                    '$1/e/'
+                );
             }
-        };
 
-        const closeSubGuide = () => {
-            if (typeof subModal.close === 'function') {
-                subModal.close();
-            } else {
-                subModal.removeAttribute('open');
+            function applyPlayerAdShield(iframe) {
+                if (!iframe) return;
+
+                const rawSrc = iframe.getAttribute('src') || '';
+                const cleanSrc = sanitizeStreamtapeEmbedUrl(rawSrc);
+
+                iframe.setAttribute('referrerpolicy', 'no-referrer');
+
+                if (auraShieldEnabled) {
+                    const hadSandbox = iframe.hasAttribute('sandbox');
+                    if (!hadSandbox) {
+                        iframe.setAttribute(
+                            'sandbox',
+                            'allow-scripts allow-same-origin allow-forms allow-presentation'
+                        );
+                    }
+                    // Sandbox flags force-apply wima sandaha src eka eka parak reload karai
+                    if (cleanSrc && (!hadSandbox || rawSrc !== cleanSrc) && iframe.dataset.shieldReloaded !== cleanSrc) {
+                        iframe.dataset.shieldReloaded = cleanSrc;
+                        iframe.setAttribute('src', cleanSrc);
+                    }
+                } else {
+                    const hadSandbox = iframe.hasAttribute('sandbox');
+                    iframe.removeAttribute('sandbox');
+                    delete iframe.dataset.shieldReloaded;
+                    if (cleanSrc && (hadSandbox || rawSrc !== cleanSrc)) {
+                        iframe.setAttribute('src', cleanSrc);
+                    }
+                }
             }
-        };
 
-        // "Subtitle දාගන්න හැටි" button එක එබුවම විතරක් open වේ
-        manualOpenBtn?.addEventListener('click', openSubGuide);
+            function toggleAuraAdShield() {
+                auraShieldEnabled = !auraShieldEnabled;
+                const btn = document.getElementById('auraAdShieldBtn');
+                const label = document.getElementById('auraAdShieldText');
 
-        closeBtns.forEach((btn) => btn.addEventListener('click', closeSubGuide));
-        subModal.addEventListener('click', (e) => {
-            if (e.target === subModal) closeSubGuide();
-        });
-    });
-</script>
+                if (btn && label) {
+                    if (auraShieldEnabled) {
+                        label.textContent = 'Ad Shield: ON';
+                        btn.classList.remove('border-amber-400/40', 'bg-amber-500/15', 'text-amber-300');
+                        btn.classList.add('border-sky-400/40', 'bg-sky-500/15', 'text-sky-300');
+                    } else {
+                        label.textContent = 'Ad Shield: OFF';
+                        btn.classList.remove('border-sky-400/40', 'bg-sky-500/15', 'text-sky-300');
+                        btn.classList.add('border-amber-400/40', 'bg-amber-500/15', 'text-amber-300');
+                    }
+                }
+
+                const embedContainer = document.querySelector('[data-embed]');
+                if (embedContainer) {
+                    embedContainer.querySelectorAll('iframe').forEach((iframe) => {
+                        delete iframe.dataset.shieldReloaded;
+                        applyPlayerAdShield(iframe);
+                    });
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', () => {
+                // 1. [data-embed] athule load wena Streamtape player iframe ekata witharak Ad Shield damima
+                const embedContainer = document.querySelector('[data-embed]');
+                if (embedContainer) {
+                    const attachShield = (iframe) => {
+                        applyPlayerAdShield(iframe);
+                        const attrObserver = new MutationObserver(() => applyPlayerAdShield(iframe));
+                        attrObserver.observe(iframe, { attributes: true, attributeFilter: ['src'] });
+                    };
+
+                    embedContainer.querySelectorAll('iframe').forEach(attachShield);
+
+                    const embedObserver = new MutationObserver((mutations) => {
+                        mutations.forEach((m) => {
+                            m.addedNodes.forEach((node) => {
+                                if (node.nodeType !== 1) return;
+                                if (node.tagName === 'IFRAME') {
+                                    attachShield(node);
+                                } else if (node.querySelectorAll) {
+                                    node.querySelectorAll('iframe').forEach(attachShield);
+                                }
+                            });
+                        });
+                    });
+                    embedObserver.observe(embedContainer, { childList: true, subtree: true });
+                }
+
+                // 2. "Subtitle දාගන්න හැටි" button eka ebuwama witharak guide popup eka open kirima
+                const subModal = document.querySelector('[data-sub-guide-modal]');
+                const closeBtns = document.querySelectorAll('[data-sub-guide-close]');
+                const manualOpenBtn = document.querySelector('[data-sub-guide-open]');
+
+                if (subModal) {
+                    const openSubGuide = () => {
+                        if (typeof subModal.showModal === 'function') {
+                            if (!subModal.open) subModal.showModal();
+                        } else {
+                            subModal.setAttribute('open', '');
+                        }
+                    };
+
+                    const closeSubGuide = () => {
+                        if (typeof subModal.close === 'function') {
+                            subModal.close();
+                        } else {
+                            subModal.removeAttribute('open');
+                        }
+                    };
+
+                    manualOpenBtn?.addEventListener('click', openSubGuide);
+                    closeBtns.forEach((btn) => btn.addEventListener('click', closeSubGuide));
+                    subModal.addEventListener('click', (e) => {
+                        if (e.target === subModal) closeSubGuide();
+                    });
+                }
+
+                // 3. Continue Watching Two-Way Sync (Website -> Mobile App)
+                @auth
+                const historyEndpoint = "{{ route('user.history.store') }}";
+                const csrfToken = "{{ csrf_token() }}";
+                const baseTitle = @json($movie->title);
+                let currentEpisodeId = 0;
+                let currentTitle = baseTitle;
+                let isPlayingStarted = false;
+                let watchedSeconds = {{ (int) request()->query('t', 0) }};
+
+                document.querySelector('[data-embed-load]')?.addEventListener('click', () => {
+                    isPlayingStarted = true;
+                });
+
+                document.querySelectorAll('[data-episode-btn]').forEach((btn, idx) => {
+                    btn.addEventListener('click', () => {
+                        isPlayingStarted = true;
+                        const epNum = parseInt(btn.dataset.episode || '', 10);
+                        currentEpisodeId = !Number.isNaN(epNum) ? epNum : (idx + 1);
+                        currentTitle = btn.dataset.embedTitle || `${baseTitle} - Episode ${currentEpisodeId}`;
+                        watchedSeconds = 0;
+                    });
+                });
+
+                setInterval(() => {
+                    const activeFrame = embedContainer ? embedContainer.querySelector('iframe[src*="http"]') : null;
+                    if (!document.hidden && (isPlayingStarted || activeFrame)) {
+                        watchedSeconds += 15;
+                        fetch(historyEndpoint, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken
+                            },
+                            body: JSON.stringify({
+                                movie_id: {{ (int) $movie->id }},
+                                episode_id: currentEpisodeId,
+                                title: currentTitle,
+                                poster_url: @json($movie->poster_url ?? ''),
+                                type: @json($movie->type ?? 'movie'),
+                                position_seconds: watchedSeconds,
+                                duration_seconds: 0
+                            })
+                        }).catch(() => {});
+                    }
+                }, 15000);
+                @endauth
+            });
+        </script>
     @endif
 @endsection
