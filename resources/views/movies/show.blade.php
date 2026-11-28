@@ -590,9 +590,9 @@
                     <h2 class="text-base font-bold" id="watch-title">Watch now</h2>
                     <div class="flex flex-wrap items-center gap-2">
                         <button type="button" id="auraAdShieldBtn" onclick="toggleAuraAdShield()"
-                                class="inline-flex items-center gap-1.5 rounded-full border border-sky-400/40 bg-sky-500/15 px-3 py-1 text-xs font-bold text-sky-300 transition hover:bg-sky-500 hover:text-white">
+                                class="inline-flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-500/15 px-3 py-1 text-xs font-bold text-amber-300 transition hover:bg-sky-500 hover:text-white">
                             <i class="fa-solid fa-shield-halved"></i>
-                            <span id="auraAdShieldText">Ad Shield: ON</span>
+                            <span id="auraAdShieldText">Ad Shield: OFF</span>
                         </button>
                         <button type="button" data-fullscreen-btn
                                 class="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-200 transition hover:bg-white/15 hover:text-white"
@@ -606,8 +606,7 @@
                     </div>
                 </div>
                 <p class="mt-1.5 text-xs font-semibold leading-relaxed text-emerald-400 sm:text-sm">
-                    Play කරන්න කලින් අනිවාර්යයෙන් Ad Shield button එක OFF කරන්න.
-                    Ads ගියොත් close කරන්න.
+                    සිදුවන අපහසුතාවයට කනගාටුයි, ads ටිකක් යනවා close කරලා බලන්න, අපි ads ගොඩක් block කරලා තියෙන්නේ.
                 </p>
             </div>
 
@@ -623,10 +622,10 @@
                     </button>
                 </div>
 
-                {{-- Cute Cinema Projector Buddy Loader --}}
+                {{-- Cute Cinema Projector Buddy Loader (Shows on Watch Now & Player Play Button Click) --}}
                 <div id="auraPlayerLoader"
                      aria-hidden="true"
-                     class="pointer-events-none absolute inset-0 z-20 hidden flex-col items-center justify-center bg-[#090d16]/95 px-4 text-center transition-opacity duration-300">
+                     class="pointer-events-none absolute inset-0 z-20 hidden flex-col items-center justify-center bg-[#090d16]/90 px-4 text-center backdrop-blur-sm transition-opacity duration-300">
                     <div class="aura-buddy-float w-48 sm:w-56">
                         <svg viewBox="0 0 220 115" class="h-auto w-full overflow-visible" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <defs>
@@ -1095,9 +1094,10 @@
         </dialog>
 
         <script>
-            let auraShieldEnabled = true;
+            let auraShieldEnabled = false;
             let auraShowLoaderFn = null;
             let auraHideLoaderFn = null;
+            let auraPlayClickTriggered = false;
 
             function sanitizeStreamtapeEmbedUrl(url) {
                 if (!url) return url;
@@ -1138,8 +1138,9 @@
 
                 if (cleanSrc && cleanSrc !== 'about:blank' && iframe.dataset.loaderBoundSrc !== cleanSrc) {
                     iframe.dataset.loaderBoundSrc = cleanSrc;
+                    auraPlayClickTriggered = false;
                     if (typeof auraShowLoaderFn === 'function') {
-                        auraShowLoaderFn(iframe.getAttribute('title') || '');
+                        auraShowLoaderFn(iframe.getAttribute('title') || '', 2600);
                     }
                     if (typeof auraHideLoaderFn === 'function') {
                         iframe.addEventListener('load', auraHideLoaderFn, { once: true });
@@ -1186,11 +1187,13 @@
                 ];
                 let loaderFallbackTimer = null;
                 let captionInterval = null;
+                const baseTitle = @json($movie->title);
+                let currentTitle = baseTitle;
 
-                auraShowLoaderFn = (titleText) => {
+                auraShowLoaderFn = (titleText, durationMs = 4200) => {
                     if (!playerLoader) return;
-                    if (playerLoaderTitle && titleText) {
-                        playerLoaderTitle.textContent = titleText;
+                    if (playerLoaderTitle) {
+                        playerLoaderTitle.textContent = titleText || currentTitle;
                     }
 
                     let msgIdx = 0;
@@ -1199,7 +1202,7 @@
                     captionInterval = setInterval(() => {
                         msgIdx = (msgIdx + 1) % funCaptions.length;
                         if (playerFunMsg) playerFunMsg.textContent = funCaptions[msgIdx];
-                    }, 1500);
+                    }, 1300);
 
                     clearTimeout(loaderFallbackTimer);
                     playerLoader.classList.remove('hidden', 'opacity-0');
@@ -1207,7 +1210,7 @@
 
                     loaderFallbackTimer = setTimeout(() => {
                         if (typeof auraHideLoaderFn === 'function') auraHideLoaderFn();
-                    }, 5000);
+                    }, durationMs);
                 };
 
                 auraHideLoaderFn = () => {
@@ -1221,6 +1224,20 @@
                         playerLoader.classList.remove('flex');
                     }, 300);
                 };
+
+                // Player eka athule thiyena Play button eka click kalama (00:00 / 00:00 buffer weddi) animation eka pennima
+                window.addEventListener('blur', () => {
+                    setTimeout(() => {
+                        if (!embedContainer || auraPlayClickTriggered) return;
+                        const activeEl = document.activeElement;
+                        if (activeEl && activeEl.tagName === 'IFRAME' && embedContainer.contains(activeEl)) {
+                            auraPlayClickTriggered = true;
+                            if (typeof auraShowLoaderFn === 'function') {
+                                auraShowLoaderFn(currentTitle, 4200);
+                            }
+                        }
+                    }, 50);
+                });
 
                 // 1. [data-embed] athule load wena Streamtape player iframe ekata Ad Shield + Cute Loader bind kirima
                 if (embedContainer) {
@@ -1277,28 +1294,29 @@
                 }
 
                 // 3. Watch Now, Episodes & Continue Watching Two-Way Sync (Website -> Mobile App)
-                const baseTitle = @json($movie->title);
                 let currentEpisodeId = 0;
-                let currentTitle = baseTitle;
                 let isPlayingStarted = false;
                 let watchedSeconds = {{ (int) request()->query('t', 0) }};
 
                 document.querySelector('[data-embed-load]')?.addEventListener('click', (e) => {
                     isPlayingStarted = true;
+                    auraPlayClickTriggered = false;
+                    currentTitle = e.currentTarget.dataset.embedTitle || baseTitle;
                     if (typeof auraShowLoaderFn === 'function') {
-                        auraShowLoaderFn(e.currentTarget.dataset.embedTitle || baseTitle);
+                        auraShowLoaderFn(currentTitle, 2600);
                     }
                 });
 
                 document.querySelectorAll('[data-episode-btn]').forEach((btn, idx) => {
                     btn.addEventListener('click', () => {
                         isPlayingStarted = true;
+                        auraPlayClickTriggered = false;
                         const epNum = parseInt(btn.dataset.episode || '', 10);
                         currentEpisodeId = !Number.isNaN(epNum) ? epNum : (idx + 1);
                         currentTitle = btn.dataset.embedTitle || `${baseTitle} - Episode ${currentEpisodeId}`;
                         watchedSeconds = 0;
                         if (typeof auraShowLoaderFn === 'function') {
-                            auraShowLoaderFn(currentTitle);
+                            auraShowLoaderFn(currentTitle, 2600);
                         }
                     });
                 });
