@@ -522,6 +522,69 @@
 
     @if($defaultPlayerSrc)
         <section class="mt-10" id="watch">
+            <style>
+                @keyframes auraReelSpin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                @keyframes auraBuddyFloat {
+                    0%, 100% { transform: translateY(0px); }
+                    50% { transform: translateY(-5px); }
+                }
+                @keyframes auraEyeBlink {
+                    0%, 44%, 48%, 100% { transform: scaleY(1); }
+                    46% { transform: scaleY(0.1); }
+                }
+                @keyframes auraBeamPulse {
+                    0%, 100% { opacity: 0.45; transform: scaleX(0.96); }
+                    50% { opacity: 0.95; transform: scaleX(1.03); }
+                }
+                @keyframes auraStarPop {
+                    0% { transform: translateY(4px) scale(0.6); opacity: 0; }
+                    50% { transform: translateY(-4px) scale(1.15); opacity: 1; }
+                    100% { transform: translateY(-12px) scale(0.7); opacity: 0; }
+                }
+                @keyframes auraProgressSlide {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(260%); }
+                }
+                .aura-reel-spin {
+                    transform-box: fill-box;
+                    transform-origin: center;
+                    animation: auraReelSpin 2.4s linear infinite;
+                }
+                .aura-reel-spin-fast {
+                    transform-box: fill-box;
+                    transform-origin: center;
+                    animation: auraReelSpin 1.8s linear infinite;
+                }
+                .aura-buddy-float {
+                    animation: auraBuddyFloat 2.2s ease-in-out infinite;
+                }
+                .aura-eye-blink {
+                    transform-box: fill-box;
+                    transform-origin: center;
+                    animation: auraEyeBlink 3.6s infinite;
+                }
+                .aura-beam-pulse {
+                    transform-box: fill-box;
+                    transform-origin: left center;
+                    animation: auraBeamPulse 1.8s ease-in-out infinite;
+                }
+                .aura-star-1 { animation: auraStarPop 2s ease-in-out infinite; }
+                .aura-star-2 { animation: auraStarPop 2s ease-in-out 0.65s infinite; }
+                .aura-star-3 { animation: auraStarPop 2s ease-in-out 1.3s infinite; }
+                .aura-progress-bar { animation: auraProgressSlide 1.4s ease-in-out infinite; }
+
+                @media (prefers-reduced-motion: reduce) {
+                    .aura-reel-spin, .aura-reel-spin-fast, .aura-buddy-float,
+                    .aura-eye-blink, .aura-beam-pulse, .aura-star-1,
+                    .aura-star-2, .aura-star-3, .aura-progress-bar {
+                        animation: none !important;
+                    }
+                }
+            </style>
+
             <div class="mx-auto mb-3 w-full max-w-4xl">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <h2 class="text-base font-bold" id="watch-title">Watch now</h2>
@@ -548,14 +611,100 @@
                 </p>
             </div>
 
-            <div data-embed class="mx-auto w-full max-w-4xl">
-                <button type="button" data-embed-load data-embed-src="{{ $defaultPlayerSrc }}" data-embed-title="{{ $movie->title }}"
-                        class="grid aspect-video w-full place-items-center rounded-lg bg-black ring-1 ring-white/10 transition hover:ring-orange-400/60"
-                        aria-label="Load the player for {{ $movie->title }}">
-                    <span class="flex items-center gap-2 rounded-full bg-orange-500 px-7 py-3 text-sm font-bold text-white">
-                        <i class="fa-solid fa-play"></i> Watch now
-                    </span>
-                </button>
+            {{-- Player Box with Cute Animated Loading Overlay --}}
+            <div id="auraPlayerShell" class="relative mx-auto w-full max-w-4xl overflow-hidden rounded-2xl bg-black ring-1 ring-white/10">
+                <div data-embed class="aspect-video w-full bg-black">
+                    <button type="button" data-embed-load data-embed-src="{{ $defaultPlayerSrc }}" data-embed-title="{{ $movie->title }}"
+                            class="grid aspect-video w-full place-items-center bg-black transition hover:bg-white/[0.02]"
+                            aria-label="Load the player for {{ $movie->title }}">
+                        <span class="flex items-center gap-2 rounded-full bg-orange-500 px-7 py-3 text-sm font-bold text-white shadow-lg shadow-orange-500/30 transition hover:scale-105">
+                            <i class="fa-solid fa-play"></i> Watch now
+                        </span>
+                    </button>
+                </div>
+
+                {{-- Cute Cinema Projector Buddy Loader --}}
+                <div id="auraPlayerLoader"
+                     aria-hidden="true"
+                     class="pointer-events-none absolute inset-0 z-20 hidden flex-col items-center justify-center bg-[#090d16]/95 px-4 text-center transition-opacity duration-300">
+                    <div class="aura-buddy-float w-48 sm:w-56">
+                        <svg viewBox="0 0 220 115" class="h-auto w-full overflow-visible" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <linearGradient id="auraBeamGrad" x1="120" y1="64" x2="210" y2="64" gradientUnits="userSpaceOnUse">
+                                    <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.55"/>
+                                    <stop offset="60%" stop-color="#F97316" stop-opacity="0.22"/>
+                                    <stop offset="100%" stop-color="#F97316" stop-opacity="0"/>
+                                </linearGradient>
+                                <linearGradient id="auraBodyGrad" x1="34" y1="42" x2="114" y2="94" gradientUnits="userSpaceOnUse">
+                                    <stop offset="0%" stop-color="#1E293B"/>
+                                    <stop offset="100%" stop-color="#0F172A"/>
+                                </linearGradient>
+                            </defs>
+
+                            {{-- Light Beam --}}
+                            <polygon points="122,56 210,22 210,104 122,72" fill="url(#auraBeamGrad)" class="aura-beam-pulse"/>
+
+                            {{-- Floating Sparkles in Beam --}}
+                            <circle cx="156" cy="54" r="2.3" fill="#38BDF8" class="aura-star-1"/>
+                            <circle cx="182" cy="68" r="2.8" fill="#FB923C" class="aura-star-2"/>
+                            <circle cx="170" cy="43" r="1.9" fill="#FDE047" class="aura-star-3"/>
+
+                            {{-- Left Film Reel --}}
+                            <g class="aura-reel-spin">
+                                <circle cx="56" cy="28" r="15" fill="#131B2E" stroke="#38BDF8" stroke-width="2.2"/>
+                                <circle cx="56" cy="28" r="3" fill="#38BDF8"/>
+                                <circle cx="56" cy="19" r="2.2" fill="#94A3B8"/>
+                                <circle cx="56" cy="37" r="2.2" fill="#94A3B8"/>
+                                <circle cx="47" cy="28" r="2.2" fill="#94A3B8"/>
+                                <circle cx="65" cy="28" r="2.2" fill="#94A3B8"/>
+                            </g>
+
+                            {{-- Right Film Reel --}}
+                            <g class="aura-reel-spin-fast">
+                                <circle cx="92" cy="28" r="15" fill="#131B2E" stroke="#F97316" stroke-width="2.2"/>
+                                <circle cx="92" cy="28" r="3" fill="#F97316"/>
+                                <circle cx="92" cy="19" r="2.2" fill="#94A3B8"/>
+                                <circle cx="92" cy="37" r="2.2" fill="#94A3B8"/>
+                                <circle cx="83" cy="28" r="2.2" fill="#94A3B8"/>
+                                <circle cx="101" cy="28" r="2.2" fill="#94A3B8"/>
+                            </g>
+
+                            {{-- Projector Lens --}}
+                            <rect x="110" y="53" width="13" height="22" rx="4" fill="#2563EB" stroke="#38BDF8" stroke-width="1.5"/>
+
+                            {{-- Cute Projector Body --}}
+                            <rect x="34" y="42" width="78" height="48" rx="15" fill="url(#auraBodyGrad)" stroke="rgba(255,255,255,0.22)" stroke-width="1.8"/>
+
+                            {{-- Cute Blinking Eyes --}}
+                            <g class="aura-eye-blink">
+                                <circle cx="61" cy="63" r="4.2" fill="#F8FAFC"/>
+                                <circle cx="62.2" cy="61.8" r="1.4" fill="#0F172A"/>
+                                <circle cx="85" cy="63" r="4.2" fill="#F8FAFC"/>
+                                <circle cx="86.2" cy="61.8" r="1.4" fill="#0F172A"/>
+                            </g>
+
+                            {{-- Rosy Cheeks & Happy Smile --}}
+                            <ellipse cx="52" cy="70" rx="3.5" ry="2" fill="#FB7185" fill-opacity="0.55"/>
+                            <ellipse cx="94" cy="70" rx="3.5" ry="2" fill="#FB7185" fill-opacity="0.55"/>
+                            <path d="M 68 72 Q 73 77 78 72" stroke="#38BDF8" stroke-width="2.2" stroke-linecap="round"/>
+
+                            {{-- Little Stand Legs --}}
+                            <path d="M 56 90 L 49 103 M 90 90 L 97 103" stroke="#64748B" stroke-width="3" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+
+                    <p id="auraPlayerFunMsg" class="mt-1 text-sm font-extrabold tracking-wide text-amber-300">
+                        🍿 Popcorn ලෑස්ති කරගන්න...
+                    </p>
+                    <p id="auraPlayerLoaderTitle" class="mt-1 max-w-xs truncate text-xs font-medium text-slate-400">
+                        {{ $movie->title }}
+                    </p>
+
+                    {{-- Mini Animated Progress Bar --}}
+                    <div class="mt-3 h-1.5 w-44 overflow-hidden rounded-full bg-white/10">
+                        <div class="aura-progress-bar h-full w-1/3 rounded-full bg-gradient-to-r from-sky-400 via-blue-500 to-orange-500"></div>
+                    </div>
+                </div>
             </div>
         </section>
     @endif
@@ -947,6 +1096,8 @@
 
         <script>
             let auraShieldEnabled = true;
+            let auraShowLoaderFn = null;
+            let auraHideLoaderFn = null;
 
             function sanitizeStreamtapeEmbedUrl(url) {
                 if (!url) return url;
@@ -984,6 +1135,16 @@
                         iframe.setAttribute('src', cleanSrc);
                     }
                 }
+
+                if (cleanSrc && cleanSrc !== 'about:blank' && iframe.dataset.loaderBoundSrc !== cleanSrc) {
+                    iframe.dataset.loaderBoundSrc = cleanSrc;
+                    if (typeof auraShowLoaderFn === 'function') {
+                        auraShowLoaderFn(iframe.getAttribute('title') || '');
+                    }
+                    if (typeof auraHideLoaderFn === 'function') {
+                        iframe.addEventListener('load', auraHideLoaderFn, { once: true });
+                    }
+                }
             }
 
             function toggleAuraAdShield() {
@@ -1007,14 +1168,61 @@
                 if (embedContainer) {
                     embedContainer.querySelectorAll('iframe').forEach((iframe) => {
                         delete iframe.dataset.shieldReloaded;
+                        delete iframe.dataset.loaderBoundSrc;
                         applyPlayerAdShield(iframe);
                     });
                 }
             }
 
             document.addEventListener('DOMContentLoaded', () => {
-                // 1. [data-embed] athule load wena Streamtape player iframe ekata witharak Ad Shield damima
                 const embedContainer = document.querySelector('[data-embed]');
+                const playerLoader = document.getElementById('auraPlayerLoader');
+                const playerLoaderTitle = document.getElementById('auraPlayerLoaderTitle');
+                const playerFunMsg = document.getElementById('auraPlayerFunMsg');
+                const funCaptions = [
+                    '🍿 Popcorn ලෑස්ති කරගන්න...',
+                    '🎬 Cinema screen එක සූදානම් වෙමින් පවතී...',
+                    '✨ ඔන්න දැන් පටන් ගන්නවා...'
+                ];
+                let loaderFallbackTimer = null;
+                let captionInterval = null;
+
+                auraShowLoaderFn = (titleText) => {
+                    if (!playerLoader) return;
+                    if (playerLoaderTitle && titleText) {
+                        playerLoaderTitle.textContent = titleText;
+                    }
+
+                    let msgIdx = 0;
+                    if (playerFunMsg) playerFunMsg.textContent = funCaptions[0];
+                    clearInterval(captionInterval);
+                    captionInterval = setInterval(() => {
+                        msgIdx = (msgIdx + 1) % funCaptions.length;
+                        if (playerFunMsg) playerFunMsg.textContent = funCaptions[msgIdx];
+                    }, 1500);
+
+                    clearTimeout(loaderFallbackTimer);
+                    playerLoader.classList.remove('hidden', 'opacity-0');
+                    playerLoader.classList.add('flex', 'opacity-100');
+
+                    loaderFallbackTimer = setTimeout(() => {
+                        if (typeof auraHideLoaderFn === 'function') auraHideLoaderFn();
+                    }, 5000);
+                };
+
+                auraHideLoaderFn = () => {
+                    if (!playerLoader || playerLoader.classList.contains('hidden')) return;
+                    clearTimeout(loaderFallbackTimer);
+                    clearInterval(captionInterval);
+                    playerLoader.classList.remove('opacity-100');
+                    playerLoader.classList.add('opacity-0');
+                    setTimeout(() => {
+                        playerLoader.classList.add('hidden');
+                        playerLoader.classList.remove('flex');
+                    }, 300);
+                };
+
+                // 1. [data-embed] athule load wena Streamtape player iframe ekata Ad Shield + Cute Loader bind kirima
                 if (embedContainer) {
                     const attachShield = (iframe) => {
                         applyPlayerAdShield(iframe);
@@ -1068,18 +1276,18 @@
                     });
                 }
 
-                // 3. Continue Watching Two-Way Sync (Website -> Mobile App)
-                @if(auth()->check() && \Illuminate\Support\Facades\Route::has('user.history.store'))
-                const historyEndpoint = "{{ route('user.history.store') }}";
-                const csrfToken = "{{ csrf_token() }}";
+                // 3. Watch Now, Episodes & Continue Watching Two-Way Sync (Website -> Mobile App)
                 const baseTitle = @json($movie->title);
                 let currentEpisodeId = 0;
                 let currentTitle = baseTitle;
                 let isPlayingStarted = false;
                 let watchedSeconds = {{ (int) request()->query('t', 0) }};
 
-                document.querySelector('[data-embed-load]')?.addEventListener('click', () => {
+                document.querySelector('[data-embed-load]')?.addEventListener('click', (e) => {
                     isPlayingStarted = true;
+                    if (typeof auraShowLoaderFn === 'function') {
+                        auraShowLoaderFn(e.currentTarget.dataset.embedTitle || baseTitle);
+                    }
                 });
 
                 document.querySelectorAll('[data-episode-btn]').forEach((btn, idx) => {
@@ -1089,8 +1297,15 @@
                         currentEpisodeId = !Number.isNaN(epNum) ? epNum : (idx + 1);
                         currentTitle = btn.dataset.embedTitle || `${baseTitle} - Episode ${currentEpisodeId}`;
                         watchedSeconds = 0;
+                        if (typeof auraShowLoaderFn === 'function') {
+                            auraShowLoaderFn(currentTitle);
+                        }
                     });
                 });
+
+                @if(auth()->check() && \Illuminate\Support\Facades\Route::has('user.history.store'))
+                const historyEndpoint = "{{ route('user.history.store') }}";
+                const csrfToken = "{{ csrf_token() }}";
 
                 setInterval(() => {
                     const activeFrame = embedContainer ? embedContainer.querySelector('iframe[src*="http"]') : null;
