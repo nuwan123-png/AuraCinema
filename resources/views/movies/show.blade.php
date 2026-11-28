@@ -529,7 +529,7 @@
                         <button type="button" id="auraAdShieldBtn" onclick="toggleAuraAdShield()"
                                 class="inline-flex items-center gap-1.5 rounded-full border border-sky-400/40 bg-sky-500/15 px-3 py-1 text-xs font-bold text-sky-300 transition hover:bg-sky-500 hover:text-white">
                             <i class="fa-solid fa-shield-halved"></i>
-                            <span id="auraAdShieldText">Ad Shield: OFF</span>
+                            <span id="auraAdShieldText">Ad Shield: ON</span>
                         </button>
                         <button type="button" data-fullscreen-btn
                                 class="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-200 transition hover:bg-white/15 hover:text-white"
@@ -945,7 +945,7 @@
         </dialog>
 
         <script>
-            let auraShieldEnabled = faulse;
+            let auraShieldEnabled = true;
 
             function sanitizeStreamtapeEmbedUrl(url) {
                 if (!url) return url;
