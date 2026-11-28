@@ -68,6 +68,8 @@
     </section>
 @endif
 
+@include('partials.continue-watching')
+
 @if($latest->isNotEmpty())
     {{-- data-auto makes this row glide by itself. Add 'auto' => true to any other row to do the same. --}}
     @include('movies._row', ['title' => 'New on AuraCinema', 'items' => $latest, 'anchor' => 'new', 'auto' => true])

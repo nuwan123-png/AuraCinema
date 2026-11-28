@@ -66,14 +66,59 @@
                      class="glass-panel absolute inset-x-3 top-full z-[60] -mt-1 overflow-hidden sm:inset-x-auto sm:left-0 sm:mt-2 sm:w-[26rem]"></div>
             </form>
 
-            @if(request()->cookie('aura_admin'))
-                <div class="hidden shrink-0 gap-2 sm:flex">
-                    <a href="{{ route('movies.incomplete') }}" class="btn-ghost !px-4 !py-2">Incomplete</a>
-                    <a href="{{ route('requests.index') }}" class="btn-ghost !px-4 !py-2">Requests</a>
-                    <a href="{{ route('admin.stats') }}" class="btn-ghost !px-4 !py-2">Stats</a>
-                    <a href="{{ route('movies.create') }}" class="btn-aura !px-4 !py-2">+ Add movie</a>
-                </div>
-            @endif
+            <div class="flex shrink-0 items-center gap-2">
+                @if(request()->cookie('aura_admin'))
+                    <div class="hidden shrink-0 gap-2 lg:flex">
+                        <a href="{{ route('movies.incomplete') }}" class="btn-ghost !px-4 !py-2">Incomplete</a>
+                        <a href="{{ route('requests.index') }}" class="btn-ghost !px-4 !py-2">Requests</a>
+                        <a href="{{ route('admin.stats') }}" class="btn-ghost !px-4 !py-2">Stats</a>
+                        <a href="{{ route('movies.create') }}" class="btn-aura !px-4 !py-2">+ Add movie</a>
+                    </div>
+                @endif
+
+                {{-- User Account / Profile Glass Button (Synced with Mobile App) --}}
+                @auth
+                    <div class="relative">
+                        <button type="button" onclick="toggleWebProfileMenu(event)"
+                                class="inline-flex items-center gap-2 rounded-full border border-sky-400/40 bg-[#131B2E]/85 py-1 pl-1.5 pr-3 text-xs font-bold text-white shadow-lg shadow-blue-950/40 backdrop-blur-xl transition hover:border-sky-400 hover:bg-blue-600/25">
+                            <span class="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-sky-400 text-xs font-extrabold text-white">
+                                {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+                            </span>
+                            <span class="hidden max-w-[95px] truncate sm:inline">{{ auth()->user()->name }}</span>
+                            <i class="fa-solid fa-chevron-down text-[10px] text-sky-300"></i>
+                        </button>
+
+                        <div id="webProfileDropdown"
+                             class="hidden absolute right-0 top-full z-[70] mt-2.5 w-56 overflow-hidden rounded-2xl border border-white/10 bg-[#131B2E]/95 p-2 shadow-2xl shadow-black/90 backdrop-blur-2xl">
+                            <div class="mb-1.5 border-b border-white/10 px-3 py-2">
+                                <div class="truncate text-xs font-extrabold text-white">{{ auth()->user()->name }}</div>
+                                <div class="truncate text-[11px] text-slate-400">{{ auth()->user()->email }}</div>
+                            </div>
+
+                            <a href="{{ route('user.profile') }}"
+                               class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-sky-500/15 hover:text-white">
+                                <i class="fa-solid fa-user text-sky-400"></i>
+                                <span>My Profile &amp; History</span>
+                            </a>
+
+                            <form method="POST" action="{{ route('user.logout') }}" class="mt-0.5">
+                                @csrf
+                                <button type="submit"
+                                        class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold text-rose-400 transition hover:bg-rose-500/15 hover:text-rose-300">
+                                    <i class="fa-solid fa-right-from-bracket"></i>
+                                    <span>Logout</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                @else
+                    <a href="{{ route('user.auth') }}"
+                       class="inline-flex items-center gap-1.5 rounded-full border border-sky-400/40 bg-blue-600/20 px-3.5 py-2 text-xs font-bold text-white backdrop-blur-xl transition hover:border-sky-400 hover:bg-blue-600">
+                        <i class="fa-solid fa-circle-user text-sm text-sky-400"></i>
+                        <span>Sign In</span>
+                    </a>
+                @endauth
+            </div>
         </div>
 
         {{-- Category bar --}}
@@ -218,6 +263,17 @@
                 window.location.href = "{{ route('home') }}#watch-with-sub-section";
             }
         }
+
+        function toggleWebProfileMenu(event) {
+            event.stopPropagation();
+            const menu = document.getElementById('webProfileDropdown');
+            if (menu) menu.classList.toggle('hidden');
+        }
+
+        document.addEventListener('click', function () {
+            const menu = document.getElementById('webProfileDropdown');
+            if (menu) menu.classList.add('hidden');
+        });
     </script>
 
     @stack('modals')
