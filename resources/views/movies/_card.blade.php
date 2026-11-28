@@ -7,7 +7,7 @@
 
 <div class="group relative {{ $class ?? 'w-36 shrink-0 snap-start sm:w-44' }}">
 <a href="{{ route('movies.show', $movie) }}" class="block">
-    <div class="relative aspect-[2/3] w-full overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-white/10 transition duration-300 group-hover:z-10 group-hover:-translate-y-1 group-hover:scale-[1.04] group-hover:shadow-[0_14px_34px_-8px_rgba(249,115,22,0.45)] group-hover:ring-2 group-hover:ring-orange-400/70">
+    <div class="on-dark relative aspect-[2/3] w-full overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-white/10 transition duration-300 group-hover:z-10 group-hover:-translate-y-1 group-hover:scale-[1.04] group-hover:shadow-[0_14px_34px_-8px_var(--color-orange-500)] group-hover:ring-2 group-hover:ring-orange-400/70">
         
         @if($movie->image)
             <img src="{{ $movie->poster_url }}" alt="{{ $movie->title }}" width="480" height="720"
@@ -17,7 +17,7 @@
         @endif
 
         @if($movie->stream_url)
-            <span class="absolute right-1.5 top-1.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 px-2 py-0.5 text-[9px] font-extrabold tracking-wide text-white shadow z-30">FULL</span>
+            <span class="absolute right-1.5 top-1.5 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 px-2 py-0.5 text-[9px] font-extrabold tracking-wide text-white shadow z-30">FULL</span>
         @endif
 
         <div class="absolute left-1.5 top-1.5 flex flex-col items-start gap-1 z-30">

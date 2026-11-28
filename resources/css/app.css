@@ -9,8 +9,80 @@
 
 /* ---- AuraCinema look: warm orange on near-black, glass panels, soft glow ---- */
 html { scroll-behavior: smooth; }
-/* Colours mirror the mobile app's dark glass theme (lib/theme/aura_theme.dart) so web and app match. */
-body { background: linear-gradient(180deg, #0b0e17 0%, #121726 50%, #0b0e17 100%) fixed, #0b0e17; }
+/* =====================================================================================
+   THEME: dark (default) and light, matching the mobile app (lib/theme/aura_theme.dart).
+   Method: Tailwind's colour tokens are CSS variables, so the light theme just re-points them.
+   Every existing text-white / text-slate-* / bg-white/5 / border-white/10 / text-orange-* class
+   therefore flips automatically. Accent: the old orange tokens now hold the app's violet.
+   ===================================================================================== */
+:root {
+    --page-bg: linear-gradient(180deg, #0b0e17 0%, #121726 50%, #0b0e17 100%);
+    --glow-1: rgba(139, 92, 246, 0.26);
+    --glow-2: rgba(139, 92, 246, 0.16);
+    --glow-3: rgba(255, 159, 28, 0.13);
+    --glow-4: rgba(255, 159, 28, 0.10);
+    --track: #0b0e17;
+    --thumb: #2a2f3d;
+    --sb-w: 16.5rem;
+    --color-white: #ffffff;
+    --color-slate-100: #f1f5f9; --color-slate-200: #e2e8f0; --color-slate-300: #cbd5e1;
+    --color-slate-400: #94a3b8; --color-slate-500: #64748b; --color-gray-400: #9ca3af;
+    --color-zinc-800: #27272a; --color-zinc-900: #18181b; --color-zinc-950: #09090b;
+    --color-orange-200: #ddd6fe; --color-orange-300: #c4b5fd; --color-orange-400: #a78bfa;
+    --color-orange-500: #8b5cf6; --color-orange-600: #7c3aed;
+    --color-amber-300: #fcd34d; --color-amber-400: #fbbf24;
+    --color-emerald-300: #6ee7b7; --color-emerald-400: #34d399;
+    --color-rose-300: #fda4af; --color-rose-400: #fb7185;
+    --color-sky-300: #7dd3fc; --color-sky-400: #38bdf8;
+    --glass-fill: rgba(255, 255, 255, 0.06);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --glass-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.10);
+}
+html { background: #0b0e17; }
+html[data-theme='light'] {
+    background: #f5f3ff;
+    --page-bg: linear-gradient(180deg, #f5f3ff 0%, #ede9fe 100%);
+    --glow-1: rgba(109, 40, 217, 0.18);
+    --glow-2: rgba(109, 40, 217, 0.10);
+    --glow-3: rgba(244, 114, 182, 0.20);
+    --glow-4: rgba(244, 114, 182, 0.12);
+    --track: #f5f3ff;
+    --thumb: #c4b5fd;
+    --color-white: #1f2937;
+    --color-slate-100: #1f2937; --color-slate-200: #374151; --color-slate-300: #4b5563;
+    --color-slate-400: #6b7280; --color-slate-500: #7c8394; --color-gray-400: #6b7280;
+    --color-zinc-800: #ede9fe; --color-zinc-900: #ffffff; --color-zinc-950: #f8f7ff;
+    --color-orange-200: #5b21b6; --color-orange-300: #6d28d9; --color-orange-400: #6d28d9;
+    --color-orange-500: #6d28d9; --color-orange-600: #5b21b6;
+    --color-amber-300: #b45309; --color-amber-400: #d97706;
+    --color-emerald-300: #047857; --color-emerald-400: #059669;
+    --color-rose-300: #be123c; --color-rose-400: #e11d48;
+    --color-sky-300: #0369a1; --color-sky-400: #0284c7;
+    --glass-fill: rgba(255, 255, 255, 0.58);
+    --glass-border: rgba(255, 255, 255, 0.85);
+    --glass-shadow: 0 18px 44px -22px rgba(76, 29, 149, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+/* Things that sit on dark photos / solid colour keep the DARK token values (white text etc.) in both themes. */
+html[data-theme='light'] :is(.on-dark, .btn-aura, [class~='bg-black'], [class*='bg-black/6'], [class*='bg-black/7'], [class*='bg-black/8'], [class*='bg-black/9'],
+    [class~='bg-orange-500'], [class~='bg-orange-600'], [class~='bg-emerald-500'], [class~='bg-sky-500'], [class~='bg-rose-600'], [class*='bg-rose-600/'], [class*='bg-gradient-to-']) {
+    color: #f1f5f9;
+    --color-white: #ffffff;
+    --color-slate-100: #f1f5f9; --color-slate-200: #e2e8f0; --color-slate-300: #cbd5e1;
+    --color-slate-400: #94a3b8; --color-slate-500: #64748b; --color-gray-400: #9ca3af;
+    --color-zinc-800: #27272a; --color-zinc-900: #18181b; --color-zinc-950: #09090b;
+    --color-orange-200: #ddd6fe; --color-orange-300: #c4b5fd; --color-orange-400: #a78bfa;
+    --color-orange-500: #8b5cf6; --color-orange-600: #7c3aed;
+    --color-amber-300: #fcd34d; --color-amber-400: #fbbf24;
+    --color-emerald-300: #6ee7b7; --color-emerald-400: #34d399;
+    --color-rose-300: #fda4af; --color-rose-400: #fb7185;
+    --color-sky-300: #7dd3fc; --color-sky-400: #38bdf8;
+    --glass-fill: rgba(18, 23, 38, 0.92);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --glass-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.10);
+}
+
+body { background: var(--page-bg) fixed, #0b0e17; }
+html[data-theme='light'] body { background: var(--page-bg) fixed, #f5f3ff; }
 /* Soft glows: ONE fixed layer of static gradients. No blur filter, no images, no animation = no lag. */
 body::before {
     content: '';
@@ -19,28 +91,80 @@ body::before {
     z-index: -1;
     pointer-events: none;
     background:
-        radial-gradient(680px 600px at 96% 4%, rgba(139, 92, 246, 0.26), transparent 70%),
-        radial-gradient(620px 560px at 2% 8%, rgba(139, 92, 246, 0.16), transparent 70%),
-        radial-gradient(640px 560px at 100% 70%, rgba(255, 159, 28, 0.13), transparent 70%),
-        radial-gradient(700px 560px at 0% 98%, rgba(255, 159, 28, 0.10), transparent 70%);
+        radial-gradient(680px 600px at 96% 4%, var(--glow-1), transparent 70%),
+        radial-gradient(620px 560px at 2% 8%, var(--glow-2), transparent 70%),
+        radial-gradient(640px 560px at 100% 70%, var(--glow-3), transparent 70%),
+        radial-gradient(700px 560px at 0% 98%, var(--glow-4), transparent 70%);
 }
-/* Reusable glass panel (same as the app: white 6% fill, white 12% border). Use on a few big panels only. */
+/* Reusable glass panel (same recipe as the app). Use on a few big panels only, never on every movie card. */
 .glass {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.10);
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
 }
 @media (min-width: 768px) { .glass { backdrop-filter: blur(14px) saturate(140%); } }
+
+/* ---- Left sidebar ---- */
+.aura-sidebar {
+    position: fixed;
+    top: 0.75rem;
+    bottom: 0.75rem;
+    left: 0.75rem;
+    z-index: 60;
+    display: flex;
+    width: var(--sb-w);
+    flex-direction: column;
+    border-radius: 1.75rem;
+    transition: width 0.25s ease, transform 0.25s ease;
+}
+.sb-nav { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.aura-shell { min-width: 0; }
+@media (min-width: 768px) {
+    .aura-shell { margin-left: calc(var(--sb-w) + 1.5rem); transition: margin-left 0.25s ease; }
+}
+@media (max-width: 767px) {
+    .aura-sidebar { width: min(18rem, 86vw); transform: translateX(-115%); background: var(--color-zinc-950); }
+    html.sb-open .aura-sidebar { transform: none; }
+    .aura-sidebar { z-index: 75; }
+}
+/* Collapsed = icons only (desktop / tablet) */
+@media (min-width: 768px) {
+    html[data-sb='collapsed'] { --sb-w: 4.9rem; }
+    html[data-sb='collapsed'] .aura-sidebar [data-sb-label] { display: none; }
+    html[data-sb='collapsed'] .aura-sidebar .sb-head { flex-direction: column; padding-left: 0; padding-right: 0; }
+    html[data-sb='collapsed'] .aura-sidebar .sb-item { justify-content: center; padding-left: 0; padding-right: 0; }
+    html[data-sb='collapsed'] .aura-sidebar .sb-nav { overflow: visible; }
+    html[data-sb='collapsed'] .aura-sidebar [data-sb-search-field] { display: none; }
+    html[data-sb='collapsed'] .aura-sidebar [data-sb-search-toggle] { display: flex; }
+    html[data-sb='collapsed'] .aura-sidebar [data-sb-collapse-icon] { transform: rotate(180deg); }
+    html[data-sb='collapsed'] .aura-sidebar [data-sb-admin-rule] { display: block; }
+    html[data-sb='collapsed'] .aura-sidebar .btn-aura { padding-left: 0; padding-right: 0; }
+    html[data-sb='collapsed'] .sb-menu .sb-panel {
+        position: absolute; left: calc(100% + 0.75rem); top: 0; z-index: 90; width: 15rem; max-height: 22rem; overflow-y: auto;
+        background: var(--color-zinc-900); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); border-radius: 1rem;
+    }
+}
+.sb-menu { position: relative; }
+.sb-panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.25rem; max-height: 16rem; overflow-y: auto; padding: 0.5rem 0.25rem 0.25rem; font-size: 0.75rem; }
+.sb-panel-years { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+details.sb-menu:not([open]) > .sb-panel { display: none; }
+details.sb-menu[open] > summary .fa-chevron-down { transform: rotate(180deg); }
+
 ::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: #0b0b0f; }
-::-webkit-scrollbar-thumb { background: #2a2a33; border-radius: 9999px; border: 2px solid #0b0b0f; }
-::-webkit-scrollbar-thumb:hover { background: #f97316; }
+::-webkit-scrollbar-track { background: var(--track); }
+::-webkit-scrollbar-thumb { background: var(--thumb); border-radius: 9999px; border: 2px solid var(--track); }
+::-webkit-scrollbar-thumb:hover { background: var(--color-orange-500); }
 input[type='search']::-webkit-search-cancel-button { display: none; }
-:focus-visible { outline: 2px solid #fb923c; outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--color-orange-400); outline-offset: 2px; }
+
+/* Theme switch icon: sun while dark (tap for light), moon while light (tap for dark) */
+[data-theme-icon-dark] { display: none; }
+html[data-theme='light'] [data-theme-icon-dark] { display: inline-block; }
+html[data-theme='light'] [data-theme-icon-light] { display: none; }
 
 @layer components {
     .btn-aura {
-        @apply inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/25 transition hover:brightness-110 active:scale-95;
+        @apply inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/30 transition hover:brightness-110 active:scale-95;
     }
     .btn-ghost {
         @apply inline-flex items-center justify-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:border-orange-400/60 hover:bg-orange-500/10 active:scale-95;
@@ -53,6 +177,15 @@ input[type='search']::-webkit-search-cancel-button { display: none; }
     }
     .glass-panel {
         @apply rounded-xl border border-white/10 bg-zinc-900/95 shadow-2xl shadow-black/60 backdrop-blur-xl;
+    }
+    .sb-item {
+        @apply flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white;
+    }
+    .sb-item.is-active {
+        @apply bg-orange-500/20 text-orange-300 ring-1 ring-orange-500/30;
+    }
+    .sb-icon-btn {
+        @apply grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/5 text-sm text-slate-300 transition hover:bg-white/10 hover:text-white;
     }
     .menu-item {
         @apply rounded-md px-2 py-1.5 transition hover:bg-orange-500/15 hover:text-orange-300;

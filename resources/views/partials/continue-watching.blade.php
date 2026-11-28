@@ -9,8 +9,8 @@
 @if($auraContinueItems->isNotEmpty())
 <section style="max-width: 1280px; margin: 18px auto 8px; padding: 0 16px;">
     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-        <span style="width: 4px; height: 20px; background: #38BDF8; border-radius: 4px; display: inline-block;"></span>
-        <h2 style="color: #fff; font-size: 18px; font-weight: 800; margin: 0;">Continue Watching</h2>
+        <span style="width: 4px; height: 20px; background: var(--color-orange-500); border-radius: 4px; display: inline-block;"></span>
+        <h2 style="color: var(--color-white); font-size: 18px; font-weight: 800; margin: 0;">Continue Watching</h2>
     </div>
 
     <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin;">

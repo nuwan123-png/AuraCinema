@@ -98,7 +98,7 @@
 @section('content')
     @include('movies._incomplete_notice', ['movie' => $movie])
 
-@include('partials.navbar')
+{{-- The old in-page navbar was removed: the left sidebar in the layout replaces it. --}}
 
     <nav class="mb-5 text-xs text-slate-400" aria-label="Breadcrumb">
         <a href="{{ route('home') }}" class="hover:text-white">Home</a> <span class="mx-1">/</span>
@@ -742,7 +742,7 @@
     @if($defaultPlayerSrc)
         {{-- Subtitle Instruction Popup Modal (Zoomed & Clear Step-by-Step Guide) --}}
         <dialog data-sub-guide-modal aria-label="Sinhala Subtitle Guide"
-                class="fixed inset-0 m-auto max-h-[92vh] w-[min(94vw,42rem)] overflow-y-auto rounded-3xl border border-white/15 bg-[#101016] p-0 text-white shadow-2xl shadow-black/95 backdrop:bg-black/85 backdrop:backdrop-blur-md">
+                class="fixed inset-0 m-auto max-h-[92vh] w-[min(94vw,42rem)] overflow-y-auto on-dark rounded-3xl border border-white/15 bg-[#101016] p-0 text-white shadow-2xl shadow-black/95 backdrop:bg-black/85 backdrop:backdrop-blur-md">
             <div class="relative p-5 sm:p-7">
                 {{-- Top Gradient Accent --}}
                 <div class="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-orange-500 via-amber-400 to-emerald-400"></div>

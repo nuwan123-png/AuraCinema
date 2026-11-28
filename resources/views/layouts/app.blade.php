@@ -1,11 +1,24 @@
 <!DOCTYPE html>
-<html lang="en" class="bg-[#0b0b0f]">
+<html lang="en" data-theme="dark" data-sb="expanded">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#0b0b0f">
-    @php($siteUrl = rtrim((string) config('auracinema.site_url'), '/'))
-    @php($defaultDescription = 'AuraCinema - browse movies, watch trailers and find full movies.')
+    <meta name="theme-color" content="#0b0e17">
+    {{-- Runs before first paint: restores the saved theme / sidebar state so the page never flashes the wrong colours. --}}
+    <script>
+        (function () {
+            try {
+                var r = document.documentElement;
+                var t = localStorage.getItem('aura_theme');
+                if (t === 'light' || t === 'dark') r.setAttribute('data-theme', t);
+                if (localStorage.getItem('aura_sidebar') === 'collapsed') r.setAttribute('data-sb', 'collapsed');
+            } catch (e) {}
+        })();
+    </script>
+    @php
+        $siteUrl = rtrim((string) config('auracinema.site_url'), '/');
+        $defaultDescription = 'AuraCinema - browse movies, watch trailers and find full movies.';
+    @endphp
     <title>@yield('title', 'AuraCinema') | Movies &amp; Trailers</title>
     <meta name="description" content="@yield('description', $defaultDescription)">
     <meta name="robots" content="@yield('robots', 'index,follow')">
@@ -37,137 +50,153 @@
     </script>
 </head>
 
-<body class="flex min-h-screen flex-col font-sans text-slate-100 antialiased selection:bg-orange-500 selection:text-white">
+<body class="min-h-screen font-sans text-slate-100 antialiased selection:bg-orange-500 selection:text-white">
 
-    {{-- Nav helpers --}}
-    @php($navType = request('type'))
-    @php($navLink = fn (bool $active) => 'py-1.5 transition '.($active ? 'text-orange-400' : 'hover:text-orange-300'))
-    @php($keepTypeLang = array_filter(['type' => request('type'), 'language' => request('language')]))
-    @php($keepTypeGenreLang = array_filter(['type' => request('type'), 'genre' => request('genre'), 'language' => request('language')]))
+    @php
+        $navType = request('type');
+        $keepTypeLang = array_filter(['type' => request('type'), 'language' => request('language')]);
+        $keepTypeGenreLang = array_filter(['type' => request('type'), 'genre' => request('genre'), 'language' => request('language')]);
+        $sbItem = fn (bool $active) => 'sb-item'.($active ? ' is-active' : '');
+        $sbTypeIcons = ['movie' => 'fa-clapperboard', 'series' => 'fa-tv', 'anime' => 'fa-wand-magic-sparkles'];
+        $waRequest = 'https://wa.me/'.preg_replace('/\D/', '', (string) config('auracinema.whatsapp_number')).'?text='.rawurlencode("Hi AuraCinema, I'd like to request a movie: ");
+        $isAdmin = (bool) request()->cookie('aura_admin');
+    @endphp
 
-    <header class="z-50 border-b border-white/10 bg-[#0b0e17]/60 backdrop-blur-xl md:sticky md:top-0">
-        <div class="relative mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-            <a href="{{ route('home') }}" class="flex shrink-0 items-center gap-2" aria-label="AuraCinema home">
-                <span class="h-3 w-3 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 shadow-[0_0_14px_rgba(249,115,22,0.9)]"></span>
-                <span class="text-xl font-extrabold tracking-tight">Aura<span class="bg-gradient-to-r from-orange-400 to-amber-300 bg-clip-text text-transparent">Cinema</span></span>
-            </a>
-
-            <form action="{{ route('movies.index') }}" method="GET" role="search" data-live-search data-live-url="{{ route('search.live') }}" class="w-full max-w-sm sm:relative">
-                <label for="q" class="sr-only">Search movies</label>
-                <div class="relative">
-                    <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-500"></i>
-                    <input id="q" type="search" name="q" value="{{ request('q') }}" placeholder="Search movies" autocomplete="off"
-                           role="combobox" aria-expanded="false" aria-controls="live-results" aria-autocomplete="list"
-                           class="w-full rounded-full border border-white/10 bg-white/5 py-2.5 pl-9 pr-4 text-sm text-white placeholder-slate-500 transition focus:border-orange-400/70 focus:bg-white/10 focus:outline-none focus:ring-4 focus:ring-orange-500/10">
-                </div>
-
-                {{-- Filled by resources/js/app.js while you type --}}
-                <div id="live-results" data-live-results role="listbox" hidden
-                     class="glass-panel absolute inset-x-3 top-full z-[60] -mt-1 overflow-hidden sm:inset-x-auto sm:left-0 sm:mt-2 sm:w-[26rem]"></div>
-            </form>
-
-            <div class="flex shrink-0 items-center gap-2">
-                @if(request()->cookie('aura_admin'))
-                    <div class="hidden shrink-0 gap-2 lg:flex">
-                        <a href="{{ route('movies.incomplete') }}" class="btn-ghost !px-4 !py-2">Incomplete</a>
-                        <a href="{{ route('requests.index') }}" class="btn-ghost !px-4 !py-2">Requests</a>
-                        <a href="{{ route('admin.stats') }}" class="btn-ghost !px-4 !py-2">Stats</a>
-                        <a href="{{ route('movies.create') }}" class="btn-aura !px-4 !py-2">+ Add movie</a>
-                    </div>
-                @endif
-
-                {{-- User Account / Profile Glass Button (Synced with Mobile App) --}}
-                @auth
-                    <div class="relative">
-                        <button type="button" onclick="toggleWebProfileMenu(event)"
-                                class="inline-flex items-center gap-2 rounded-full border border-sky-400/40 bg-[#131B2E]/85 py-1 pl-1.5 pr-3 text-xs font-bold text-white shadow-lg shadow-blue-950/40 backdrop-blur-xl transition hover:border-sky-400 hover:bg-blue-600/25">
-                            <span class="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-sky-400 text-xs font-extrabold text-white">
-                                {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-                            </span>
-                            <span class="hidden max-w-[95px] truncate sm:inline">{{ auth()->user()->name }}</span>
-                            <i class="fa-solid fa-chevron-down text-[10px] text-sky-300"></i>
-                        </button>
-
-                        <div id="webProfileDropdown"
-                             class="hidden absolute right-0 top-full z-[70] mt-2.5 w-56 overflow-hidden rounded-2xl border border-white/10 bg-[#131B2E]/95 p-2 shadow-2xl shadow-black/90 backdrop-blur-2xl">
-                            <div class="mb-1.5 border-b border-white/10 px-3 py-2">
-                                <div class="truncate text-xs font-extrabold text-white">{{ auth()->user()->name }}</div>
-                                <div class="truncate text-[11px] text-slate-400">{{ auth()->user()->email }}</div>
-                            </div>
-
-                            <a href="{{ route('user.profile') }}"
-                               class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-sky-500/15 hover:text-white">
-                                <i class="fa-solid fa-user text-sky-400"></i>
-                                <span>My Profile &amp; History</span>
-                            </a>
-
-                            <form method="POST" action="{{ route('user.logout') }}" class="mt-0.5">
-                                @csrf
-                                <button type="submit"
-                                        class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold text-rose-400 transition hover:bg-rose-500/15 hover:text-rose-300">
-                                    <i class="fa-solid fa-right-from-bracket"></i>
-                                    <span>Logout</span>
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                @else
-                    <a href="{{ route('user.auth') }}"
-                       class="inline-flex items-center gap-1.5 rounded-full border border-sky-400/40 bg-blue-600/20 px-3.5 py-2 text-xs font-bold text-white backdrop-blur-xl transition hover:border-sky-400 hover:bg-blue-600">
-                        <i class="fa-solid fa-circle-user text-sm text-sky-400"></i>
-                        <span>Sign In</span>
-                    </a>
-                @endauth
-            </div>
+    {{-- Phone top bar: opens the sidebar as a slide-out drawer. Hidden on tablets and desktops. --}}
+    <header class="glass sticky top-0 z-40 flex items-center justify-between gap-3 border-x-0 border-t-0 px-4 py-2.5 md:hidden">
+        <button type="button" data-sb-open aria-label="Open menu" class="sb-icon-btn"><i class="fa-solid fa-bars"></i></button>
+        <a href="{{ route('home') }}" class="flex items-center gap-2" aria-label="AuraCinema home">
+            <span class="h-3 w-3 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 shadow-[0_0_14px_var(--color-orange-500)]"></span>
+            <span class="text-lg font-extrabold tracking-tight">Aura<span class="text-orange-400">Cinema</span></span>
+        </a>
+        <div class="flex items-center gap-2">
+            <button type="button" data-sb-open data-sb-focus-search aria-label="Search" class="sb-icon-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
+            <button type="button" data-theme-toggle aria-label="Switch light / dark theme" class="sb-icon-btn"><i class="fa-solid fa-circle-half-stroke"></i></button>
         </div>
-
-        {{-- Category bar --}}
-        <nav class="border-t border-white/5" aria-label="Primary">
-            <div class="relative mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-0 px-4 py-1 text-[13px] font-semibold uppercase tracking-wide text-slate-300 sm:px-6">
-
-                {{-- Genre Dropdown --}}
-                <details data-menu class="sm:relative">
-                    <summary class="flex cursor-pointer list-none items-center gap-1 py-1.5 hover:text-white [&::-webkit-details-marker]:hidden {{ request('genre') ? 'text-orange-400' : '' }}">
-                        Genre <i class="fa-solid fa-chevron-down text-[9px]"></i>
-                    </summary>
-                    <div class="absolute inset-x-4 top-full z-50 mt-2 grid max-h-72 grid-cols-3 gap-1 overflow-y-auto overscroll-contain glass-panel p-2 text-xs normal-case sm:inset-x-auto sm:left-0 sm:w-60 sm:grid-cols-2">
-                        @foreach($globalNavGenres as $g)
-                            <a href="{{ route('movies.index', array_merge($keepTypeLang, ['genre' => $g])) }}" class="menu-item {{ request('genre') === $g ? 'text-orange-400' : '' }}">{{ $g }}</a>
-                        @endforeach
-                    </div>
-                </details>
-
-                {{-- Type Links --}}
-                @foreach($globalNavTypes as $navKey => $navLabel)
-                    <a href="{{ route('movies.index', array_filter(['type' => $navKey, 'language' => request('language')])) }}" class="{{ $navLink($navType === $navKey) }}">
-                        {{ $navLabel }}
-                    </a>
-                @endforeach
-
-                <a href="{{ route('suggestions') }}" class="{{ $navLink(request()->routeIs('suggestions')) }}">Suggestion</a>
-
-                {{-- Year Dropdown (All years 2027 down to 1990) --}}
-                <details data-menu class="sm:relative">
-                    <summary class="flex cursor-pointer list-none items-center gap-1 py-1.5 hover:text-white [&::-webkit-details-marker]:hidden {{ request('year') ? 'text-orange-400' : '' }}">
-                        Year <i class="fa-solid fa-chevron-down text-[9px]"></i>
-                    </summary>
-                    <div class="absolute inset-x-4 top-full z-50 mt-2 glass-panel grid max-h-80 grid-cols-4 gap-1 overflow-y-auto overscroll-contain p-2 text-xs normal-case sm:inset-x-auto sm:left-0 sm:w-56 sm:grid-cols-3">
-                        @if(request('year'))
-                            <a href="{{ route('movies.index', $keepTypeGenreLang) }}" class="menu-item col-span-full text-center text-orange-400">All Years</a>
-                        @endif
-                        @php($navYears = range((int) date('Y') + 1, 1990))
-                        @foreach($navYears as $y)
-                            <a href="{{ route('movies.index', array_merge($keepTypeGenreLang, ['year' => $y])) }}" class="menu-item text-center {{ (int) request('year') === $y ? 'text-orange-400' : '' }}">{{ $y }}</a>
-                        @endforeach
-                    </div>
-                </details>
-
-                @php($waRequest = 'https://wa.me/'.preg_replace('/\D/', '', (string) config('auracinema.whatsapp_number')).'?text='.rawurlencode("Hi AuraCinema, I'd like to request a movie: "))
-                <a href="{{ $waRequest }}" target="_blank" rel="noopener" class="{{ $navLink(false) }}"><i class="fa-brands fa-whatsapp text-emerald-400"></i> Request</a>
-            </div>
-        </nav>
     </header>
 
+    <div id="sbOverlay" data-sb-close class="fixed inset-0 z-[72] hidden bg-black/60 md:hidden"></div>
+
+    {{-- ============ Left sidebar ============ --}}
+    <aside id="sidebar" class="aura-sidebar glass" aria-label="Main menu">
+        <div class="sb-head flex items-center justify-between gap-2 px-3 pt-4">
+            <a href="{{ route('home') }}" class="flex min-w-0 items-center gap-2.5" aria-label="AuraCinema home">
+                <span class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 text-lg font-extrabold text-white shadow-lg shadow-orange-500/30">A</span>
+                <span data-sb-label class="truncate text-lg font-extrabold tracking-tight">Aura<span class="text-orange-400">Cinema</span></span>
+            </a>
+            <button type="button" data-sb-collapse aria-label="Collapse or expand menu" class="sb-icon-btn hidden md:grid"><i class="fa-solid fa-angles-left" data-sb-collapse-icon></i></button>
+            <button type="button" data-sb-close aria-label="Close menu" class="sb-icon-btn md:hidden"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        {{-- Live search (script in resources/js/app.js looks for [data-live-search], input[name=q], [data-live-results]) --}}
+        <form action="{{ route('movies.index') }}" method="GET" role="search" data-live-search data-live-url="{{ route('search.live') }}" class="relative px-3 pt-4">
+            <label for="q" class="sr-only">Search movies</label>
+            <div data-sb-search-field class="relative">
+                <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-500"></i>
+                <input id="q" type="search" name="q" value="{{ request('q') }}" placeholder="Search movies" autocomplete="off"
+                       role="combobox" aria-expanded="false" aria-controls="live-results" aria-autocomplete="list"
+                       class="w-full rounded-2xl border border-white/10 bg-white/5 py-2.5 pl-9 pr-3 text-sm text-white placeholder-slate-500 transition focus:border-orange-400/70 focus:bg-white/10 focus:outline-none focus:ring-4 focus:ring-orange-500/15">
+            </div>
+            <button type="button" data-sb-search-toggle aria-label="Search" title="Search" class="sb-item hidden !justify-center"><i class="fa-solid fa-magnifying-glass w-5 text-center"></i></button>
+            <div id="live-results" data-live-results role="listbox" hidden
+                 class="glass-panel absolute left-3 right-3 top-full z-[80] mt-2 max-h-[70vh] overflow-y-auto md:left-full md:right-auto md:top-4 md:ml-4 md:mt-0 md:w-[26rem]"></div>
+        </form>
+
+        <nav class="sb-nav mt-4 flex-1 space-y-1 px-3 pb-3" aria-label="Primary">
+            <a href="{{ route('home') }}" title="Home" class="{{ $sbItem(request()->routeIs('home') && ! $navType) }}">
+                <i class="fa-solid fa-house w-5 text-center"></i><span data-sb-label>Home</span>
+            </a>
+
+            @foreach($globalNavTypes as $navKey => $navLabel)
+                <a href="{{ route('movies.index', array_filter(['type' => $navKey, 'language' => request('language')])) }}" title="{{ $navLabel }}" class="{{ $sbItem($navType === $navKey) }}">
+                    <i class="fa-solid {{ $sbTypeIcons[$navKey] ?? 'fa-film' }} w-5 text-center"></i><span data-sb-label>{{ $navLabel }}</span>
+                </a>
+            @endforeach
+
+            <a href="{{ route('suggestions') }}" title="Suggestion" class="{{ $sbItem(request()->routeIs('suggestions')) }}">
+                <i class="fa-solid fa-lightbulb w-5 text-center"></i><span data-sb-label>Suggestion</span>
+            </a>
+
+            {{-- Genre --}}
+            <details data-menu class="sb-menu">
+                <summary class="{{ $sbItem((bool) request('genre')) }} cursor-pointer list-none [&::-webkit-details-marker]:hidden" title="Genre">
+                    <i class="fa-solid fa-masks-theater w-5 text-center"></i><span data-sb-label>Genre</span>
+                    <i data-sb-label class="fa-solid fa-chevron-down ml-auto text-[10px]"></i>
+                </summary>
+                <div class="sb-panel">
+                    @foreach($globalNavGenres as $g)
+                        <a href="{{ route('movies.index', array_merge($keepTypeLang, ['genre' => $g])) }}" class="menu-item {{ request('genre') === $g ? 'text-orange-400' : '' }}">{{ $g }}</a>
+                    @endforeach
+                </div>
+            </details>
+
+            {{-- Year --}}
+            <details data-menu class="sb-menu">
+                <summary class="{{ $sbItem((bool) request('year')) }} cursor-pointer list-none [&::-webkit-details-marker]:hidden" title="Year">
+                    <i class="fa-solid fa-calendar-days w-5 text-center"></i><span data-sb-label>Year</span>
+                    <i data-sb-label class="fa-solid fa-chevron-down ml-auto text-[10px]"></i>
+                </summary>
+                <div class="sb-panel sb-panel-years">
+                    @if(request('year'))
+                        <a href="{{ route('movies.index', $keepTypeGenreLang) }}" class="menu-item col-span-full text-center text-orange-400">All Years</a>
+                    @endif
+                    @foreach(range((int) date('Y') + 1, 1990) as $y)
+                        <a href="{{ route('movies.index', array_merge($keepTypeGenreLang, ['year' => $y])) }}" class="menu-item text-center {{ (int) request('year') === $y ? 'text-orange-400' : '' }}">{{ $y }}</a>
+                    @endforeach
+                </div>
+            </details>
+
+            <a href="{{ $waRequest }}" target="_blank" rel="noopener" title="Request a movie" class="sb-item">
+                <i class="fa-brands fa-whatsapp w-5 text-center text-emerald-400"></i><span data-sb-label>Request</span>
+            </a>
+
+            @if($isAdmin)
+                <p data-sb-label class="px-3 pb-1 pt-4 text-[10px] font-extrabold uppercase tracking-widest text-slate-500">Admin</p>
+                <div data-sb-admin-rule class="mx-2 my-3 hidden border-t border-white/10"></div>
+                <a href="{{ route('movies.incomplete') }}" title="Incomplete" class="{{ $sbItem(request()->routeIs('movies.incomplete')) }}"><i class="fa-solid fa-triangle-exclamation w-5 text-center"></i><span data-sb-label>Incomplete</span></a>
+                <a href="{{ route('requests.index') }}" title="Requests" class="{{ $sbItem(request()->routeIs('requests.index')) }}"><i class="fa-solid fa-inbox w-5 text-center"></i><span data-sb-label>Requests</span></a>
+                <a href="{{ route('admin.stats') }}" title="Stats" class="{{ $sbItem(request()->routeIs('admin.stats')) }}"><i class="fa-solid fa-chart-line w-5 text-center"></i><span data-sb-label>Stats</span></a>
+                <a href="{{ route('movies.create') }}" title="Add movie" class="btn-aura mt-2 w-full !rounded-2xl !py-2.5"><i class="fa-solid fa-plus"></i><span data-sb-label>Add movie</span></a>
+            @endif
+        </nav>
+
+        <div class="relative space-y-1 border-t border-white/10 p-3">
+            <button type="button" data-theme-toggle title="Switch light / dark theme" class="sb-item w-full">
+                <i class="fa-solid fa-moon w-5 text-center" data-theme-icon-dark></i>
+                <i class="fa-solid fa-sun w-5 text-center" data-theme-icon-light></i>
+                <span data-sb-label data-theme-label>Theme</span>
+            </button>
+
+            @auth
+                <button type="button" onclick="toggleWebProfileMenu(event)" title="{{ auth()->user()->name }}" class="sb-item w-full">
+                    <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-gradient-to-br from-orange-500 to-orange-600 text-xs font-extrabold text-white">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
+                    <span data-sb-label class="min-w-0 flex-1 truncate text-left">{{ auth()->user()->name }}</span>
+                    <i data-sb-label class="fa-solid fa-chevron-up text-[10px]"></i>
+                </button>
+                <div id="webProfileDropdown" class="glass-panel absolute bottom-full left-3 right-3 z-[80] mb-2 hidden p-2 md:left-auto md:right-auto md:w-60">
+                    <div class="mb-1.5 border-b border-white/10 px-3 py-2">
+                        <div class="truncate text-xs font-extrabold text-white">{{ auth()->user()->name }}</div>
+                        <div class="truncate text-[11px] text-slate-400">{{ auth()->user()->email }}</div>
+                    </div>
+                    <a href="{{ route('user.profile') }}" class="menu-item flex items-center gap-2.5 !px-3 !py-2 text-xs font-semibold">
+                        <i class="fa-solid fa-user text-orange-400"></i><span>My Profile &amp; History</span>
+                    </a>
+                    <form method="POST" action="{{ route('user.logout') }}" class="mt-0.5">
+                        @csrf
+                        <button type="submit" class="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs font-semibold text-rose-400 transition hover:bg-rose-500/15">
+                            <i class="fa-solid fa-right-from-bracket"></i><span>Logout</span>
+                        </button>
+                    </form>
+                </div>
+            @else
+                <a href="{{ route('user.auth') }}" title="Sign In" class="btn-aura w-full !rounded-2xl !py-2.5">
+                    <i class="fa-solid fa-circle-user"></i><span data-sb-label>Sign In</span>
+                </a>
+            @endauth
+        </div>
+    </aside>
+
+    <div class="aura-shell flex min-h-screen min-w-0 flex-col">
     <main class="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
         @if(session('success'))
             <div class="mb-6 flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-300" role="status">
@@ -189,18 +218,19 @@
         @yield('content')
     </main>
 
-    <footer class="mt-10 border-t border-white/5 bg-gradient-to-b from-transparent to-black/40 py-10 text-center text-xs text-slate-500">
+    <footer class="mt-10 border-t border-white/10 py-10 text-center text-xs text-slate-500">
         <a href="{{ route('home') }}" class="inline-flex items-center gap-2 text-sm font-extrabold text-white">
-            <span class="h-2.5 w-2.5 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 shadow-[0_0_12px_rgba(249,115,22,0.9)]"></span>
-            <span>Aura<span class="bg-gradient-to-r from-orange-400 to-amber-300 bg-clip-text text-transparent">Cinema</span></span>
+            <span class="h-2.5 w-2.5 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 shadow-[0_0_12px_var(--color-orange-500)]"></span>
+            <span>Aura<span class="text-orange-400">Cinema</span></span>
         </a>
         <p class="mt-3">&copy; {{ date('Y') }} AuraCinema. Built with Laravel.</p>
         <p class="mt-2"><a href="{{ route('movies.create') }}" class="transition hover:text-orange-300">Admin</a></p>
     </footer>
+    </div>{{-- /.aura-shell --}}
 
     <!-- Compact Floating Subtitle Notice (Bottom-Right, Non-Fullscreen) -->
     <div id="auraWelcomePopup"
-         class="fixed inset-x-3 bottom-3 z-[70] hidden overflow-hidden rounded-2xl border border-orange-500/35 bg-[#12121a]/95 p-3.5 text-slate-200 shadow-2xl shadow-black/90 backdrop-blur-xl sm:inset-x-auto sm:bottom-5 sm:right-5 sm:w-[22.5rem]">
+         class="on-dark fixed inset-x-3 bottom-3 z-[70] hidden overflow-hidden rounded-2xl border border-orange-500/35 bg-[#12121a]/95 p-3.5 text-slate-200 shadow-2xl shadow-black/90 backdrop-blur-xl sm:inset-x-auto sm:bottom-5 sm:right-5 sm:w-[22.5rem]">
         <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-orange-500 via-amber-400 to-emerald-400"></div>
 
         <div class="flex items-start justify-between gap-2">
@@ -263,6 +293,54 @@
                 window.location.href = "{{ route('home') }}#watch-with-sub-section";
             }
         }
+
+
+        // ---- Theme + sidebar (state saved in localStorage; the head script restores it before paint) ----
+        (function () {
+            var root = document.documentElement;
+            var save = function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} };
+            var meta = document.querySelector('meta[name="theme-color"]');
+            var paintTheme = function () {
+                var light = root.getAttribute('data-theme') === 'light';
+                if (meta) meta.setAttribute('content', light ? '#f5f3ff' : '#0b0e17');
+                document.querySelectorAll('[data-theme-label]').forEach(function (el) { el.textContent = light ? 'Dark mode' : 'Light mode'; });
+            };
+            paintTheme();
+            document.querySelectorAll('[data-theme-toggle]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+                    root.setAttribute('data-theme', next);
+                    save('aura_theme', next);
+                    paintTheme();
+                });
+            });
+
+            var collapse = document.querySelector('[data-sb-collapse]');
+            if (collapse) collapse.addEventListener('click', function () {
+                var next = root.getAttribute('data-sb') === 'collapsed' ? 'expanded' : 'collapsed';
+                root.setAttribute('data-sb', next);
+                save('aura_sidebar', next);
+            });
+
+            var closeDrawer = function () { root.classList.remove('sb-open'); document.getElementById('sbOverlay').classList.add('hidden'); };
+            var openDrawer = function () { root.classList.add('sb-open'); document.getElementById('sbOverlay').classList.remove('hidden'); };
+            document.querySelectorAll('[data-sb-open]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    openDrawer();
+                    if (btn.hasAttribute('data-sb-focus-search')) setTimeout(function () { document.getElementById('q').focus(); }, 60);
+                });
+            });
+            document.querySelectorAll('[data-sb-close]').forEach(function (el) { el.addEventListener('click', closeDrawer); });
+            document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDrawer(); });
+
+            // Collapsed (icons only): the search icon re-opens the full sidebar and focuses the box.
+            var searchToggle = document.querySelector('[data-sb-search-toggle]');
+            if (searchToggle) searchToggle.addEventListener('click', function () {
+                root.setAttribute('data-sb', 'expanded');
+                save('aura_sidebar', 'expanded');
+                setTimeout(function () { document.getElementById('q').focus(); }, 60);
+            });
+        })();
 
         function toggleWebProfileMenu(event) {
             event.stopPropagation();
