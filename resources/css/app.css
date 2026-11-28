@@ -9,13 +9,28 @@
 
 /* ---- AuraCinema look: warm orange on near-black, glass panels, soft glow ---- */
 html { scroll-behavior: smooth; }
-body {
+/* Colours mirror the mobile app's dark glass theme (lib/theme/aura_theme.dart) so web and app match. */
+body { background: linear-gradient(180deg, #0b0e17 0%, #121726 50%, #0b0e17 100%) fixed, #0b0e17; }
+/* Soft glows: ONE fixed layer of static gradients. No blur filter, no images, no animation = no lag. */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
     background:
-        radial-gradient(1100px 520px at 8% -8%, rgba(249, 115, 22, 0.14), transparent 60%),
-        radial-gradient(900px 460px at 100% 0%, rgba(251, 191, 36, 0.07), transparent 55%),
-        #0b0b0f;
-    background-attachment: fixed;
+        radial-gradient(680px 600px at 96% 4%, rgba(139, 92, 246, 0.26), transparent 70%),
+        radial-gradient(620px 560px at 2% 8%, rgba(139, 92, 246, 0.16), transparent 70%),
+        radial-gradient(640px 560px at 100% 70%, rgba(255, 159, 28, 0.13), transparent 70%),
+        radial-gradient(700px 560px at 0% 98%, rgba(255, 159, 28, 0.10), transparent 70%);
 }
+/* Reusable glass panel (same as the app: white 6% fill, white 12% border). Use on a few big panels only. */
+.glass {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.10);
+}
+@media (min-width: 768px) { .glass { backdrop-filter: blur(14px) saturate(140%); } }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: #0b0b0f; }
 ::-webkit-scrollbar-thumb { background: #2a2a33; border-radius: 9999px; border: 2px solid #0b0b0f; }

@@ -18,7 +18,7 @@
 {{-- Animated hero carousel: up to 5 latest titles with a poster. Behaviour lives in resources/js/app.js. --}}
 @if($heroes->isNotEmpty())
     <section data-hero aria-roledescription="carousel" aria-label="Latest titles"
-             class="relative mb-8 touch-pan-y overflow-hidden rounded-2xl bg-gradient-to-r from-zinc-900 via-[#14141c] to-zinc-900 shadow-2xl shadow-black/50 ring-1 ring-white/10 sm:mb-10">
+             class="glass relative mb-8 touch-pan-y overflow-hidden rounded-3xl sm:mb-10">
         <div class="hero-stage">
             @foreach($heroes as $i => $hero)
                 <article data-slide aria-hidden="{{ $i === 0 ? 'false' : 'true' }}"

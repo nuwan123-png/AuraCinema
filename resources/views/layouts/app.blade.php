@@ -45,7 +45,7 @@
     @php($keepTypeLang = array_filter(['type' => request('type'), 'language' => request('language')]))
     @php($keepTypeGenreLang = array_filter(['type' => request('type'), 'genre' => request('genre'), 'language' => request('language')]))
 
-    <header class="z-50 border-b border-white/5 bg-[#0b0b0f]/80 backdrop-blur-xl md:sticky md:top-0">
+    <header class="z-50 border-b border-white/10 bg-[#0b0e17]/60 backdrop-blur-xl md:sticky md:top-0">
         <div class="relative mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
             <a href="{{ route('home') }}" class="flex shrink-0 items-center gap-2" aria-label="AuraCinema home">
                 <span class="h-3 w-3 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 shadow-[0_0_14px_rgba(249,115,22,0.9)]"></span>
